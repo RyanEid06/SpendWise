@@ -2,6 +2,7 @@ import {
   AiAnalysisResult,
   Expense,
   ImportSummary,
+  Language,
   MonthlyBudget,
   SpendWiseBackup,
   ThemeMode,
@@ -14,78 +15,40 @@ const STORAGE_KEYS = {
   BUDGETS: 'spendwise_budgets',
   CURRENCY: 'spendwise_currency',
   THEME: 'spendwise_theme',
+  LANGUAGE: 'spendwise_language',
   APP_LOCK: 'spendwise_app_lock_enabled',
   LOCK_TIMEOUT: 'spendwise_lock_timeout_seconds',
   LOCK_PIN: 'spendwise_lock_pin',
   AI_CACHE: 'spendwise_ai_insights_cache',
-  INITIALIZED: 'spendwise_initialized_v2',
+  INITIALIZED: 'spendwise_clean_init_v3',
 };
-
-// Seed realistic data for the user so they can immediately see the dashboard and AI insights
-function getInitialSeedData(): { expenses: Expense[]; budgets: MonthlyBudget[] } {
-  const current = currentMonthYear();
-  const prev1 = previousMonth(current);
-  const prev2 = previousMonth(prev1);
-
-  const curKey = getMonthKey(current);
-  const prev1Key = getMonthKey(prev1);
-  const prev2Key = getMonthKey(prev2);
-
-  const budgets: MonthlyBudget[] = [
-    { monthKey: curKey, startingAmount: 2500, updatedAt: Date.now() },
-    { monthKey: prev1Key, startingAmount: 2400, updatedAt: Date.now() - 30 * 86400000 },
-    { monthKey: prev2Key, startingAmount: 2400, updatedAt: Date.now() - 60 * 86400000 },
-  ];
-
-  // Helper to make dates within a month
-  const makeDate = (my: MonthYear, day: number) => new Date(my.year, my.month - 1, day, 14, 0).getTime();
-
-  let idCounter = 1;
-  const expenses: Expense[] = [
-    // Current Month expenses
-    { id: idCounter++, amount: 78.50, description: 'Whole Foods Market', category: 'Groceries', date: makeDate(current, 3), note: 'Fresh produce, milk, cereal', createdAt: Date.now() },
-    { id: idCounter++, amount: 14.25, description: 'Starbucks Coffee', category: 'Food', date: makeDate(current, 4), note: 'Morning latte & pastry', createdAt: Date.now() },
-    { id: idCounter++, amount: 45.00, description: 'Shell Gas Station', category: 'Transportation', date: makeDate(current, 5), note: 'Fuel refill', createdAt: Date.now() },
-    { id: idCounter++, amount: 15.99, description: 'Netflix Subscription', category: 'Subscriptions', date: makeDate(current, 8), note: 'Monthly 4K streaming plan', createdAt: Date.now() },
-    { id: idCounter++, amount: 124.80, description: 'Carrefour Supermarket', category: 'Groceries', date: makeDate(current, 10), note: 'Bi-weekly family supplies', createdAt: Date.now() },
-    { id: idCounter++, amount: 14.50, description: 'Starbucks Coffee', category: 'Food', date: makeDate(current, 12), note: 'Cold brew & snack', createdAt: Date.now() },
-    { id: idCounter++, amount: 89.00, description: 'City Water & Power', category: 'Bills', date: makeDate(current, 14), note: 'Monthly utility bill', createdAt: Date.now() },
-    { id: idCounter++, amount: 32.50, description: 'Cinema City Tickets', category: 'Entertainment', date: makeDate(current, 16), note: 'Weekend movie night', createdAt: Date.now() },
-    { id: idCounter++, amount: 13.90, description: 'Starbucks Coffee', category: 'Food', date: makeDate(current, 18), note: 'Afternoon coffee', createdAt: Date.now() },
-    { id: idCounter++, amount: 280.00, description: 'Apple Store', category: 'Electronics', date: makeDate(current, 19), note: 'AirPods Pro replacement', createdAt: Date.now() },
-    { id: idCounter++, amount: 56.40, description: 'Trader Joe\'s', category: 'Groceries', date: makeDate(current, 21), note: 'Snacks and fruits', createdAt: Date.now() },
-    { id: idCounter++, amount: 65.00, description: 'Pharmacy Prescription', category: 'Health', date: makeDate(current, 22), note: 'Vitamins and prescription', createdAt: Date.now() },
-
-    // Previous Month 1 expenses
-    { id: idCounter++, amount: 110.00, description: 'Costco Wholesale', category: 'Groceries', date: makeDate(prev1, 2), note: 'Bulk goods', createdAt: Date.now() - 30 * 86400000 },
-    { id: idCounter++, amount: 48.00, description: 'Shell Gas Station', category: 'Transportation', date: makeDate(prev1, 5), note: 'Gasoline', createdAt: Date.now() - 30 * 86400000 },
-    { id: idCounter++, amount: 15.99, description: 'Netflix Subscription', category: 'Subscriptions', date: makeDate(prev1, 8), note: 'Subscription', createdAt: Date.now() - 30 * 86400000 },
-    { id: idCounter++, amount: 92.50, description: 'Carrefour Supermarket', category: 'Groceries', date: makeDate(prev1, 12), note: 'Groceries', createdAt: Date.now() - 30 * 86400000 },
-    { id: idCounter++, amount: 84.00, description: 'City Water & Power', category: 'Bills', date: makeDate(prev1, 15), note: 'Electricity', createdAt: Date.now() - 30 * 86400000 },
-    { id: idCounter++, amount: 45.00, description: 'Dinner with Colleagues', category: 'Food', date: makeDate(prev1, 18), note: 'Italian dinner', createdAt: Date.now() - 30 * 86400000 },
-    { id: idCounter++, amount: 120.00, description: 'Running Shoes', category: 'Shopping', date: makeDate(prev1, 24), note: 'Sports shoes', createdAt: Date.now() - 30 * 86400000 },
-
-    // Previous Month 2 expenses
-    { id: idCounter++, amount: 130.00, description: 'Supermarket Groceries', category: 'Groceries', date: makeDate(prev2, 4), note: 'Monthly groceries', createdAt: Date.now() - 60 * 86400000 },
-    { id: idCounter++, amount: 80.00, description: 'Internet Fiber', category: 'Bills', date: makeDate(prev2, 10), note: 'High speed internet', createdAt: Date.now() - 60 * 86400000 },
-    { id: idCounter++, amount: 15.99, description: 'Netflix Subscription', category: 'Subscriptions', date: makeDate(prev2, 8), note: 'Streaming', createdAt: Date.now() - 60 * 86400000 },
-    { id: idCounter++, amount: 55.00, description: 'Commuter Train Pass', category: 'Transportation', date: makeDate(prev2, 15), note: 'Monthly transit card', createdAt: Date.now() - 60 * 86400000 },
-  ];
-
-  return { expenses, budgets };
-}
 
 export class StorageManager {
   static init() {
     if (typeof window === 'undefined') return;
     const isInit = localStorage.getItem(STORAGE_KEYS.INITIALIZED);
     if (!isInit) {
-      const seed = getInitialSeedData();
-      localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(seed.expenses));
-      localStorage.setItem(STORAGE_KEYS.BUDGETS, JSON.stringify(seed.budgets));
-      localStorage.setItem(STORAGE_KEYS.CURRENCY, DEFAULT_CURRENCY_CODE);
-      localStorage.setItem(STORAGE_KEYS.THEME, 'SYSTEM');
+      // Start with clean, authentic empty data - zero invented/fake data
+      localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.BUDGETS, JSON.stringify([]));
+      if (!localStorage.getItem(STORAGE_KEYS.CURRENCY)) {
+        localStorage.setItem(STORAGE_KEYS.CURRENCY, DEFAULT_CURRENCY_CODE);
+      }
+      if (!localStorage.getItem(STORAGE_KEYS.THEME)) {
+        localStorage.setItem(STORAGE_KEYS.THEME, 'SYSTEM');
+      }
+      if (!localStorage.getItem(STORAGE_KEYS.LANGUAGE)) {
+        localStorage.setItem(STORAGE_KEYS.LANGUAGE, 'en');
+      }
       localStorage.setItem(STORAGE_KEYS.INITIALIZED, 'true');
+    }
+
+    // Ensure any previously loaded mock seed data is cleared so user has a clean slate
+    const currentExp = this.getExpenses();
+    const hasMockSeed = currentExp.length > 0 && currentExp.some((e) => e.description === 'Whole Foods Market' || e.description === 'Starbucks Coffee');
+    if (hasMockSeed) {
+      this.saveExpenses([]);
+      this.saveBudgets([]);
     }
   }
 
@@ -104,10 +67,10 @@ export class StorageManager {
 
   static addExpense(expense: Omit<Expense, 'id' | 'createdAt'>): Expense {
     const expenses = this.getExpenses();
-    const newId = expenses.length > 0 ? Math.max(...expenses.map((e) => e.id)) + 1 : 1;
+    const maxId = expenses.reduce((max, e) => Math.max(max, e.id || 0), 0);
     const newExpense: Expense = {
       ...expense,
-      id: newId,
+      id: maxId + 1,
       createdAt: Date.now(),
     };
     expenses.unshift(newExpense);
@@ -173,6 +136,14 @@ export class StorageManager {
 
   static setThemeMode(mode: ThemeMode) {
     localStorage.setItem(STORAGE_KEYS.THEME, mode);
+  }
+
+  static getLanguage(): Language {
+    return (localStorage.getItem(STORAGE_KEYS.LANGUAGE) as Language) || 'en';
+  }
+
+  static setLanguage(lang: Language) {
+    localStorage.setItem(STORAGE_KEYS.LANGUAGE, lang);
   }
 
   static isAppLockEnabled(): boolean {
@@ -287,12 +258,29 @@ export class StorageManager {
 
   // Restore or merge backup
   static restoreBackup(backup: SpendWiseBackup, replaceExisting: boolean): ImportSummary {
-    let currentExpenses = replaceExisting ? [] : this.getExpenses();
-    let currentBudgets = replaceExisting ? [] : this.getBudgets();
+    const currentExpenses = replaceExisting ? [] : this.getExpenses();
+    const currentBudgets = replaceExisting ? [] : this.getBudgets();
 
-    let maxId = currentExpenses.length > 0 ? Math.max(...currentExpenses.map((e) => e.id)) : 0;
+    let maxId = currentExpenses.reduce((max, e) => Math.max(max, e.id || 0), 0);
 
-    const importedExpenses: Expense[] = backup.expenses.map((b) => {
+    const isDuplicate = (incoming: any, existingList: Expense[]) => {
+      return existingList.some((e) => {
+        if (incoming.id && e.id === incoming.id) return true;
+        if (incoming.createdAt && e.createdAt === incoming.createdAt && Math.abs(e.amount - incoming.amount) < 0.001) return true;
+        return (
+          e.date === incoming.date &&
+          Math.abs(e.amount - incoming.amount) < 0.001 &&
+          e.description.trim().toLowerCase() === incoming.description.trim().toLowerCase() &&
+          e.category.toLowerCase() === incoming.category.toLowerCase()
+        );
+      });
+    };
+
+    const expensesToImport = replaceExisting
+      ? backup.expenses
+      : backup.expenses.filter((b) => !isDuplicate(b, currentExpenses));
+
+    const importedExpenses: Expense[] = expensesToImport.map((b) => {
       maxId++;
       return {
         id: replaceExisting ? b.id : maxId,

@@ -15,6 +15,7 @@ export interface MonthlyBudget {
 }
 
 export type ThemeMode = 'SYSTEM' | 'LIGHT' | 'DARK';
+export type Language = 'en' | 'fr' | 'ar';
 
 export interface LockTimeoutOption {
   seconds: number;

@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { Wallet, X } from 'lucide-react';
+import { Language } from '../types';
 import { getCurrency, formatCurrency } from '../utils/currency';
+import { t } from '../utils/translations';
 
 interface SetBudgetModalProps {
   isOpen: boolean;
   monthName: string;
   currentStartingAmount: number;
   currencyCode: string;
+  language: Language;
   onSave: (amount: number) => void;
   onClose: () => void;
 }
@@ -16,6 +19,7 @@ export const SetBudgetModal: React.FC<SetBudgetModalProps> = ({
   monthName,
   currentStartingAmount,
   currencyCode,
+  language,
   onSave,
   onClose,
 }) => {
@@ -32,7 +36,7 @@ export const SetBudgetModal: React.FC<SetBudgetModalProps> = ({
   const handleSave = () => {
     const amount = parseFloat(amountText);
     if (isNaN(amount) || amount <= 0) {
-      setError('Please enter an amount greater than 0');
+      setError(t(language, 'budgetError'));
       return;
     }
     onSave(amount);
@@ -40,38 +44,42 @@ export const SetBudgetModal: React.FC<SetBudgetModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
-      <div className="bg-[#111928] border border-slate-800 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800/80">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-xl bg-emerald-950/80 text-emerald-400 flex items-center justify-center">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="budget-modal-title"
+    >
+      <div className="bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden transition-colors">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200/80 dark:border-slate-800/80">
+          <div className="flex items-center space-x-2.5 rtl:space-x-reverse">
+            <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0">
               <Wallet className="w-4 h-4" />
             </div>
-            <h3 className="font-bold text-white text-lg">
-              Starting Budget
+            <h3 id="budget-modal-title" className="font-bold text-slate-900 dark:text-white text-lg">
+              {t(language, 'setBudgetModalTitle')}
             </h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            aria-label="Close dialog"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="p-6 space-y-4">
-          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            Enter how much starting money or income you have budgeted for{' '}
-            <strong className="text-white">{monthName}</strong>. This is
-            specific to this month only.
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+            {t(language, 'setBudgetModalDesc', { month: monthName })}
           </p>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-              Starting Money
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+              {t(language, 'startingBudgetLabel')}
             </label>
             <div className="relative rounded-2xl">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none font-bold text-slate-400 text-lg">
+              <div className="absolute inset-y-0 left-0 rtl:left-auto rtl:right-0 pl-4 rtl:pl-0 rtl:pr-4 flex items-center pointer-events-none font-bold text-slate-400 text-lg">
                 {currency.symbol}
               </div>
               <input
@@ -83,15 +91,19 @@ export const SetBudgetModal: React.FC<SetBudgetModalProps> = ({
                   setAmountText(e.target.value);
                   setError(null);
                 }}
-                className="w-full pl-9 pr-4 py-3 rounded-2xl border border-slate-800 bg-[#0B0F19] text-white text-lg font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={`w-full pl-10 rtl:pl-4 rtl:pr-10 pr-4 py-3 rounded-2xl border text-lg font-bold tabular-nums bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-white focus:outline-none focus:ring-2 transition-all ${
+                  error
+                    ? 'border-rose-500 focus:ring-rose-500'
+                    : 'border-slate-200 dark:border-slate-800 focus:ring-emerald-500'
+                }`}
               />
             </div>
-            {error && <p className="text-xs text-rose-400 mt-1 font-medium">{error}</p>}
+            {error && <p className="text-xs text-rose-500 dark:text-rose-400 mt-1 font-medium">{error}</p>}
           </div>
 
           <div>
-            <span className="block text-xs font-semibold text-slate-400 mb-2">
-              Quick Presets:
+            <span className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">
+              {t(language, 'quickPresetsLabel')}
             </span>
             <div className="flex flex-wrap gap-2">
               {quickAmounts.map((preset) => (
@@ -102,7 +114,7 @@ export const SetBudgetModal: React.FC<SetBudgetModalProps> = ({
                     setAmountText(preset.toString());
                     setError(null);
                   }}
-                  className="px-3 py-1.5 rounded-xl border border-slate-800 bg-[#0B0F19] hover:bg-emerald-950/40 hover:border-emerald-600/60 text-xs font-semibold text-slate-200 transition-colors cursor-pointer"
+                  className="min-h-[44px] px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:border-emerald-400 dark:hover:border-emerald-600/60 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors cursor-pointer active:scale-95"
                 >
                   {formatCurrency(preset, currencyCode)}
                 </button>
@@ -111,20 +123,20 @@ export const SetBudgetModal: React.FC<SetBudgetModalProps> = ({
           </div>
         </div>
 
-        <div className="p-4 bg-[#0B0F19]/60 border-t border-slate-800/80 flex items-center justify-end space-x-3">
+        <div className="p-4 bg-slate-50 dark:bg-[#0B0F19]/60 border-t border-slate-200/80 dark:border-slate-800/80 flex items-center justify-end space-x-3 rtl:space-x-reverse">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-400 hover:bg-slate-800 transition-colors cursor-pointer"
+            className="min-h-[44px] px-5 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
-            Cancel
+            {t(language, 'cancelBtn')}
           </button>
           <button
             type="button"
             onClick={handleSave}
-            className="px-5 py-2 rounded-xl text-sm font-extrabold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
+            className="min-h-[44px] px-6 py-2 rounded-xl text-sm font-extrabold bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-sm transition-all cursor-pointer active:scale-95"
           >
-            Save Budget
+            {t(language, 'saveBudgetBtn')}
           </button>
         </div>
       </div>

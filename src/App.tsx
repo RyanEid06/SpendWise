@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Plus } from 'lucide-react';
-import { Expense, MonthlyBudget, Screen, ThemeMode, CategorySpend, AiAnalysisResult } from './types';
+import { Expense, MonthlyBudget, Screen, ThemeMode, CategorySpend, AiAnalysisResult, Language } from './types';
 import {
   currentMonthYear,
   getDisplayName,
@@ -37,6 +37,7 @@ export const App: React.FC = () => {
   const [budgets, setBudgets] = useState<MonthlyBudget[]>(() => StorageManager.getBudgets());
   const [currencyCode, setCurrencyCodeState] = useState<string>(() => StorageManager.getCurrencyCode());
   const [themeMode, setThemeModeState] = useState<ThemeMode>(() => StorageManager.getThemeMode());
+  const [language, setLanguageState] = useState<Language>(() => StorageManager.getLanguage());
 
   // App Lock states
   const [appLockEnabled, setAppLockEnabledState] = useState<boolean>(() => StorageManager.isAppLockEnabled());
@@ -65,23 +66,55 @@ export const App: React.FC = () => {
     setAiNotice(null);
   }, [currentMY]);
 
-  // Handle Theme class on document.documentElement
+  // Live formatted current time for Android status header
+  const [currentTime, setCurrentTime] = useState(() => {
+    const d = new Date();
+    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const d = new Date();
+      setCurrentTime(d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }));
+    }, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Handle Theme class on document.documentElement with system listener
   useEffect(() => {
     const root = document.documentElement;
-    if (themeMode === 'DARK') {
-      root.classList.add('dark');
-    } else if (themeMode === 'LIGHT') {
-      root.classList.remove('dark');
-    } else {
-      // SYSTEM
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      if (prefersDark) {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+    const applyTheme = () => {
+      if (themeMode === 'DARK') {
         root.classList.add('dark');
-      } else {
+      } else if (themeMode === 'LIGHT') {
         root.classList.remove('dark');
+      } else {
+        // SYSTEM
+        if (mediaQuery.matches) {
+          root.classList.add('dark');
+        } else {
+          root.classList.remove('dark');
+        }
       }
-    }
+    };
+
+    applyTheme();
+    mediaQuery.addEventListener('change', applyTheme);
+    return () => mediaQuery.removeEventListener('change', applyTheme);
   }, [themeMode]);
+
+  // Handle RTL and language attribute on document.documentElement
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute('lang', language);
+    if (language === 'ar') {
+      root.setAttribute('dir', 'rtl');
+    } else {
+      root.setAttribute('dir', 'ltr');
+    }
+  }, [language]);
 
   // Lock timeout on visibilitychange (when tab loses focus and returns)
   useEffect(() => {
@@ -214,6 +247,11 @@ export const App: React.FC = () => {
     setThemeModeState(mode);
   };
 
+  const handleLanguageChange = (newLang: Language) => {
+    StorageManager.setLanguage(newLang);
+    setLanguageState(newLang);
+  };
+
   const handleAppLockToggle = (enabled: boolean) => {
     StorageManager.setAppLockEnabled(enabled);
     setAppLockEnabledState(enabled);
@@ -238,6 +276,7 @@ export const App: React.FC = () => {
     setExpenses(StorageManager.getExpenses());
     setBudgets(StorageManager.getBudgets());
     setCurrencyCodeState(StorageManager.getCurrencyCode());
+    setLanguageState(StorageManager.getLanguage());
     const cached = StorageManager.getCachedAnalysis(getMonthKey(currentMY));
     setAiResult(cached);
   };
@@ -291,8 +330,11 @@ export const App: React.FC = () => {
       console.warn('Gemini spending analysis error, using statistical fallback:', err);
       StorageManager.cacheAnalysis(localFallback);
       setAiResult(localFallback);
+      const isApiKeyMissing = err.message?.includes('Gemini API key');
       setAiNotice(
-        `Using local statistical analysis (${err.message || 'Gemini service offline'}).`
+        isApiKeyMissing
+          ? 'Gemini API key not configured. Using verified local statistical analysis.'
+          : 'Unable to reach Gemini AI service right now. Using verified local statistical analysis.'
       );
     } finally {
       setIsAiLoading(false);
@@ -300,38 +342,54 @@ export const App: React.FC = () => {
   }, [expenses, monthlyExpenses, currentMY, currencyCode]);
 
   return (
-    <div className="min-h-screen bg-[#0B0F19] text-slate-100 flex flex-col font-sans select-none antialiased">
+    <div className="min-h-screen bg-slate-100 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 flex flex-col font-sans select-none antialiased transition-colors duration-200">
       {/* App Lock Screen Overlay */}
       {isLocked && (
         <LockScreen
           storedPin={StorageManager.getLockPin()}
+          language={language}
           onUnlock={() => setIsLocked(false)}
         />
       )}
 
-      {/* Android Top Status Bar (Matching screenshot: 6:24, wifi, battery) */}
-      <header className="sticky top-0 z-40 bg-[#0B0F19] pt-2 px-6 pb-1">
-        <div className="max-w-md mx-auto flex items-center justify-between text-xs text-slate-300 font-semibold tracking-tight">
-          <span>6:24</span>
-          <div className="flex items-center space-x-2">
-            {/* WiFi */}
-            <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-              <path d="M12 4C7.31 4 3.07 5.9 0 8.98L12 21 24 8.98A16.88 16.88 0 0 0 12 4z"/>
-            </svg>
-            {/* Signal */}
-            <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-              <path d="M2 22h20V2L2 22z"/>
-            </svg>
-            {/* Battery */}
-            <svg className="w-4 h-3.5 fill-current" viewBox="0 0 24 24">
-              <path d="M16 4h-2V2h-4v2H8C6.9 4 6 4.9 6 6v14c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2z"/>
-            </svg>
+      {/* Android Top Status Bar & App Header */}
+      <header className="sticky top-0 z-40 bg-slate-100/95 dark:bg-[#0B0F19]/95 backdrop-blur-md pt-2 px-4 pb-2 transition-colors border-b border-slate-200/50 dark:border-slate-800/50">
+        <div className="max-w-md mx-auto space-y-1.5">
+          {/* Status Bar Row (Always LTR for authentic mobile clock & battery orientation) */}
+          <div dir="ltr" className="flex items-center justify-between text-xs text-slate-700 dark:text-slate-300 font-semibold tracking-tight px-1">
+            <span>{currentTime}</span>
+            <div className="flex items-center space-x-2" aria-hidden="true">
+              {/* WiFi */}
+              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                <path d="M12 4C7.31 4 3.07 5.9 0 8.98L12 21 24 8.98A16.88 16.88 0 0 0 12 4z"/>
+              </svg>
+              {/* Signal */}
+              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                <path d="M2 22h20V2L2 22z"/>
+              </svg>
+              {/* Battery */}
+              <svg className="w-4 h-3.5 fill-current" viewBox="0 0 24 24">
+                <path d="M16 4h-2V2h-4v2H8C6.9 4 6 4.9 6 6v14c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2z"/>
+              </svg>
+            </div>
+          </div>
+
+          {/* App Branding (Clean, language switcher moved to Settings) */}
+          <div className="flex items-center justify-between pt-0.5">
+            <div className="flex items-center space-x-2 rtl:space-x-reverse">
+              <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black text-xs">
+                S
+              </div>
+              <h1 className="font-extrabold text-sm sm:text-base tracking-tight text-slate-900 dark:text-white">
+                SpendWise
+              </h1>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-md w-full mx-auto px-4 pt-1 pb-24">
+      <main className="flex-1 max-w-md w-full mx-auto px-4 pt-1 pb-36">
         {currentScreen === 'home' && (
           <DashboardScreen
             currentMonthYear={currentMY}
@@ -343,10 +401,15 @@ export const App: React.FC = () => {
             topExpenses={topExpenses}
             categoryBreakdown={categoryBreakdown}
             currencyCode={currencyCode}
+            language={language}
             onPreviousMonth={() => setCurrentMY((prev) => previousMonth(prev))}
             onNextMonth={() => setCurrentMY((prev) => nextMonth(prev))}
             onSetBudgetClick={() => setShowBudgetModal(true)}
             onExpenseClick={(expense) => setEditingExpense(expense)}
+            onAddExpenseClick={() => {
+              setEditingExpense(null);
+              setShowAddModal(true);
+            }}
           />
         )}
 
@@ -355,6 +418,7 @@ export const App: React.FC = () => {
             currentMonthYear={currentMY}
             expenses={monthlyExpenses}
             currencyCode={currencyCode}
+            language={language}
             onPreviousMonth={() => setCurrentMY((prev) => previousMonth(prev))}
             onNextMonth={() => setCurrentMY((prev) => nextMonth(prev))}
             onExpenseClick={(expense) => setEditingExpense(expense)}
@@ -373,6 +437,7 @@ export const App: React.FC = () => {
             isLoading={isAiLoading}
             error={aiError}
             notice={aiNotice}
+            language={language}
             onPreviousMonth={() => setCurrentMY((prev) => previousMonth(prev))}
             onNextMonth={() => setCurrentMY((prev) => nextMonth(prev))}
             onAnalyzeClick={handleAnalyzeSpending}
@@ -389,6 +454,7 @@ export const App: React.FC = () => {
             budgets={budgets}
             currentMonthYear={currentMY}
             currencyCode={currencyCode}
+            language={language}
             onNavigateToExpense={(expense) => {
               setEditingExpense(expense);
               setShowAddModal(true);
@@ -400,6 +466,7 @@ export const App: React.FC = () => {
           <SettingsScreen
             currentCurrencyCode={currencyCode}
             currentThemeMode={themeMode}
+            currentLanguage={language}
             totalExpensesCount={expenses.length}
             isAppLockEnabled={appLockEnabled}
             lockTimeoutSeconds={lockTimeoutSeconds}
@@ -407,28 +474,29 @@ export const App: React.FC = () => {
             onLockTimeoutChange={handleLockTimeoutChange}
             onCurrencyChange={handleCurrencyChange}
             onThemeChange={handleThemeChange}
+            onLanguageChange={handleLanguageChange}
             onClearAllData={handleClearAllData}
             onBackupRestored={handleBackupRestored}
           />
         )}
       </main>
 
-      {/* Floating Action Button (rounded green squircle with black plus like screenshot) */}
-      {currentScreen !== 'settings' && (
+      {/* Floating Action Button (Cleanly positioned on secondary screens; Home uses stationary bottom button) */}
+      {currentScreen !== 'settings' && currentScreen !== 'home' && (
         <button
           onClick={() => {
             setEditingExpense(null);
             setShowAddModal(true);
           }}
-          className="fixed bottom-24 right-5 z-30 w-12 h-12 rounded-2xl bg-[#34D399] hover:bg-[#10B981] text-slate-950 shadow-lg shadow-emerald-500/25 flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
-          aria-label="Add Expense"
+          className="fixed bottom-20 right-4 rtl:right-auto rtl:left-4 z-30 min-w-[52px] min-h-[52px] w-13 h-13 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-lg shadow-emerald-500/30 flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
+          aria-label={language === 'ar' ? 'إضافة مصروف' : language === 'fr' ? 'Ajouter une dépense' : 'Add Expense'}
         >
           <Plus className="w-6 h-6 stroke-[2.75]" />
         </button>
       )}
 
       {/* Bottom Navigation */}
-      <Navigation currentScreen={currentScreen} onSelectScreen={setCurrentScreen} />
+      <Navigation currentScreen={currentScreen} language={language} onSelectScreen={setCurrentScreen} />
 
       {/* Add / Edit Expense Modal Dialog */}
       {(showAddModal || editingExpense !== null) && (
@@ -437,6 +505,7 @@ export const App: React.FC = () => {
           initialExpense={editingExpense}
           defaultDate={Date.now()}
           currencyCode={currencyCode}
+          language={language}
           onSave={(amount, description, category, date, note) => {
             if (editingExpense) {
               handleUpdateExpense(editingExpense.id, amount, description, category, date, note);
@@ -460,6 +529,7 @@ export const App: React.FC = () => {
           monthName={getDisplayName(currentMY)}
           currentStartingAmount={startingMoney}
           currencyCode={currencyCode}
+          language={language}
           onSave={handleSetStartingMoney}
           onClose={() => setShowBudgetModal(false)}
         />
