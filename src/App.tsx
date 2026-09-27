@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { apiUrl, fetchWithTimeout } from './utils/api';
+import { apiFetch } from './utils/api';
 import { Plus } from 'lucide-react';
 import { Expense, MonthlyBudget, Screen, ThemeMode, CategorySpend, AiAnalysisResult, Language } from './types';
 import {
@@ -63,7 +63,7 @@ export const App: React.FC = () => {
     setAiResult(cached);
     setAiError(null);
     setAiNotice(null);
-  }, [currentMY]);
+  }, [currentMY, expenses, currencyCode, language]);
 
   // Handle Theme class on document.documentElement with system listener
   useEffect(() => {
@@ -224,7 +224,9 @@ export const App: React.FC = () => {
 
   const handleCurrencyChange = (code: string) => {
     StorageManager.setCurrencyCode(code);
+    StorageManager.clearAnalysisCache();
     setCurrencyCodeState(code);
+    setAiResult(null);
   };
 
   const handleThemeChange = (mode: ThemeMode) => {
@@ -234,7 +236,9 @@ export const App: React.FC = () => {
 
   const handleLanguageChange = (newLang: Language) => {
     StorageManager.setLanguage(newLang);
+    StorageManager.clearAnalysisCache();
     setLanguageState(newLang);
+    setAiResult(null);
   };
 
   const handleAppLockToggle = (enabled: boolean) => {
@@ -292,16 +296,18 @@ export const App: React.FC = () => {
     const localFallback = analyzer.generateStatisticalAnalysis(summary, currencyCode);
 
     try {
-      const prompt = analyzer.buildGeminiPrompt(summary, currencyCode);
-
-      const response = await fetchWithTimeout(apiUrl('/api/gemini/analyze'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt,
-          monthKey: getMonthKey(currentMY),
-        }),
-      });
+      const response = await apiFetch(
+        '/api/gemini/analyze',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            summary,
+            currencyCode,
+            language,
+          }),
+        },
+        30000
+      );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -325,7 +331,7 @@ export const App: React.FC = () => {
     } finally {
       setIsAiLoading(false);
     }
-  }, [expenses, monthlyExpenses, currentMY, currencyCode]);
+  }, [expenses, monthlyExpenses, currentMY, currencyCode, language]);
 
   if (isLocked) {
     return <LockScreen storedPin={StorageManager.getLockPin()} language={language} onUnlock={() => setIsLocked(false)} />;

@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { apiUrl, fetchWithTimeout } from '../utils/api';
+import React, { useState, useMemo, useEffect } from 'react';
+import { apiFetch } from '../utils/api';
 import {
   BarChart3,
   Calendar,
@@ -61,6 +61,11 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
     );
   }, [expenses, budgets, selectedPeriod, currentMonthYear]);
 
+  useEffect(() => {
+    setAiExplanation(null);
+    setAiError(null);
+  }, [expenses, budgets, currentMonthYear, selectedPeriod, currencyCode, language]);
+
   const periods: { key: TimePeriod; label: string }[] = [
     { key: 'CURRENT_MONTH', label: t(language, 'periodCurrent') },
     { key: 'LAST_3_MONTHS', label: t(language, 'period3M') },
@@ -81,15 +86,18 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
     const localFallback = StatisticsEngine.generateLocalTrendExplanation(stats, currencyCode);
 
     try {
-      const prompt = StatisticsEngine.buildTrendExplanationPrompt(stats, currencyCode);
-      const res = await fetchWithTimeout(apiUrl('/api/gemini/explain-trends'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt,
-          periodLabel: stats.periodLabel,
-        }),
-      });
+      const res = await apiFetch(
+        '/api/gemini/explain-trends',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            stats,
+            currencyCode,
+            language,
+          }),
+        },
+        30000
+      );
 
       if (!res.ok) {
         throw new Error('Using verified local calculation');

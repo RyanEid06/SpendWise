@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { apiUrl, fetchWithTimeout } from '../utils/api';
+import { apiFetch } from '../utils/api';
 import { Camera, X, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { Expense, Language, ReceiptScanResult } from '../types';
 import { DEFAULT_CATEGORIES } from '../utils/categories';
@@ -68,14 +68,18 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
       reader.onload = async () => {
         const base64Data = reader.result as string;
         try {
-          const res = await fetchWithTimeout(apiUrl('/api/gemini/scan-receipt'), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              imageBase64: base64Data,
-              mimeType: file.type || 'image/jpeg',
-            }),
-          });
+          const res = await apiFetch(
+            '/api/gemini/scan-receipt',
+            {
+              method: 'POST',
+              body: JSON.stringify({
+                imageBase64: base64Data,
+                mimeType: file.type || 'image/jpeg',
+                language,
+              }),
+            },
+            45000
+          );
 
           if (!res.ok) {
             const errData = await res.json().catch(() => ({}));

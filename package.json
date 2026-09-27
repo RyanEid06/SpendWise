@@ -7,7 +7,7 @@
     "dev": "tsx server.ts",
     "build": "tsc --noEmit && vite build",
     "verify": "tsc --noEmit && vite build",
-    "start": "node server.ts",
+    "start": "tsx server.ts",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
     "android:sync": "cap sync android"
@@ -21,7 +21,8 @@
     "lucide-react": "^0.475.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "tailwind-merge": "^3.0.1"
+    "tailwind-merge": "^3.0.1",
+    "tsx": "^4.19.2"
   },
   "devDependencies": {
     "@capacitor/android": "^8.5.2",
@@ -34,7 +35,6 @@
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^4.3.4",
     "tailwindcss": "^4.0.0",
-    "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vite": "^6.1.0"
   }
