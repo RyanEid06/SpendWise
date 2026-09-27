@@ -35,9 +35,10 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
 
   const filteredExpenses = useMemo(() => {
-    if (!searchQuery.trim()) return expenses;
+    const sorted = [...expenses].sort((a, b) => b.date - a.date || b.createdAt - a.createdAt);
+    if (!searchQuery.trim()) return sorted;
     const q = searchQuery.toLowerCase();
-    return expenses.filter(
+    return sorted.filter(
       (e) =>
         e.description.toLowerCase().includes(q) ||
         e.category.toLowerCase().includes(q) ||

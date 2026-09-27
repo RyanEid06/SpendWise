@@ -15,7 +15,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({ storedPin, language, onU
 
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (pin === storedPin || pin === '1234' || pin === '') {
+    if (pin.length > 0 && pin === storedPin) {
       onUnlock();
     } else {
       setError(t(language, 'pinError'));

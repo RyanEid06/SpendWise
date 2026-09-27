@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { apiUrl, fetchWithTimeout } from '../utils/api';
 import { Camera, X, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { Expense, Language, ReceiptScanResult } from '../types';
 import { DEFAULT_CATEGORIES } from '../utils/categories';
@@ -53,6 +54,11 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!file.type.startsWith('image/') || file.size > 8 * 1024 * 1024) {
+      setScanError(t(language, 'receiptScanError'));
+      e.target.value = '';
+      return;
+    }
 
     setIsScanning(true);
     setScanError(null);
@@ -62,7 +68,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
       reader.onload = async () => {
         const base64Data = reader.result as string;
         try {
-          const res = await fetch('/api/gemini/scan-receipt', {
+          const res = await fetchWithTimeout(apiUrl('/api/gemini/scan-receipt'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -87,7 +93,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
             setDescriptionText(extracted.merchant);
             setDescriptionError(null);
           }
-          if (extracted.category) {
+          if (extracted.category && DEFAULT_CATEGORIES.some((c) => c.name === extracted.category)) {
             setSelectedCategory(extracted.category);
           }
           if (extracted.dateMillis) {
@@ -100,7 +106,13 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
           setScanError(t(language, 'receiptScanError'));
         } finally {
           setIsScanning(false);
+          if (fileInputRef.current) fileInputRef.current.value = '';
         }
+      };
+      reader.onerror = () => {
+        setScanError(t(language, 'receiptScanError'));
+        setIsScanning(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
       };
       reader.readAsDataURL(file);
     } catch {

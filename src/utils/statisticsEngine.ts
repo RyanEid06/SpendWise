@@ -18,18 +18,6 @@ import { getCategoryInfo } from './categories';
 import { formatCurrency } from './currency';
 
 export class StatisticsEngine {
-  // Simple in-memory cache to avoid recomputing on repeated tab switches
-  private static cache = new Map<string, StatisticsOverview>();
-
-  private static getCacheKey(
-    expenses: Expense[],
-    budgets: MonthlyBudget[],
-    period: TimePeriod,
-    anchorMonth: MonthYear
-  ): string {
-    return `${period}_${expenses.length}_${budgets.length}_${getMonthKey(anchorMonth)}`;
-  }
-
   /**
    * Determine the list of target month keys based on selected period
    */
@@ -74,10 +62,6 @@ export class StatisticsEngine {
     period: TimePeriod,
     anchorMonth: MonthYear
   ): StatisticsOverview {
-    const cacheKey = this.getCacheKey(allExpenses, budgets, period, anchorMonth);
-    const cached = this.cache.get(cacheKey);
-    if (cached) return cached;
-
     const monthKeys = this.getMonthKeysForPeriod(period, anchorMonth, allExpenses);
     const monthKeySet = new Set(monthKeys);
 
@@ -246,7 +230,6 @@ export class StatisticsEngine {
       averageTransactionsPerMonth,
     };
 
-    this.cache.set(cacheKey, result);
     return result;
   }
 

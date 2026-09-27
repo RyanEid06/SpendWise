@@ -5,7 +5,24 @@ import path from 'path';
 import fs from 'fs';
 
 const app = express();
-const port = 3000;
+const port = Number(process.env.PORT || 3000);
+const MAX_PROMPT_LENGTH = 50_000;
+const MAX_IMAGE_BASE64_LENGTH = 12_000_000;
+const allowedSeverities = new Set(['INFO', 'NOTABLE', 'REVIEW', 'POSITIVE']);
+const allowedCategories = new Set(['Food', 'Groceries', 'Transportation', 'Shopping', 'Entertainment', 'Bills', 'Subscriptions', 'Health', 'Education', 'Electronics', 'Travel', 'Other']);
+
+function safeString(value: unknown, fallback = ''): string { return typeof value === 'string' ? value.slice(0, 4000) : fallback; }
+function safeInsightArray(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 8).flatMap((item) => {
+    if (!item || typeof item !== 'object') return [];
+    const obj = item as Record<string, unknown>;
+    const title = safeString(obj.title).trim();
+    const explanation = safeString(obj.explanation).trim();
+    if (!title || !explanation) return [];
+    return [{ title, explanation, numbers: safeString(obj.numbers), category: typeof obj.category === 'string' ? obj.category.slice(0, 80) : null, severity: allowedSeverities.has(String(obj.severity)) ? obj.severity : 'INFO' }];
+  });
+}
 
 // Parse JSON bodies up to 25MB for image uploads
 app.use(express.json({ limit: '25mb' }));
@@ -30,8 +47,8 @@ function getGeminiClient(): GoogleGenAI | null {
 app.post('/api/gemini/analyze', async (req: Request, res: Response) => {
   try {
     const { prompt, monthKey } = req.body;
-    if (!prompt) {
-      return res.status(400).json({ error: 'Prompt is required' });
+    if (typeof prompt !== 'string' || !prompt.trim() || prompt.length > MAX_PROMPT_LENGTH) {
+      return res.status(400).json({ error: 'A valid prompt is required' });
     }
 
     const ai = getGeminiClient();
@@ -63,12 +80,12 @@ app.post('/api/gemini/analyze', async (req: Request, res: Response) => {
         timestamp: Date.now(),
         analyzedMonthKey: monthKey || '',
         isAiGenerated: true,
-        spendingOverview: parsed.spendingOverview || 'Spending analysis complete.',
-        historyContext: parsed.historyContext || '',
-        biggestChanges: parsed.biggestChanges || [],
-        unusualExpenses: parsed.unusualExpenses || [],
-        recurringSpending: parsed.recurringSpending || [],
-        areasToReview: parsed.areasToReview || [],
+        spendingOverview: safeString(parsed.spendingOverview, 'Spending analysis complete.'),
+        historyContext: safeString(parsed.historyContext),
+        biggestChanges: safeInsightArray(parsed.biggestChanges),
+        unusualExpenses: safeInsightArray(parsed.unusualExpenses),
+        recurringSpending: safeInsightArray(parsed.recurringSpending),
+        areasToReview: safeInsightArray(parsed.areasToReview),
       });
     } catch {
       return res.status(500).json({ error: 'Failed to parse Gemini response as JSON' });
@@ -85,8 +102,8 @@ app.post('/api/gemini/analyze', async (req: Request, res: Response) => {
 app.post('/api/gemini/explain-trends', async (req: Request, res: Response) => {
   try {
     const { prompt, periodLabel } = req.body;
-    if (!prompt) {
-      return res.status(400).json({ error: 'Prompt is required' });
+    if (typeof prompt !== 'string' || !prompt.trim() || prompt.length > MAX_PROMPT_LENGTH) {
+      return res.status(400).json({ error: 'A valid prompt is required' });
     }
 
     const ai = getGeminiClient();
@@ -117,10 +134,10 @@ app.post('/api/gemini/explain-trends', async (req: Request, res: Response) => {
       return res.json({
         timestamp: Date.now(),
         periodLabel: periodLabel || 'Selected Period',
-        summary: parsed.summary || 'Trend analysis complete.',
-        keyObservations: Array.isArray(parsed.keyObservations) ? parsed.keyObservations : [],
-        categoryHighlights: Array.isArray(parsed.categoryHighlights) ? parsed.categoryHighlights : [],
-        recommendation: parsed.recommendation || '',
+        summary: safeString(parsed.summary, 'Trend analysis complete.'),
+        keyObservations: Array.isArray(parsed.keyObservations) ? parsed.keyObservations.slice(0, 10).map((v: unknown) => safeString(v)).filter(Boolean) : [],
+        categoryHighlights: Array.isArray(parsed.categoryHighlights) ? parsed.categoryHighlights.slice(0, 10).map((v: unknown) => safeString(v)).filter(Boolean) : [],
+        recommendation: safeString(parsed.recommendation),
         isAiGenerated: true,
       });
     } catch {
@@ -138,8 +155,11 @@ app.post('/api/gemini/explain-trends', async (req: Request, res: Response) => {
 app.post('/api/gemini/scan-receipt', async (req: Request, res: Response) => {
   try {
     const { imageBase64, mimeType = 'image/jpeg' } = req.body;
-    if (!imageBase64) {
-      return res.status(400).json({ error: 'Image base64 data is required' });
+    if (typeof imageBase64 !== 'string' || !imageBase64 || imageBase64.length > MAX_IMAGE_BASE64_LENGTH) {
+      return res.status(400).json({ error: 'Valid image data is required' });
+    }
+    if (typeof mimeType !== 'string' || !/^image\/(jpeg|jpg|png|webp)$/i.test(mimeType)) {
+      return res.status(400).json({ error: 'Unsupported receipt image type' });
     }
 
     const ai = getGeminiClient();
@@ -216,12 +236,12 @@ Output pure JSON matching:
       }
 
       return res.json({
-        merchant: parsed.merchant || null,
-        totalAmount: typeof parsed.totalAmount === 'number' ? parsed.totalAmount : null,
+        merchant: typeof parsed.merchant === 'string' ? parsed.merchant.slice(0, 200) : null,
+        totalAmount: typeof parsed.totalAmount === 'number' && Number.isFinite(parsed.totalAmount) && parsed.totalAmount > 0 ? parsed.totalAmount : null,
         dateMillis,
         dateFormatted,
-        category: parsed.category || null,
-        items: itemsList,
+        category: typeof parsed.category === 'string' && allowedCategories.has(parsed.category) ? parsed.category : 'Other',
+        items: itemsList.slice(0, 50).map((item: unknown) => safeString(item, '').slice(0, 200)).filter(Boolean),
         notesSummary,
         isUncertain: !parsed.totalAmount || !parsed.merchant || !!parsed.uncertaintyReason,
         uncertaintyReason: parsed.uncertaintyReason || null,

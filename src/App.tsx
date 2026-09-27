@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { apiUrl, fetchWithTimeout } from './utils/api';
 import { Plus } from 'lucide-react';
 import { Expense, MonthlyBudget, Screen, ThemeMode, CategorySpend, AiAnalysisResult, Language } from './types';
 import {
   currentMonthYear,
   getDisplayName,
   getEndOfMonthTimestamp,
+  getDefaultTimestampForMonth,
   getMonthKey,
   getStartOfMonthTimestamp,
   nextMonth,
@@ -24,10 +26,7 @@ import { AddEditExpenseModal } from './components/AddEditExpenseModal';
 import { SetBudgetModal } from './components/SetBudgetModal';
 
 export const App: React.FC = () => {
-  // Initialize storage
-  useEffect(() => {
-    StorageManager.init();
-  }, []);
+  StorageManager.init();
 
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [currentMY, setCurrentMY] = useState(currentMonthYear());
@@ -65,20 +64,6 @@ export const App: React.FC = () => {
     setAiError(null);
     setAiNotice(null);
   }, [currentMY]);
-
-  // Live formatted current time for Android status header
-  const [currentTime, setCurrentTime] = useState(() => {
-    const d = new Date();
-    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  });
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const d = new Date();
-      setCurrentTime(d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }));
-    }, 15000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Handle Theme class on document.documentElement with system listener
   useEffect(() => {
@@ -276,6 +261,7 @@ export const App: React.FC = () => {
     setExpenses(StorageManager.getExpenses());
     setBudgets(StorageManager.getBudgets());
     setCurrencyCodeState(StorageManager.getCurrencyCode());
+    setThemeModeState(StorageManager.getThemeMode());
     setLanguageState(StorageManager.getLanguage());
     const cached = StorageManager.getCachedAnalysis(getMonthKey(currentMY));
     setAiResult(cached);
@@ -308,7 +294,7 @@ export const App: React.FC = () => {
     try {
       const prompt = analyzer.buildGeminiPrompt(summary, currencyCode);
 
-      const response = await fetch('/api/gemini/analyze', {
+      const response = await fetchWithTimeout(apiUrl('/api/gemini/analyze'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -341,39 +327,15 @@ export const App: React.FC = () => {
     }
   }, [expenses, monthlyExpenses, currentMY, currencyCode]);
 
-  return (
-    <div className="min-h-screen bg-slate-100 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 flex flex-col font-sans select-none antialiased transition-colors duration-200">
-      {/* App Lock Screen Overlay */}
-      {isLocked && (
-        <LockScreen
-          storedPin={StorageManager.getLockPin()}
-          language={language}
-          onUnlock={() => setIsLocked(false)}
-        />
-      )}
+  if (isLocked) {
+    return <LockScreen storedPin={StorageManager.getLockPin()} language={language} onUnlock={() => setIsLocked(false)} />;
+  }
 
+  return (
+    <div className="min-h-screen bg-slate-100 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 flex flex-col font-sans antialiased transition-colors duration-200">
       {/* Android Top Status Bar & App Header */}
       <header className="sticky top-0 z-40 bg-slate-100/95 dark:bg-[#0B0F19]/95 backdrop-blur-md pt-2 px-4 pb-2 transition-colors border-b border-slate-200/50 dark:border-slate-800/50">
         <div className="max-w-md mx-auto space-y-1.5">
-          {/* Status Bar Row (Always LTR for authentic mobile clock & battery orientation) */}
-          <div dir="ltr" className="flex items-center justify-between text-xs text-slate-700 dark:text-slate-300 font-semibold tracking-tight px-1">
-            <span>{currentTime}</span>
-            <div className="flex items-center space-x-2" aria-hidden="true">
-              {/* WiFi */}
-              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                <path d="M12 4C7.31 4 3.07 5.9 0 8.98L12 21 24 8.98A16.88 16.88 0 0 0 12 4z"/>
-              </svg>
-              {/* Signal */}
-              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                <path d="M2 22h20V2L2 22z"/>
-              </svg>
-              {/* Battery */}
-              <svg className="w-4 h-3.5 fill-current" viewBox="0 0 24 24">
-                <path d="M16 4h-2V2h-4v2H8C6.9 4 6 4.9 6 6v14c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2z"/>
-              </svg>
-            </div>
-          </div>
-
           {/* App Branding (Clean, language switcher moved to Settings) */}
           <div className="flex items-center justify-between pt-0.5">
             <div className="flex items-center space-x-2 rtl:space-x-reverse">
@@ -503,7 +465,7 @@ export const App: React.FC = () => {
         <AddEditExpenseModal
           isOpen={true}
           initialExpense={editingExpense}
-          defaultDate={Date.now()}
+          defaultDate={getDefaultTimestampForMonth(currentMY)}
           currencyCode={currencyCode}
           language={language}
           onSave={(amount, description, category, date, note) => {

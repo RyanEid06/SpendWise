@@ -185,7 +185,7 @@ export class SpendingAnalyzer {
           ((baseline.currentMonthTotal - baseline.previousMonthTotal) /
             baseline.previousMonthTotal) *
           100;
-        if (changePct > 20 && baseline.currentMonthTotal > 30) {
+        if (changePct > 20) {
           biggestChanges.push({
             title: `${baseline.category} Spending Increase`,
             explanation: `${baseline.category} spending increased by ${Math.round(
@@ -198,7 +198,7 @@ export class SpendingAnalyzer {
             category: baseline.category,
             severity: 'NOTABLE',
           });
-        } else if (changePct < -20 && baseline.previousMonthTotal > 30) {
+        } else if (changePct < -20) {
           biggestChanges.push({
             title: `${baseline.category} Spending Decrease`,
             explanation: `${baseline.category} spending decreased by ${Math.round(
@@ -221,7 +221,7 @@ export class SpendingAnalyzer {
         (b) => b.category.toLowerCase() === exp.category.toLowerCase()
       );
       const typical = baseline?.typicalTransactionMedian || 0;
-      if (typical > 0 && exp.amount >= typical * 2.2 && exp.amount > 40) {
+      if (typical > 0 && exp.amount >= typical * 2.2) {
         unusualExpenses.push({
           title: `Higher Than Typical ${exp.category} Purchase`,
           explanation: `Your ${formatCurrency(

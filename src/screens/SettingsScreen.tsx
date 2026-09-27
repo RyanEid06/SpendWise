@@ -58,6 +58,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
   const [showClearModal, setShowClearModal] = useState(false);
   const [pendingImportBackup, setPendingImportBackup] = useState<SpendWiseBackup | null>(null);
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
 
   const timeoutOptions = [
     { seconds: 0, label: t(currentLanguage, 'timeoutImmediate') },
@@ -116,17 +118,17 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMessage('Backup file is too large.');
+      e.target.value = '';
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
         const text = event.target?.result as string;
-        const parsed: SpendWiseBackup = JSON.parse(text);
-
-        if (!parsed.expenses || !parsed.monthlyBudgets) {
-          throw new Error('Missing recognized financial records in backup file.');
-        }
-
+        const parsed = StorageManager.validateBackup(JSON.parse(text));
         setPendingImportBackup(parsed);
         setErrorMessage(null);
       } catch {
@@ -258,7 +260,28 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         </div>
 
         {isAppLockEnabled && (
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-4">
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">{t(currentLanguage, 'changePinLabel')}</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <input type="password" inputMode="numeric" maxLength={8} value={newPin} onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))} placeholder={t(currentLanguage, 'newPinPlaceholder')} className="min-h-[44px] px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] text-sm text-slate-900 dark:text-white" />
+                <input type="password" inputMode="numeric" maxLength={8} value={confirmPin} onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))} placeholder={t(currentLanguage, 'confirmPinPlaceholder')} className="min-h-[44px] px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] text-sm text-slate-900 dark:text-white" />
+              </div>
+              <button type="button" onClick={() => {
+                if (!/^\d{4,8}$/.test(newPin) || newPin !== confirmPin) {
+                  setErrorMessage(t(currentLanguage, 'pinMismatch'));
+                  return;
+                }
+                StorageManager.setLockPin(newPin);
+                setNewPin('');
+                setConfirmPin('');
+                setErrorMessage(null);
+                setStatusMessage(t(currentLanguage, 'pinSaved'));
+              }} className="min-h-[44px] px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-extrabold">
+                {t(currentLanguage, 'savePinBtn')}
+              </button>
+            </div>
+            <div className="space-y-2">
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
               {t(currentLanguage, 'lockTimeoutLabel')}
             </label>
@@ -278,6 +301,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                   {lockTimeoutSeconds === opt.seconds && <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
                 </button>
               ))}
+            </div>
             </div>
           </div>
         )}
@@ -382,7 +406,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             return (
               <button
                 key={c.code}
-                onClick={() => onCurrencyChange(c.code)}
+                onClick={() => {
+                  if (totalExpensesCount > 0 && !isSelected) {
+                    setErrorMessage('Currency is locked once expenses exist so saved amounts are never relabeled incorrectly. Export and clear financial data first if you intentionally want a different base currency.');
+                    return;
+                  }
+                  onCurrencyChange(c.code);
+                }}
                 className={`w-full min-h-[48px] flex items-center justify-between p-3 rounded-2xl transition-all cursor-pointer ${
                   isSelected
                     ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-800/80'

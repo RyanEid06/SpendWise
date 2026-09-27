@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { apiUrl, fetchWithTimeout } from '../utils/api';
 import {
   BarChart3,
   Calendar,
@@ -81,7 +82,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
 
     try {
       const prompt = StatisticsEngine.buildTrendExplanationPrompt(stats, currencyCode);
-      const res = await fetch('/api/gemini/explain-trends', {
+      const res = await fetchWithTimeout(apiUrl('/api/gemini/explain-trends'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

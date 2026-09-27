@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Wallet, X } from 'lucide-react';
 import { Language } from '../types';
-import { getCurrency, formatCurrency } from '../utils/currency';
+import { getCurrency } from '../utils/currency';
 import { t } from '../utils/translations';
 
 interface SetBudgetModalProps {
@@ -26,7 +26,6 @@ export const SetBudgetModal: React.FC<SetBudgetModalProps> = ({
   if (!isOpen) return null;
 
   const currency = getCurrency(currencyCode);
-  const quickAmounts = [500, 1000, 1500, 2000, 3000, 5000];
 
   const [amountText, setAmountText] = useState(
     currentStartingAmount > 0 ? currentStartingAmount.toString() : ''
@@ -101,26 +100,6 @@ export const SetBudgetModal: React.FC<SetBudgetModalProps> = ({
             {error && <p className="text-xs text-rose-500 dark:text-rose-400 mt-1 font-medium">{error}</p>}
           </div>
 
-          <div>
-            <span className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">
-              {t(language, 'quickPresetsLabel')}
-            </span>
-            <div className="flex flex-wrap gap-2">
-              {quickAmounts.map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => {
-                    setAmountText(preset.toString());
-                    setError(null);
-                  }}
-                  className="min-h-[44px] px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:border-emerald-400 dark:hover:border-emerald-600/60 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors cursor-pointer active:scale-95"
-                >
-                  {formatCurrency(preset, currencyCode)}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
         <div className="p-4 bg-slate-50 dark:bg-[#0B0F19]/60 border-t border-slate-200/80 dark:border-slate-800/80 flex items-center justify-end space-x-3 rtl:space-x-reverse">

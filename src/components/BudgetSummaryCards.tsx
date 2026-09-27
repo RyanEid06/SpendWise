@@ -28,7 +28,7 @@ export const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
   onSetBudgetClick,
 }) => {
   const isOverBudget = isBudgetSet && remainingMoney < 0;
-  const percentUsed = Math.min(100, Math.round(progress * 100));
+  const percentUsed = Math.max(0, Math.round(progress * 100));
   const percentLeft = Math.max(0, Math.round((1 - Math.min(1, progress)) * 100));
 
   return (
@@ -115,7 +115,7 @@ export const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
             <div
               className="w-full bg-slate-200 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden"
               role="progressbar"
-              aria-valuenow={percentUsed}
+              aria-valuenow={Math.min(100, percentUsed)}
               aria-valuemin={0}
               aria-valuemax={100}
               aria-label="Monthly budget usage progress"

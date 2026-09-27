@@ -91,3 +91,10 @@ export function fromInputDateFormat(dateStr: string): number {
   const [year, month, day] = dateStr.split('-').map(Number);
   return new Date(year, month - 1, day, 12, 0, 0).getTime();
 }
+
+export function getDefaultTimestampForMonth(my: MonthYear): number {
+  const today = new Date();
+  if (today.getFullYear() === my.year && today.getMonth() + 1 === my.month) return Date.now();
+  const lastDay = new Date(my.year, my.month, 0).getDate();
+  return new Date(my.year, my.month - 1, Math.min(today.getDate(), lastDay), 12, 0, 0, 0).getTime();
+}

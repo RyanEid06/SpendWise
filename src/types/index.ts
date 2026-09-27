@@ -81,6 +81,7 @@ export interface ReceiptScanResult {
 
 export interface BackupMetadata {
   appVersion: string;
+  schemaVersion?: number;
   exportedAt: number;
   exportedAtFormatted: string;
   totalExpenses: number;
@@ -90,6 +91,7 @@ export interface BackupMetadata {
 export interface BackupSettings {
   currencyCode: string;
   themeMode: string;
+  language?: Language;
 }
 
 export interface ExpenseBackupItem {

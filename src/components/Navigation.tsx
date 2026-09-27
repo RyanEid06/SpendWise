@@ -20,7 +20,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentScreen, language,
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#0B0F19]/95 backdrop-blur-md border-t border-slate-200/90 dark:border-slate-800/80 pb-safe transition-colors"
+      className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#0B0F19]/95 backdrop-blur-md border-t border-slate-200/90 dark:border-slate-800/80 transition-colors" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       role="tablist"
       aria-label="Main Navigation"
     >
@@ -59,8 +59,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentScreen, language,
           );
         })}
       </div>
-      {/* Android bottom gesture pill */}
-      <div className="w-32 h-1 bg-slate-300 dark:bg-slate-700/60 rounded-full mx-auto mb-1.5 mt-0.5"></div>
+
     </nav>
   );
 };
