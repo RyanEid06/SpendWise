@@ -7,7 +7,7 @@ import {
   SpendWiseBackup,
   ThemeMode,
 } from '../types';
-import { currentMonthYear, formatDate, getMonthKey, MonthYear, previousMonth } from './date';
+import { currentMonthYear, formatDate, getMonthKey, MonthYear, previousMonth, toInputDateFormat } from './date';
 import { DEFAULT_CURRENCY_CODE, SUPPORTED_CURRENCIES } from './currency';
 import { APP_VERSION_NAME } from './appVersion';
 
@@ -204,24 +204,104 @@ export class StorageManager {
   }
 
   static validateBackup(input: unknown): SpendWiseBackup {
-    if (!input || typeof input !== 'object') throw new Error('Backup must be a JSON object.');
+    if (!input || typeof input !== 'object' || Array.isArray(input)) {
+      throw new Error('Backup must be a JSON object.');
+    }
+
     const backup = input as SpendWiseBackup;
-    if (!Array.isArray(backup.expenses) || !Array.isArray(backup.monthlyBudgets)) throw new Error('Backup is missing financial records.');
-    if (backup.metadata?.schemaVersion != null && backup.metadata.schemaVersion !== 1) throw new Error('Unsupported backup schema version.');
+    if (!backup.metadata || typeof backup.metadata !== 'object') {
+      throw new Error('Backup metadata is missing.');
+    }
+    if (!backup.settings || typeof backup.settings !== 'object') {
+      throw new Error('Backup settings are missing.');
+    }
+    if (!Array.isArray(backup.expenses) || !Array.isArray(backup.monthlyBudgets)) {
+      throw new Error('Backup is missing financial records.');
+    }
+
+    const metadata = backup.metadata;
+    if (metadata.schemaVersion !== 1) {
+      throw new Error('Unsupported backup schema version.');
+    }
+    if (typeof metadata.appVersion !== 'string' || !metadata.appVersion.trim()) {
+      throw new Error('Backup app version is missing.');
+    }
+    if (!Number.isFinite(metadata.exportedAt) || metadata.exportedAt <= 0) {
+      throw new Error('Backup export timestamp is invalid.');
+    }
+    if (typeof metadata.exportedAtFormatted !== 'string' || !metadata.exportedAtFormatted.trim()) {
+      throw new Error('Backup export date is invalid.');
+    }
+    if (
+      !Number.isInteger(metadata.totalExpenses) ||
+      metadata.totalExpenses < 0 ||
+      !Number.isInteger(metadata.totalBudgets) ||
+      metadata.totalBudgets < 0
+    ) {
+      throw new Error('Backup record counts are invalid.');
+    }
+    if (
+      metadata.totalExpenses !== backup.expenses.length ||
+      metadata.totalBudgets !== backup.monthlyBudgets.length
+    ) {
+      throw new Error('Backup record counts do not match its contents.');
+    }
+
+    const currency = backup.settings.currencyCode;
+    if (
+      typeof currency !== 'string' ||
+      !SUPPORTED_CURRENCIES.some((c) => c.code === currency)
+    ) {
+      throw new Error('Backup uses an unsupported currency.');
+    }
+    if (!['SYSTEM', 'LIGHT', 'DARK'].includes(backup.settings.themeMode)) {
+      throw new Error('Backup contains an invalid theme.');
+    }
+    if (!['en', 'fr', 'ar'].includes(backup.settings.language)) {
+      throw new Error('Backup contains an invalid language.');
+    }
+
+    const expenseIds = new Set<number>();
     for (const e of backup.expenses) {
-      if (!Number.isInteger(e.id) || e.id < 0 || !Number.isFinite(e.amount) || e.amount <= 0 || typeof e.description !== 'string' || !e.description.trim() || typeof e.category !== 'string' || !e.category.trim() || !Number.isFinite(e.date) || !Number.isFinite(e.createdAt)) throw new Error('Backup contains an invalid expense.');
+      if (
+        !Number.isInteger(e.id) ||
+        e.id <= 0 ||
+        expenseIds.has(e.id) ||
+        !Number.isFinite(e.amount) ||
+        e.amount <= 0 ||
+        typeof e.description !== 'string' ||
+        !e.description.trim() ||
+        typeof e.category !== 'string' ||
+        !e.category.trim() ||
+        !Number.isFinite(e.date) ||
+        e.date <= 0 ||
+        !Number.isFinite(e.createdAt) ||
+        e.createdAt <= 0 ||
+        (e.note !== undefined && e.note !== null && typeof e.note !== 'string')
+      ) {
+        throw new Error('Backup contains an invalid or duplicate expense.');
+      }
+      expenseIds.add(e.id);
     }
+
+    const budgetMonths = new Set<string>();
     for (const b of backup.monthlyBudgets) {
-      if (!/^\d{4}-\d{2}$/.test(b.monthKey) || !Number.isFinite(b.startingAmount) || b.startingAmount <= 0 || !Number.isFinite(b.updatedAt)) throw new Error('Backup contains an invalid monthly budget.');
+      if (
+        !/^\d{4}-(0[1-9]|1[0-2])$/.test(b.monthKey) ||
+        budgetMonths.has(b.monthKey) ||
+        !Number.isFinite(b.startingAmount) ||
+        b.startingAmount <= 0 ||
+        !Number.isFinite(b.updatedAt) ||
+        b.updatedAt <= 0
+      ) {
+        throw new Error('Backup contains an invalid or duplicate monthly budget.');
+      }
+      budgetMonths.add(b.monthKey);
     }
-    const currency = backup.settings?.currencyCode;
-    if (currency && !SUPPORTED_CURRENCIES.some((c) => c.code === currency)) throw new Error('Backup uses an unsupported currency.');
-    if (backup.settings?.themeMode && !['SYSTEM', 'LIGHT', 'DARK'].includes(backup.settings.themeMode)) throw new Error('Backup contains an invalid theme.');
-    if (backup.settings?.language && !['en', 'fr', 'ar'].includes(backup.settings.language)) throw new Error('Backup contains an invalid language.');
+
     return backup;
   }
-
-  // Generate full SpendWise v2.0 backup JSON
+  // Generate full SpendWise backup JSON
   static createBackupJson(): SpendWiseBackup {
     const expenses = this.getExpenses();
     const budgets = this.getBudgets();
@@ -262,23 +342,24 @@ export class StorageManager {
     };
   }
 
-  // Generate CSV export
+  // Generate UTF-8 CSV export. The BOM helps Excel recognize Arabic/French
+  // text correctly, while CRLF keeps the file friendly to Windows tools.
   static createCsvExport(): string {
     const expenses = this.getExpenses();
     const currencyCode = this.getCurrencyCode();
 
     const lines: string[] = ['ID,Date,Description,Category,Amount,Currency,Note,Created_At'];
     for (const e of expenses) {
-      const dateFmt = formatDate(e.date);
+      const dateFmt = toInputDateFormat(e.date);
       const desc = escapeCsv(e.description);
       const cat = escapeCsv(e.category);
       const note = escapeCsv(e.note || '');
-      const line = `${e.id},"${dateFmt}",${desc},${cat},${e.amount.toFixed(2)},${currencyCode},${note},${e.createdAt}`;
+      const line = `${e.id},${dateFmt},${desc},${cat},${e.amount.toFixed(2)},${currencyCode},${note},${e.createdAt}`;
       lines.push(line);
     }
-    return lines.join('\n');
-  }
 
+    return '\uFEFF' + lines.join('\r\n');
+  }
   // Restore or merge a fully validated backup. Target state is built before mutation,
   // and current state is restored if a write fails.
   static restoreBackup(input: SpendWiseBackup, replaceExisting: boolean): ImportSummary {
@@ -288,36 +369,94 @@ export class StorageManager {
     const oldCurrency = this.getCurrencyCode();
     const oldTheme = this.getThemeMode();
     const oldLanguage = this.getLanguage();
+
+    const currentHasFinancialData = oldExpenses.length > 0 || oldBudgets.length > 0;
+    const backupHasFinancialData =
+      backup.expenses.length > 0 || backup.monthlyBudgets.length > 0;
+
+    if (
+      !replaceExisting &&
+      currentHasFinancialData &&
+      backupHasFinancialData &&
+      backup.settings.currencyCode !== oldCurrency
+    ) {
+      throw new Error('BACKUP_CURRENCY_MISMATCH');
+    }
+
     const currentExpenses = replaceExisting ? [] : oldExpenses;
     let maxId = currentExpenses.reduce((max, e) => Math.max(max, e.id || 0), 0);
 
-    const isDuplicate = (incoming: SpendWiseBackup['expenses'][number], existing: Expense[]) => existing.some((e) =>
-      (incoming.createdAt === e.createdAt && Math.abs(incoming.amount - e.amount) < 0.001) ||
-      (incoming.date === e.date && Math.abs(incoming.amount - e.amount) < 0.001 && e.description.trim().toLowerCase() === incoming.description.trim().toLowerCase() && e.category.trim().toLowerCase() === incoming.category.trim().toLowerCase())
-    );
+    const isDuplicate = (
+      incoming: SpendWiseBackup['expenses'][number],
+      existing: Expense[]
+    ) =>
+      existing.some(
+        (e) =>
+          (incoming.createdAt === e.createdAt &&
+            Math.abs(incoming.amount - e.amount) < 0.001) ||
+          (incoming.date === e.date &&
+            Math.abs(incoming.amount - e.amount) < 0.001 &&
+            e.description.trim().toLowerCase() === incoming.description.trim().toLowerCase() &&
+            e.category.trim().toLowerCase() === incoming.category.trim().toLowerCase())
+      );
 
     const importedExpenses: Expense[] = [];
+    const knownExpenses = [...currentExpenses];
+
     for (const item of backup.expenses) {
-      if (!replaceExisting && isDuplicate(item, currentExpenses)) continue;
-      importedExpenses.push({ id: replaceExisting ? item.id : ++maxId, amount: item.amount, description: item.description.trim(), category: item.category.trim(), date: item.date, note: item.note?.trim() || null, createdAt: item.createdAt });
+      if (!replaceExisting && isDuplicate(item, knownExpenses)) continue;
+
+      const imported: Expense = {
+        id: replaceExisting ? item.id : ++maxId,
+        amount: item.amount,
+        description: item.description.trim(),
+        category: item.category.trim(),
+        date: item.date,
+        note: item.note?.trim() || null,
+        createdAt: item.createdAt,
+      };
+
+      importedExpenses.push(imported);
+      knownExpenses.push(imported);
     }
-    const nextExpenses = replaceExisting ? importedExpenses : [...importedExpenses, ...currentExpenses];
+
+    const nextExpenses = replaceExisting
+      ? importedExpenses
+      : [...importedExpenses, ...currentExpenses];
 
     const budgetMap = new Map<string, MonthlyBudget>();
-    if (!replaceExisting) oldBudgets.forEach((b) => budgetMap.set(b.monthKey, b));
+    if (!replaceExisting) {
+      oldBudgets.forEach((b) => budgetMap.set(b.monthKey, b));
+    }
+
     let budgetsImported = 0;
     for (const item of backup.monthlyBudgets) {
       if (!replaceExisting && budgetMap.has(item.monthKey)) continue;
-      budgetMap.set(item.monthKey, { monthKey: item.monthKey, startingAmount: item.startingAmount, updatedAt: item.updatedAt });
+      budgetMap.set(item.monthKey, {
+        monthKey: item.monthKey,
+        startingAmount: item.startingAmount,
+        updatedAt: item.updatedAt,
+      });
       budgetsImported++;
     }
+
+    // Merging into an empty financial store may safely adopt the backup currency.
+    // Merging into existing data preserves every current setting.
+    const adoptBackupCurrency =
+      replaceExisting || (!currentHasFinancialData && backupHasFinancialData);
 
     try {
       this.saveExpenses(nextExpenses);
       this.saveBudgets(Array.from(budgetMap.values()));
-      if (backup.settings?.currencyCode) this.setCurrencyCode(backup.settings.currencyCode);
-      if (backup.settings?.themeMode) this.setThemeMode(backup.settings.themeMode as ThemeMode);
-      if (backup.settings?.language) this.setLanguage(backup.settings.language as Language);
+
+      if (adoptBackupCurrency) {
+        this.setCurrencyCode(backup.settings.currencyCode);
+      }
+      if (replaceExisting) {
+        this.setThemeMode(backup.settings.themeMode as ThemeMode);
+        this.setLanguage(backup.settings.language as Language);
+      }
+
       this.clearAnalysisCache();
     } catch (error) {
       this.saveExpenses(oldExpenses);
@@ -328,13 +467,17 @@ export class StorageManager {
       throw error;
     }
 
-    return { expensesImported: importedExpenses.length, budgetsImported, currencyUpdated: backup.settings?.currencyCode || null, wasReplaced: replaceExisting };
+    return {
+      expensesImported: importedExpenses.length,
+      budgetsImported,
+      currencyUpdated: adoptBackupCurrency ? backup.settings.currencyCode : null,
+      wasReplaced: replaceExisting,
+    };
   }
 
 }
-
 function escapeCsv(field: string): string {
-  if (field.includes(',') || field.includes('"') || field.includes('\n')) {
+  if (field.includes(',') || field.includes('"') || field.includes('\n') || field.includes('\r')) {
     return `"${field.replace(/"/g, '""')}"`;
   }
   return field;

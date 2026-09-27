@@ -21,6 +21,7 @@ import { ConfirmationModal } from '../components/ConfirmationModal';
 import { ImportPreviewModal } from '../components/ImportPreviewModal';
 import { t } from '../utils/translations';
 import { APP_VERSION_CODE, APP_VERSION_NAME } from '../utils/appVersion';
+import { exportTextFile } from '../utils/fileExport';
 
 interface SettingsScreenProps {
   currentCurrencyCode: string;
@@ -77,17 +78,16 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   ];
 
   // Export JSON handler
-  const handleExportJson = () => {
+  const handleExportJson = async () => {
     try {
       const backup = StorageManager.createBackupJson();
-      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
       const dateStamp = new Date().toISOString().split('T')[0];
-      a.href = url;
-      a.download = `spendwise_backup_${dateStamp}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+      await exportTextFile({
+        fileName: `spendwise_backup_${dateStamp}.json`,
+        content: JSON.stringify(backup, null, 2),
+        mimeType: 'application/json',
+        shareTitle: t(currentLanguage, 'createBackupBtn'),
+      });
       setStatusMessage(
         `${t(currentLanguage, 'createBackupBtn')}: ${backup.metadata.totalExpenses} / ${backup.metadata.totalBudgets}`
       );
@@ -98,24 +98,21 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   };
 
   // Export CSV handler
-  const handleExportCsv = () => {
+  const handleExportCsv = async () => {
     try {
-      const csv = StorageManager.createCsvExport();
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
       const dateStamp = new Date().toISOString().split('T')[0];
-      a.href = url;
-      a.download = `spendwise_expenses_${dateStamp}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
+      await exportTextFile({
+        fileName: `spendwise_expenses_${dateStamp}.csv`,
+        content: StorageManager.createCsvExport(),
+        mimeType: 'text/csv',
+        shareTitle: t(currentLanguage, 'exportCsvBtn'),
+      });
       setStatusMessage(t(currentLanguage, 'exportCsvBtn'));
       setErrorMessage(null);
     } catch {
       setErrorMessage('CSV Export failed.');
     }
   };
-
   // Import JSON file reader
   const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -152,11 +149,17 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           ? `${t(currentLanguage, 'replaceRestoreBtn')}: ${summary.expensesImported}`
           : `${t(currentLanguage, 'mergeImportBtn')}: ${summary.expensesImported}`
       );
-    } catch {
-      setErrorMessage('Import failed.');
+      setErrorMessage(null);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'BACKUP_CURRENCY_MISMATCH') {
+        setErrorMessage(
+          'This backup uses a different currency. Merge is blocked to prevent amounts from being relabeled incorrectly. Use Replace only if you intend to restore the backup currency and all backup data.'
+        );
+      } else {
+        setErrorMessage('Import failed.');
+      }
     }
   };
-
   return (
     <div className="space-y-4 pb-28 animate-screen-enter">
       {/* Title Header */}
