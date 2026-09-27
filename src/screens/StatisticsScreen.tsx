@@ -128,7 +128,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
             {t(language, 'statsTitle')}
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            {t(language, 'statsSub')}
+            {t(language, 'statsSub')} Â· {getLocalizedMonthName(currentMonthYear, language)} Â· {getLocalizedMonthName(currentMonthYear, language)}
           </p>
         </div>
       </div>
@@ -318,7 +318,9 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
         ) : (
           <div className="space-y-3 pt-1">
             {stats.monthlyStats.map((item) => {
-              const heightPercent = Math.min(100, Math.max(8, (item.totalSpent / maxMonthSpent) * 100));
+              const heightPercent = item.totalSpent === 0
+                ? 0
+                : Math.min(100, Math.max(2, (item.totalSpent / maxMonthSpent) * 100));
               const isRemainingNegative = item.isBudgetSet && item.remainingMoney < 0;
 
               // Parse year and month from monthKey "YYYY-MM"
@@ -330,7 +332,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center space-x-2 rtl:space-x-reverse">
                       <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                      <span className="font-bold text-slate-900 dark:text-white">{localizedMonthName}</span>
+                      <span className="font-bold text-slate-900 dark:text-white">{localizedMonthName}{item.isPartialMonth && <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400"> Â· {t(language, 'partialMonthLabel')}</span>}</span>
                     </div>
                     <span className="font-extrabold tabular-nums text-sm text-slate-900 dark:text-white">
                       {formatCurrency(item.totalSpent, currencyCode)}
@@ -402,7 +404,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                 <div
                   key={item.category}
                   style={{
-                    width: `${Math.max(1.5, item.percentage)}%`,
+                    width: `${Math.min(100, Math.max(0, item.percentage))}%`,
                     backgroundColor: item.color,
                   }}
                   className="h-full transition-all duration-300"

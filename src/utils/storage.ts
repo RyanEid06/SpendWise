@@ -32,6 +32,14 @@ export class StorageManager {
     if (localStorage.getItem(STORAGE_KEYS.CURRENCY) === null) localStorage.setItem(STORAGE_KEYS.CURRENCY, DEFAULT_CURRENCY_CODE);
     if (localStorage.getItem(STORAGE_KEYS.THEME) === null) localStorage.setItem(STORAGE_KEYS.THEME, 'SYSTEM');
     if (localStorage.getItem(STORAGE_KEYS.LANGUAGE) === null) localStorage.setItem(STORAGE_KEYS.LANGUAGE, 'en');
+
+    // Never leave an upgraded installation locked behind the old implicit 1234 fallback.
+    // A lock is valid only when a real 4-8 digit PIN has explicitly been saved.
+    const storedPin = localStorage.getItem(STORAGE_KEYS.LOCK_PIN) || '';
+    if (localStorage.getItem(STORAGE_KEYS.APP_LOCK) === 'true' && !/^\d{4,8}$/.test(storedPin)) {
+      localStorage.setItem(STORAGE_KEYS.APP_LOCK, 'false');
+    }
+
     localStorage.setItem(STORAGE_KEYS.INITIALIZED, 'true');
   }
 
@@ -172,10 +180,17 @@ export class StorageManager {
   }
 
   static getLockPin(): string {
-    return localStorage.getItem(STORAGE_KEYS.LOCK_PIN) || '1234';
+    return localStorage.getItem(STORAGE_KEYS.LOCK_PIN) || '';
+  }
+
+  static hasLockPin(): boolean {
+    return /^\d{4,8}$/.test(this.getLockPin());
   }
 
   static setLockPin(pin: string) {
+    if (!/^\d{4,8}$/.test(pin)) {
+      throw new Error('PIN must contain 4-8 digits.');
+    }
     localStorage.setItem(STORAGE_KEYS.LOCK_PIN, pin);
   }
 

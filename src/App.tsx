@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { App as CapacitorApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 import { apiFetch } from './utils/api';
 import { Plus } from 'lucide-react';
 import { Expense, MonthlyBudget, Screen, ThemeMode, CategorySpend, AiAnalysisResult, Language } from './types';
@@ -41,7 +43,9 @@ export const App: React.FC = () => {
   // App Lock states
   const [appLockEnabled, setAppLockEnabledState] = useState<boolean>(() => StorageManager.isAppLockEnabled());
   const [lockTimeoutSeconds, setLockTimeoutSecondsState] = useState<number>(() => StorageManager.getLockTimeoutSeconds());
-  const [isLocked, setIsLocked] = useState<boolean>(() => StorageManager.isAppLockEnabled());
+  const [isLocked, setIsLocked] = useState<boolean>(() =>
+    StorageManager.isAppLockEnabled() && StorageManager.hasLockPin()
+  );
 
   // Modal dialog states
   const [showAddModal, setShowAddModal] = useState(false);
@@ -101,27 +105,95 @@ export const App: React.FC = () => {
     }
   }, [language]);
 
-  // Lock timeout on visibilitychange (when tab loses focus and returns)
+  // Lock timeout uses the native Capacitor lifecycle on Android and falls back
+  // to document visibility in the browser.
   useEffect(() => {
-    if (!appLockEnabled) return;
-    let lastBlurTime = 0;
+    if (!appLockEnabled || !StorageManager.hasLockPin()) return;
+
+    let backgroundedAt = 0;
+    let disposed = false;
+    let removeNativeListener: (() => Promise<void>) | null = null;
+
+    const applyResumeLock = () => {
+      if (backgroundedAt <= 0) return;
+      const elapsedSec = (Date.now() - backgroundedAt) / 1000;
+      if (elapsedSec >= lockTimeoutSeconds) {
+        setIsLocked(true);
+      }
+      backgroundedAt = 0;
+    };
+
+    if (Capacitor.isNativePlatform()) {
+      void CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+        if (!isActive) {
+          backgroundedAt = Date.now();
+        } else {
+          applyResumeLock();
+        }
+      }).then((handle) => {
+        if (disposed) {
+          void handle.remove();
+        } else {
+          removeNativeListener = () => handle.remove();
+        }
+      });
+
+      return () => {
+        disposed = true;
+        if (removeNativeListener) void removeNativeListener();
+      };
+    }
 
     const handleVisibility = () => {
       if (document.hidden) {
-        lastBlurTime = Date.now();
+        backgroundedAt = Date.now();
       } else {
-        if (lastBlurTime > 0) {
-          const elapsedSec = (Date.now() - lastBlurTime) / 1000;
-          if (elapsedSec >= lockTimeoutSeconds) {
-            setIsLocked(true);
-          }
-        }
+        applyResumeLock();
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [appLockEnabled, lockTimeoutSeconds]);
+
+  // Android Back: close app-level dialogs first, then return to Home, then exit.
+  useEffect(() => {
+    if (Capacitor.getPlatform() !== 'android') return;
+
+    let disposed = false;
+    let removeBackListener: (() => Promise<void>) | null = null;
+
+    void CapacitorApp.addListener('backButton', () => {
+      if (showAddModal || editingExpense !== null) {
+        setShowAddModal(false);
+        setEditingExpense(null);
+        return;
+      }
+
+      if (showBudgetModal) {
+        setShowBudgetModal(false);
+        return;
+      }
+
+      if (currentScreen !== 'home') {
+        setCurrentScreen('home');
+        return;
+      }
+
+      void CapacitorApp.exitApp();
+    }).then((handle) => {
+      if (disposed) {
+        void handle.remove();
+      } else {
+        removeBackListener = () => handle.remove();
+      }
+    });
+
+    return () => {
+      disposed = true;
+      if (removeBackListener) void removeBackListener();
+    };
+  }, [currentScreen, showAddModal, editingExpense, showBudgetModal]);
 
   // Filter expenses for current month
   const monthlyExpenses = useMemo(() => {
@@ -242,6 +314,8 @@ export const App: React.FC = () => {
   };
 
   const handleAppLockToggle = (enabled: boolean) => {
+    if (enabled && !StorageManager.hasLockPin()) return;
+
     StorageManager.setAppLockEnabled(enabled);
     setAppLockEnabledState(enabled);
     if (!enabled) {
@@ -340,7 +414,7 @@ export const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 flex flex-col font-sans antialiased transition-colors duration-200">
       {/* Android Top Status Bar & App Header */}
-      <header className="sticky top-0 z-40 bg-slate-100/95 dark:bg-[#0B0F19]/95 backdrop-blur-md pt-2 px-4 pb-2 transition-colors border-b border-slate-200/50 dark:border-slate-800/50">
+      <header className="sticky top-0 z-40 bg-slate-100/95 dark:bg-[#0B0F19]/95 backdrop-blur-md px-4 pb-2 transition-colors border-b border-slate-200/50 dark:border-slate-800/50" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)' }}>
         <div className="max-w-md mx-auto space-y-1.5">
           {/* App Branding (Clean, language switcher moved to Settings) */}
           <div className="flex items-center justify-between pt-0.5">
@@ -357,7 +431,7 @@ export const App: React.FC = () => {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-md w-full mx-auto px-4 pt-1 pb-36">
+      <main className="flex-1 max-w-md w-full mx-auto px-4 pt-1" style={{ paddingBottom: 'calc(9rem + env(safe-area-inset-bottom, 0px))' }}>
         {currentScreen === 'home' && (
           <DashboardScreen
             currentMonthYear={currentMY}
@@ -456,7 +530,7 @@ export const App: React.FC = () => {
             setEditingExpense(null);
             setShowAddModal(true);
           }}
-          className="fixed bottom-20 right-4 rtl:right-auto rtl:left-4 z-30 min-w-[52px] min-h-[52px] w-13 h-13 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-lg shadow-emerald-500/30 flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
+          className="fixed right-4 rtl:right-auto rtl:left-4 z-30 min-w-[52px] min-h-[52px] w-13 h-13 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-lg shadow-emerald-500/30 flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer" style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}
           aria-label={language === 'ar' ? 'إضافة مصروف' : language === 'fr' ? 'Ajouter une dépense' : 'Add Expense'}
         >
           <Plus className="w-6 h-6 stroke-[2.75]" />

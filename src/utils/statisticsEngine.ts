@@ -13,6 +13,7 @@ import {
   getMonthYearFromTimestamp,
   parseMonthKey,
   previousMonth,
+  currentMonthYear,
 } from './date';
 import { getCategoryInfo } from './categories';
 import { formatCurrency } from './currency';
@@ -21,7 +22,7 @@ export class StatisticsEngine {
   /**
    * Determine the list of target month keys based on selected period
    */
-  static getMonthKeysForPeriod(period: TimePeriod, anchorMonth: MonthYear, allExpenses: Expense[]): string[] {
+  static getMonthKeysForPeriod(period: TimePeriod, anchorMonth: MonthYear, allExpenses: Expense[], budgets: MonthlyBudget[]): string[] {
     const anchorKey = getMonthKey(anchorMonth);
 
     if (period === 'CURRENT_MONTH') {
@@ -39,6 +40,9 @@ export class StatisticsEngine {
       allKeys.add(anchorKey);
       for (const e of allExpenses) {
         allKeys.add(getMonthKey(getMonthYearFromTimestamp(e.date)));
+      }
+      for (const b of budgets) {
+        allKeys.add(b.monthKey);
       }
       return Array.from(allKeys).sort();
     }
@@ -62,8 +66,9 @@ export class StatisticsEngine {
     period: TimePeriod,
     anchorMonth: MonthYear
   ): StatisticsOverview {
-    const monthKeys = this.getMonthKeysForPeriod(period, anchorMonth, allExpenses);
+    const monthKeys = this.getMonthKeysForPeriod(period, anchorMonth, allExpenses, budgets);
     const monthKeySet = new Set(monthKeys);
+    const currentCalendarKey = getMonthKey(currentMonthYear());
 
     // Filter expenses within selected period
     const filteredExpenses = allExpenses.filter((e) => {
@@ -111,6 +116,7 @@ export class StatisticsEngine {
         isBudgetSet,
         remainingMoney,
         transactionCount: monthExpenses.length,
+        isPartialMonth: k === currentCalendarKey,
         largestExpense,
       };
     });
@@ -176,19 +182,19 @@ export class StatisticsEngine {
           };
         });
 
-        // Determine trend direction
+        // Compare the two most recent complete months. The live current month is
+        // intentionally excluded so an incomplete month is not labeled as a drop.
         let trendDirection: 'UP' | 'DOWN' | 'STABLE' = 'STABLE';
         let trendPercent = 0;
-        if (monthlyData.length >= 2) {
-          const firstNonZero = monthlyData.find((m) => m.amount > 0)?.amount || 0;
-          const last = monthlyData[monthlyData.length - 1].amount;
-          if (firstNonZero > 0) {
-            trendPercent = ((last - firstNonZero) / firstNonZero) * 100;
+        const completeMonths = monthlyData.filter((m) => m.monthKey !== currentCalendarKey);
+        if (completeMonths.length >= 2) {
+          const previous = completeMonths[completeMonths.length - 2].amount;
+          const latest = completeMonths[completeMonths.length - 1].amount;
+
+          if (previous > 0) {
+            trendPercent = ((latest - previous) / previous) * 100;
             if (trendPercent > 10) trendDirection = 'UP';
             else if (trendPercent < -10) trendDirection = 'DOWN';
-          } else if (last > 0) {
-            trendDirection = 'UP';
-            trendPercent = 100;
           }
         }
 

@@ -9,6 +9,7 @@ on:
       - wp1/release-updates
       - wp2/native-backup-export
       - wp3/gemini-backend
+      - wp4/android-financial-ux
     tags:
       - 'v*'
 

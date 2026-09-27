@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, Fingerprint } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { Language } from '../types';
 import { t } from '../utils/translations';
 
@@ -15,7 +15,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({ storedPin, language, onU
 
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (pin.length > 0 && pin === storedPin) {
+    if (/^\d{4,8}$/.test(pin) && pin === storedPin) {
       onUnlock();
     } else {
       setError(t(language, 'pinError'));
@@ -42,12 +42,13 @@ export const LockScreen: React.FC<LockScreenProps> = ({ storedPin, language, onU
           <div className="space-y-2">
             <input
               type="password"
+              inputMode="numeric"
               maxLength={8}
               autoFocus
               placeholder={t(language, 'enterPinPlaceholder')}
               value={pin}
               onChange={(e) => {
-                setPin(e.target.value);
+                setPin(e.target.value.replace(/\D/g, ''));
                 setError(null);
               }}
               className="w-full text-center tracking-widest text-lg font-bold py-3.5 px-4 rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-400 placeholder:text-xs placeholder:tracking-normal focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-inner"
@@ -57,9 +58,8 @@ export const LockScreen: React.FC<LockScreenProps> = ({ storedPin, language, onU
 
           <button
             type="submit"
-            className="w-full min-h-[48px] flex items-center justify-center space-x-2 rtl:space-x-reverse py-3.5 px-4 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold text-sm shadow-sm transition-all cursor-pointer active:scale-95"
+            className="w-full min-h-[48px] flex items-center justify-center py-3.5 px-4 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold text-sm shadow-sm transition-all cursor-pointer active:scale-95"
           >
-            <Fingerprint className="w-5 h-5" />
             <span>{t(language, 'unlockBtn')}</span>
           </button>
         </form>

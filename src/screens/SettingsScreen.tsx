@@ -63,6 +63,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [pendingImportBackup, setPendingImportBackup] = useState<SpendWiseBackup | null>(null);
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
+  const hasSavedPin = StorageManager.hasLockPin();
 
   const timeoutOptions = [
     { seconds: 0, label: t(currentLanguage, 'timeoutImmediate') },
@@ -256,7 +257,15 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             <input
               type="checkbox"
               checked={isAppLockEnabled}
-              onChange={(e) => onAppLockToggle(e.target.checked)}
+              onChange={(e) => {
+                const enabled = e.target.checked;
+                if (enabled && !StorageManager.hasLockPin()) {
+                  setErrorMessage(t(currentLanguage, 'pinRequiredToEnable'));
+                  return;
+                }
+                setErrorMessage(null);
+                onAppLockToggle(enabled);
+              }}
               className="sr-only peer"
               aria-label={t(currentLanguage, 'appLockTitle')}
             />
@@ -264,15 +273,34 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           </label>
         </div>
 
-        {isAppLockEnabled && (
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-4">
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">{t(currentLanguage, 'changePinLabel')}</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <input type="password" inputMode="numeric" maxLength={8} value={newPin} onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))} placeholder={t(currentLanguage, 'newPinPlaceholder')} className="min-h-[44px] px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] text-sm text-slate-900 dark:text-white" />
-                <input type="password" inputMode="numeric" maxLength={8} value={confirmPin} onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))} placeholder={t(currentLanguage, 'confirmPinPlaceholder')} className="min-h-[44px] px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] text-sm text-slate-900 dark:text-white" />
-              </div>
-              <button type="button" onClick={() => {
+        <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-4">
+          <div className="space-y-2">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+              {t(currentLanguage, hasSavedPin ? 'changePinLabel' : 'setPinLabel')}
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <input
+                type="password"
+                inputMode="numeric"
+                maxLength={8}
+                value={newPin}
+                onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
+                placeholder={t(currentLanguage, 'newPinPlaceholder')}
+                className="min-h-[44px] px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] text-sm text-slate-900 dark:text-white"
+              />
+              <input
+                type="password"
+                inputMode="numeric"
+                maxLength={8}
+                value={confirmPin}
+                onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
+                placeholder={t(currentLanguage, 'confirmPinPlaceholder')}
+                className="min-h-[44px] px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] text-sm text-slate-900 dark:text-white"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => {
                 if (!/^\d{4,8}$/.test(newPin) || newPin !== confirmPin) {
                   setErrorMessage(t(currentLanguage, 'pinMismatch'));
                   return;
@@ -282,36 +310,39 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 setConfirmPin('');
                 setErrorMessage(null);
                 setStatusMessage(t(currentLanguage, 'pinSaved'));
-              }} className="min-h-[44px] px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-extrabold">
-                {t(currentLanguage, 'savePinBtn')}
-              </button>
-            </div>
-            <div className="space-y-2">
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-              {t(currentLanguage, 'lockTimeoutLabel')}
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              {timeoutOptions.map((opt) => (
-                <button
-                  key={opt.seconds}
-                  type="button"
-                  onClick={() => onLockTimeoutChange(opt.seconds)}
-                  className={`min-h-[44px] flex items-center justify-between p-2.5 rounded-xl border text-xs font-medium transition-all cursor-pointer ${
-                    lockTimeoutSeconds === opt.seconds
-                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold'
-                      : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <span>{opt.label}</span>
-                  {lockTimeoutSeconds === opt.seconds && <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
-                </button>
-              ))}
-            </div>
-            </div>
+              }}
+              className="min-h-[44px] px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-extrabold"
+            >
+              {t(currentLanguage, 'savePinBtn')}
+            </button>
           </div>
-        )}
-      </div>
 
+          {isAppLockEnabled && (
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                {t(currentLanguage, 'lockTimeoutLabel')}
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {timeoutOptions.map((opt) => (
+                  <button
+                    key={opt.seconds}
+                    type="button"
+                    onClick={() => onLockTimeoutChange(opt.seconds)}
+                    className={`min-h-[44px] flex items-center justify-between p-2.5 rounded-xl border text-xs font-medium transition-all cursor-pointer ${
+                      lockTimeoutSeconds === opt.seconds
+                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold'
+                        : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <span>{opt.label}</span>
+                    {lockTimeoutSeconds === opt.seconds && <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
       {/* Backup & Export Data */}
       <div className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 rounded-3xl p-5 shadow-xs space-y-3.5 transition-colors">
         <div>

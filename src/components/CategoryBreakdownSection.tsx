@@ -55,7 +55,7 @@ export const CategoryBreakdownSection: React.FC<CategoryBreakdownSectionProps> =
               <div
                 key={item.categoryName}
                 style={{
-                  width: `${Math.max(1, item.percentage)}%`,
+                  width: `${Math.min(100, Math.max(0, item.percentage))}%`,
                   backgroundColor: item.color,
                 }}
                 className="h-full transition-all duration-500 ease-out"

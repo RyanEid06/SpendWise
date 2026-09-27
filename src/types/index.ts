@@ -168,6 +168,7 @@ export interface MonthlySpendingStat {
   isBudgetSet: boolean;
   remainingMoney: number;
   transactionCount: number;
+  isPartialMonth: boolean;
   largestExpense: Expense | null;
 }
 
