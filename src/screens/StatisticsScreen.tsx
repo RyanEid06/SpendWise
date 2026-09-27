@@ -128,7 +128,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
             {t(language, 'statsTitle')}
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            {t(language, 'statsSub')} Â· {getLocalizedMonthName(currentMonthYear, language)} Â· {getLocalizedMonthName(currentMonthYear, language)}
+            {t(language, 'statsSub')} {'\u00B7'} {getLocalizedMonthName(currentMonthYear, language)}
           </p>
         </div>
       </div>
@@ -332,7 +332,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center space-x-2 rtl:space-x-reverse">
                       <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                      <span className="font-bold text-slate-900 dark:text-white">{localizedMonthName}{item.isPartialMonth && <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400"> Â· {t(language, 'partialMonthLabel')}</span>}</span>
+                      <span className="font-bold text-slate-900 dark:text-white">{localizedMonthName}{item.isPartialMonth && <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400"> {'\u00B7'} {t(language, 'partialMonthLabel')}</span>}</span>
                     </div>
                     <span className="font-extrabold tabular-nums text-sm text-slate-900 dark:text-white">
                       {formatCurrency(item.totalSpent, currencyCode)}

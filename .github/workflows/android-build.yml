@@ -10,6 +10,7 @@ on:
       - wp2/native-backup-export
       - wp3/gemini-backend
       - wp4/android-financial-ux
+      - wp5/final-release-gate
     tags:
       - 'v*'
 
