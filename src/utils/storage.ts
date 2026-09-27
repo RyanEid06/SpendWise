@@ -9,6 +9,7 @@ import {
 } from '../types';
 import { currentMonthYear, formatDate, getMonthKey, MonthYear, previousMonth } from './date';
 import { DEFAULT_CURRENCY_CODE, SUPPORTED_CURRENCIES } from './currency';
+import { APP_VERSION_NAME } from './appVersion';
 
 const STORAGE_KEYS = {
   EXPENSES: 'spendwise_expenses',
@@ -231,7 +232,7 @@ export class StorageManager {
     const now = Date.now();
     return {
       metadata: {
-        appVersion: '1.0.0',
+        appVersion: APP_VERSION_NAME,
         schemaVersion: 1,
         exportedAt: now,
         exportedAtFormatted: new Date(now).toISOString().replace('T', ' ').substring(0, 19),

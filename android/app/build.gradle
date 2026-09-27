@@ -1,27 +1,63 @@
+import groovy.json.JsonSlurper
+
 apply plugin: 'com.android.application'
+
+def spendwiseVersion = new JsonSlurper().parse(file('../../version.json'))
+def releaseKeystorePath = System.getenv('SPENDWISE_KEYSTORE_PATH')
+def releaseKeystorePassword = System.getenv('SPENDWISE_KEYSTORE_PASSWORD')
+def releaseKeyAlias = System.getenv('SPENDWISE_KEY_ALIAS')
+def releaseKeyPassword = System.getenv('SPENDWISE_KEY_PASSWORD')
+def releaseSigningConfigured = [
+    releaseKeystorePath,
+    releaseKeystorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword,
+].every { value -> value != null && !value.trim().isEmpty() }
 
 android {
     namespace = "com.spendwise.app"
     compileSdk = rootProject.ext.compileSdkVersion
+
+    signingConfigs {
+        release {
+            if (releaseSigningConfigured) {
+                storeFile file(releaseKeystorePath)
+                storePassword releaseKeystorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
+
     defaultConfig {
         applicationId "com.spendwise.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode spendwiseVersion.versionCode.toString().toInteger()
+        versionName spendwiseVersion.versionName.toString()
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
-             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
-             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+
     buildTypes {
         release {
             minifyEnabled false
-            signingConfig signingConfigs.debug
+            if (releaseSigningConfigured) {
+                signingConfig signingConfigs.release
+            }
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+    }
+}
+
+gradle.taskGraph.whenReady { graph ->
+    if ((graph.hasTask(':app:assembleRelease') || graph.hasTask(':app:bundleRelease')) && !releaseSigningConfigured) {
+        throw new GradleException(
+            'SpendWise release signing is not configured. Set SPENDWISE_KEYSTORE_PATH, ' +
+            'SPENDWISE_KEYSTORE_PASSWORD, SPENDWISE_KEY_ALIAS, and SPENDWISE_KEY_PASSWORD.'
+        )
     }
 }
 

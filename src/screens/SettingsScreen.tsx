@@ -12,6 +12,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Globe,
+  Info,
 } from 'lucide-react';
 import { Language, SpendWiseBackup, ThemeMode } from '../types';
 import { SUPPORTED_CURRENCIES } from '../utils/currency';
@@ -19,6 +20,7 @@ import { StorageManager } from '../utils/storage';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import { ImportPreviewModal } from '../components/ImportPreviewModal';
 import { t } from '../utils/translations';
+import { APP_VERSION_CODE, APP_VERSION_NAME } from '../utils/appVersion';
 
 interface SettingsScreenProps {
   currentCurrencyCode: string;
@@ -464,6 +466,31 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               </button>
             );
           })}
+        </div>
+      </div>
+
+      {/* About / installed version */}
+      <div className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 rounded-3xl p-5 shadow-xs space-y-3.5 transition-colors">
+        <div className="flex items-center space-x-2.5 rtl:space-x-reverse">
+          <Info className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+          <div>
+            <h3 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base">
+              {t(currentLanguage, 'aboutSectionTitle')}
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {t(currentLanguage, 'aboutSectionSub')}
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/70 dark:border-slate-800/60 p-3">
+            <div className="text-slate-500 dark:text-slate-400 font-medium">{t(currentLanguage, 'versionLabel')}</div>
+            <div className="mt-1 font-extrabold text-slate-900 dark:text-white tabular-nums">{APP_VERSION_NAME}</div>
+          </div>
+          <div className="rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/70 dark:border-slate-800/60 p-3">
+            <div className="text-slate-500 dark:text-slate-400 font-medium">{t(currentLanguage, 'buildLabel')}</div>
+            <div className="mt-1 font-extrabold text-slate-900 dark:text-white tabular-nums">{APP_VERSION_CODE}</div>
+          </div>
         </div>
       </div>
 
