@@ -5,11 +5,13 @@ export interface CurrencyOption {
   symbolPrefix?: boolean;
 }
 
-export const LBP_RATE = 90000; // $1 = 90,000 L.L.
+export const LBP_RATE = 90000; // Suggested default: 1 USD = 90,000 LBP
+export const MAX_CURRENCY_RATE = 1e12;
+export const MAX_STORED_AMOUNT = 1e15;
 
 export const SUPPORTED_CURRENCIES: CurrencyOption[] = [
   { code: 'USD', symbol: '$', name: 'US Dollar (USD)', symbolPrefix: true },
-  { code: 'LBP', symbol: 'L.L.', name: 'Lebanese Lira (LBP) - $1 = 90,000 L.L.', symbolPrefix: false },
+  { code: 'LBP', symbol: 'L.L.', name: 'Lebanese Lira (LBP)', symbolPrefix: false },
   { code: 'EUR', symbol: '€', name: 'Euro (EUR)', symbolPrefix: true },
   { code: 'GBP', symbol: '£', name: 'British Pound (GBP)', symbolPrefix: true },
   { code: 'AED', symbol: 'د.إ', name: 'UAE Dirham (AED)', symbolPrefix: false },
@@ -30,12 +32,54 @@ export function getCurrency(code: string): CurrencyOption {
   );
 }
 
+export function isValidConversionRate(targetUnitsPerSourceUnit: number): boolean {
+  return (
+    Number.isFinite(targetUnitsPerSourceUnit) &&
+    targetUnitsPerSourceUnit > 0 &&
+    targetUnitsPerSourceUnit <= MAX_CURRENCY_RATE
+  );
+}
+
+// Authoritative convention: target currency units per 1 source currency unit.
+export function convertCurrencyAmount(
+  amount: number,
+  targetUnitsPerSourceUnit: number
+): number {
+  if (!Number.isFinite(amount) || amount < 0) {
+    throw new Error('Amount must be a finite non-negative number.');
+  }
+  if (!isValidConversionRate(targetUnitsPerSourceUnit)) {
+    throw new Error('Conversion rate must be a finite positive number.');
+  }
+
+  const converted = amount * targetUnitsPerSourceUnit;
+  if (
+    !Number.isFinite(converted) ||
+    Math.abs(converted) > MAX_STORED_AMOUNT ||
+    (amount > 0 && converted <= 0)
+  ) {
+    throw new Error('Converted amount is outside the supported numeric range.');
+  }
+
+  // Keep useful floating-point precision without applying display rounding to storage.
+  return Number(converted.toPrecision(15));
+}
+
+export function getSuggestedConversionRate(sourceCode: string, targetCode: string): number | null {
+  const source = sourceCode.toUpperCase();
+  const target = targetCode.toUpperCase();
+
+  if (source === 'USD' && target === 'LBP') return LBP_RATE;
+  if (source === 'LBP' && target === 'USD') return 1 / LBP_RATE;
+  return null;
+}
+
 export function convertUsdToLbp(usd: number): number {
-  return usd * LBP_RATE;
+  return convertCurrencyAmount(usd, LBP_RATE);
 }
 
 export function convertLbpToUsd(lbp: number): number {
-  return lbp / LBP_RATE;
+  return convertCurrencyAmount(lbp, 1 / LBP_RATE);
 }
 
 export function formatCurrency(

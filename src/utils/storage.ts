@@ -8,7 +8,12 @@ import {
   ThemeMode,
 } from '../types';
 import { currentMonthYear, formatDate, getMonthKey, MonthYear, previousMonth, toInputDateFormat } from './date';
-import { DEFAULT_CURRENCY_CODE, SUPPORTED_CURRENCIES } from './currency';
+import {
+  convertCurrencyAmount,
+  DEFAULT_CURRENCY_CODE,
+  isValidConversionRate,
+  SUPPORTED_CURRENCIES,
+} from './currency';
 import { APP_VERSION_NAME } from './appVersion';
 
 const STORAGE_KEYS = {
@@ -21,12 +26,34 @@ const STORAGE_KEYS = {
   LOCK_TIMEOUT: 'spendwise_lock_timeout_seconds',
   LOCK_PIN: 'spendwise_lock_pin',
   AI_CACHE: 'spendwise_ai_insights_cache',
+  CURRENCY_TXN: 'spendwise_currency_conversion_txn_v1',
   INITIALIZED: 'spendwise_clean_init_v3',
 };
+
+type CurrencyTransactionState = {
+  expenses: string | null;
+  budgets: string | null;
+  currency: string | null;
+};
+
+interface CurrencyConversionJournal {
+  version: 1;
+  phase: 'prepared' | 'committed';
+  original: CurrencyTransactionState;
+  target: CurrencyTransactionState;
+}
+
+export interface CurrencyConversionResult {
+  sourceCurrencyCode: string;
+  targetCurrencyCode: string;
+  expensesConverted: number;
+  budgetsConverted: number;
+}
 
 export class StorageManager {
   static init() {
     if (typeof window === 'undefined') return;
+    this.recoverInterruptedCurrencyConversion();
     if (localStorage.getItem(STORAGE_KEYS.EXPENSES) === null) localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify([]));
     if (localStorage.getItem(STORAGE_KEYS.BUDGETS) === null) localStorage.setItem(STORAGE_KEYS.BUDGETS, JSON.stringify([]));
     if (localStorage.getItem(STORAGE_KEYS.CURRENCY) === null) localStorage.setItem(STORAGE_KEYS.CURRENCY, DEFAULT_CURRENCY_CODE);
@@ -144,6 +171,157 @@ export class StorageManager {
 
   static setCurrencyCode(code: string) {
     localStorage.setItem(STORAGE_KEYS.CURRENCY, code);
+  }
+
+  private static setRawStorageValue(key: string, value: string | null) {
+    if (value === null) {
+      localStorage.removeItem(key);
+    } else {
+      localStorage.setItem(key, value);
+    }
+  }
+
+  private static recoverInterruptedCurrencyConversion() {
+    const rawJournal = localStorage.getItem(STORAGE_KEYS.CURRENCY_TXN);
+    if (!rawJournal) return;
+
+    try {
+      const journal = JSON.parse(rawJournal) as CurrencyConversionJournal;
+      if (
+        journal.version !== 1 ||
+        !journal.original ||
+        !journal.target ||
+        !['prepared', 'committed'].includes(journal.phase)
+      ) {
+        throw new Error('Invalid currency conversion journal.');
+      }
+
+      // A prepared transaction was interrupted before commit: roll back.
+      // A committed transaction was interrupted during cleanup: roll forward.
+      const recovered = journal.phase === 'committed' ? journal.target : journal.original;
+      this.setRawStorageValue(STORAGE_KEYS.EXPENSES, recovered.expenses);
+      this.setRawStorageValue(STORAGE_KEYS.BUDGETS, recovered.budgets);
+      this.setRawStorageValue(STORAGE_KEYS.CURRENCY, recovered.currency);
+      this.clearAnalysisCache();
+      localStorage.removeItem(STORAGE_KEYS.CURRENCY_TXN);
+    } catch {
+      // Never let a malformed recovery marker brick application startup.
+      localStorage.removeItem(STORAGE_KEYS.CURRENCY_TXN);
+      this.clearAnalysisCache();
+    }
+  }
+
+  static convertCurrency(
+    targetCurrencyCode: string,
+    targetUnitsPerSourceUnit: number
+  ): CurrencyConversionResult {
+    const sourceCurrencyCode = this.getCurrencyCode().toUpperCase();
+    const target = targetCurrencyCode.toUpperCase();
+    const isSupported = (code: string) => SUPPORTED_CURRENCIES.some((c) => c.code === code);
+
+    if (!isSupported(sourceCurrencyCode) || !isSupported(target)) {
+      throw new Error('Unsupported source or target currency.');
+    }
+    if (sourceCurrencyCode === target) {
+      return {
+        sourceCurrencyCode,
+        targetCurrencyCode: target,
+        expensesConverted: 0,
+        budgetsConverted: 0,
+      };
+    }
+    if (!isValidConversionRate(targetUnitsPerSourceUnit)) {
+      throw new Error('Invalid currency conversion rate.');
+    }
+
+    const expenses = this.getExpenses();
+    const budgets = this.getBudgets();
+
+    // Empty ledgers are a preference change, not a financial conversion.
+    if (expenses.length === 0 && budgets.length === 0) {
+      this.setCurrencyCode(target);
+      this.clearAnalysisCache();
+      return {
+        sourceCurrencyCode,
+        targetCurrencyCode: target,
+        expensesConverted: 0,
+        budgetsConverted: 0,
+      };
+    }
+
+    // Calculate the complete target state before writing anything.
+    const convertedExpenses = expenses.map((expense) => ({
+      ...expense,
+      amount: convertCurrencyAmount(expense.amount, targetUnitsPerSourceUnit),
+    }));
+    const convertedBudgets = budgets.map((budget) => ({
+      ...budget,
+      startingAmount: convertCurrencyAmount(budget.startingAmount, targetUnitsPerSourceUnit),
+    }));
+
+    const original: CurrencyTransactionState = {
+      expenses: localStorage.getItem(STORAGE_KEYS.EXPENSES),
+      budgets: localStorage.getItem(STORAGE_KEYS.BUDGETS),
+      currency: localStorage.getItem(STORAGE_KEYS.CURRENCY),
+    };
+    const targetState: CurrencyTransactionState = {
+      expenses: JSON.stringify(convertedExpenses),
+      budgets: JSON.stringify(convertedBudgets),
+      currency: target,
+    };
+    const journal: CurrencyConversionJournal = {
+      version: 1,
+      phase: 'prepared',
+      original,
+      target: targetState,
+    };
+
+    // Persist the recovery marker before mutating the ledger. If this fails
+    // (for example because storage is full), no financial value has changed.
+    localStorage.setItem(STORAGE_KEYS.CURRENCY_TXN, JSON.stringify(journal));
+
+    try {
+      this.setRawStorageValue(STORAGE_KEYS.EXPENSES, targetState.expenses);
+      this.setRawStorageValue(STORAGE_KEYS.BUDGETS, targetState.budgets);
+      this.setRawStorageValue(STORAGE_KEYS.CURRENCY, targetState.currency);
+
+      // Cache invalidation is part of the logical transaction. If it fails,
+      // the prepared journal still instructs init() to restore the original ledger.
+      this.clearAnalysisCache();
+
+      // Mark commit only after the ledger and cache state are coherent.
+      journal.phase = 'committed';
+      localStorage.setItem(STORAGE_KEYS.CURRENCY_TXN, JSON.stringify(journal));
+    } catch (error) {
+      // Best-effort exact rollback of the original persisted financial state.
+      try {
+        this.setRawStorageValue(STORAGE_KEYS.EXPENSES, original.expenses);
+        this.setRawStorageValue(STORAGE_KEYS.BUDGETS, original.budgets);
+        this.setRawStorageValue(STORAGE_KEYS.CURRENCY, original.currency);
+        this.clearAnalysisCache();
+        localStorage.removeItem(STORAGE_KEYS.CURRENCY_TXN);
+      } catch {
+        // If the platform itself is refusing storage writes, keep the prepared
+        // recovery journal whenever possible. init() will roll back on restart.
+      }
+      throw error;
+    }
+
+    // Cleanup is intentionally outside the rollback block. If journal removal
+    // itself fails after commit, init() sees phase=committed and safely rolls
+    // forward to the already-written target state instead of reverting a valid conversion.
+    try {
+      localStorage.removeItem(STORAGE_KEYS.CURRENCY_TXN);
+    } catch {
+      // Safe to leave a committed journal for startup recovery/cleanup.
+    }
+
+    return {
+      sourceCurrencyCode,
+      targetCurrencyCode: target,
+      expensesConverted: convertedExpenses.length,
+      budgetsConverted: convertedBudgets.length,
+    };
   }
 
   static getThemeMode(): ThemeMode {

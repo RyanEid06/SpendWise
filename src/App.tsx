@@ -294,11 +294,29 @@ export const App: React.FC = () => {
     setBudgets(StorageManager.getBudgets());
   };
 
-  const handleCurrencyChange = (code: string) => {
-    StorageManager.setCurrencyCode(code);
-    StorageManager.clearAnalysisCache();
-    setCurrencyCodeState(code);
+  const handleCurrencyChange = (code: string, targetUnitsPerSourceUnit?: number) => {
+    const storedExpenses = StorageManager.getExpenses();
+    const storedBudgets = StorageManager.getBudgets();
+    const hasFinancialData = storedExpenses.length > 0 || storedBudgets.length > 0;
+
+    if (code === StorageManager.getCurrencyCode()) return;
+
+    if (hasFinancialData) {
+      if (targetUnitsPerSourceUnit === undefined) {
+        throw new Error('A conversion rate is required for an existing financial ledger.');
+      }
+      StorageManager.convertCurrency(code, targetUnitsPerSourceUnit);
+    } else {
+      StorageManager.setCurrencyCode(code);
+      StorageManager.clearAnalysisCache();
+    }
+
+    setExpenses(StorageManager.getExpenses());
+    setBudgets(StorageManager.getBudgets());
+    setCurrencyCodeState(StorageManager.getCurrencyCode());
     setAiResult(null);
+    setAiError(null);
+    setAiNotice(null);
   };
 
   const handleThemeChange = (mode: ThemeMode) => {
@@ -510,6 +528,7 @@ export const App: React.FC = () => {
             currentThemeMode={themeMode}
             currentLanguage={language}
             totalExpensesCount={expenses.length}
+            totalBudgetsCount={budgets.length}
             isAppLockEnabled={appLockEnabled}
             lockTimeoutSeconds={lockTimeoutSeconds}
             onAppLockToggle={handleAppLockToggle}

@@ -15,10 +15,11 @@ import {
   Info,
 } from 'lucide-react';
 import { Language, SpendWiseBackup, ThemeMode } from '../types';
-import { SUPPORTED_CURRENCIES } from '../utils/currency';
+import { getSuggestedConversionRate, SUPPORTED_CURRENCIES } from '../utils/currency';
 import { StorageManager } from '../utils/storage';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import { ImportPreviewModal } from '../components/ImportPreviewModal';
+import { CurrencyConversionModal } from '../components/CurrencyConversionModal';
 import { t } from '../utils/translations';
 import { APP_VERSION_CODE, APP_VERSION_NAME } from '../utils/appVersion';
 import { exportTextFile } from '../utils/fileExport';
@@ -28,11 +29,12 @@ interface SettingsScreenProps {
   currentThemeMode: ThemeMode;
   currentLanguage: Language;
   totalExpensesCount: number;
+  totalBudgetsCount: number;
   isAppLockEnabled: boolean;
   lockTimeoutSeconds: number;
   onAppLockToggle: (enabled: boolean) => void;
   onLockTimeoutChange: (seconds: number) => void;
-  onCurrencyChange: (code: string) => void;
+  onCurrencyChange: (code: string, targetUnitsPerSourceUnit?: number) => void;
   onThemeChange: (mode: ThemeMode) => void;
   onLanguageChange: (lang: Language) => void;
   onClearAllData: () => void;
@@ -44,6 +46,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   currentThemeMode,
   currentLanguage,
   totalExpensesCount,
+  totalBudgetsCount,
   isAppLockEnabled,
   lockTimeoutSeconds,
   onAppLockToggle,
@@ -61,9 +64,15 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
   const [showClearModal, setShowClearModal] = useState(false);
   const [pendingImportBackup, setPendingImportBackup] = useState<SpendWiseBackup | null>(null);
+  const [pendingCurrencyCode, setPendingCurrencyCode] = useState<string | null>(null);
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const hasSavedPin = StorageManager.hasLockPin();
+  const hasFinancialData = totalExpensesCount > 0 || totalBudgetsCount > 0;
+  const currencyPreviewAmount =
+    StorageManager.getExpenses()[0]?.amount ??
+    StorageManager.getBudgets()[0]?.startingAmount ??
+    0;
 
   const timeoutOptions = [
     { seconds: 0, label: t(currentLanguage, 'timeoutImmediate') },
@@ -443,11 +452,16 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               <button
                 key={c.code}
                 onClick={() => {
-                  if (totalExpensesCount > 0 && !isSelected) {
-                    setErrorMessage('Currency is locked once expenses exist so saved amounts are never relabeled incorrectly. Export and clear financial data first if you intentionally want a different base currency.');
+                  if (isSelected) return;
+
+                  setErrorMessage(null);
+                  if (!hasFinancialData) {
+                    onCurrencyChange(c.code);
+                    setStatusMessage(t(currentLanguage, 'currencyChangeSaved', { currency: c.code }));
                     return;
                   }
-                  onCurrencyChange(c.code);
+
+                  setPendingCurrencyCode(c.code);
                 }}
                 className={`w-full min-h-[48px] flex items-center justify-between p-3 rounded-2xl transition-all cursor-pointer ${
                   isSelected
@@ -584,6 +598,29 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           language={currentLanguage}
           onConfirm={handleConfirmImport}
           onClose={() => setPendingImportBackup(null)}
+        />
+      )}
+
+      {/* Safe Currency Conversion Modal */}
+      {pendingCurrencyCode && (
+        <CurrencyConversionModal
+          key={`${currentCurrencyCode}-${pendingCurrencyCode}`}
+          isOpen={true}
+          sourceCurrencyCode={currentCurrencyCode}
+          targetCurrencyCode={pendingCurrencyCode}
+          expenseCount={totalExpensesCount}
+          budgetCount={totalBudgetsCount}
+          previewAmount={currencyPreviewAmount}
+          initialRate={getSuggestedConversionRate(currentCurrencyCode, pendingCurrencyCode)}
+          language={currentLanguage}
+          onConfirm={(targetUnitsPerSourceUnit) => {
+            const targetCode = pendingCurrencyCode;
+            onCurrencyChange(targetCode, targetUnitsPerSourceUnit);
+            setPendingCurrencyCode(null);
+            setErrorMessage(null);
+            setStatusMessage(t(currentLanguage, 'currencyChangeSaved', { currency: targetCode }));
+          }}
+          onClose={() => setPendingCurrencyCode(null)}
         />
       )}
     </div>
