@@ -82,6 +82,21 @@ export interface AiAnalysisResult {
   areasToReview: InsightCardItem[];
 }
 
+export type SmartCaptureConfidence = 'high' | 'medium' | 'low';
+
+export interface SmartCaptureResult {
+  description?: string | null;
+  category: string;
+  amount?: number | null;
+  merchantOrBrand?: string | null;
+  notes?: string | null;
+  confidence: SmartCaptureConfidence;
+  uncertaintyReason?: string | null;
+  priceVisible: boolean;
+  detectedCurrencyCode?: string | null;
+  currencyMismatch: boolean;
+}
+
 export interface ReceiptScanResult {
   merchant?: string | null;
   totalAmount?: number | null;

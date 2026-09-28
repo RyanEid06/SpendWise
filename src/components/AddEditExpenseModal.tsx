@@ -1,14 +1,15 @@
 import React, { useState, useRef } from 'react';
 import { apiFetch } from '../utils/api';
 import { Camera, X, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
-import { Expense, Language, ReceiptScanResult } from '../types';
+import { Expense, Language, ReceiptScanResult, SmartCaptureResult } from '../types';
 import { DEFAULT_CATEGORIES } from '../utils/categories';
 import { getCurrency, formatCurrency } from '../utils/currency';
 import { fromInputDateFormat, toInputDateFormat } from '../utils/date';
 import { getLocalizedCategoryName, t } from '../utils/translations';
 import { ExpenseAttachmentsEditor } from './ExpenseAttachmentsEditor';
-import { AttachmentDraft, AttachmentEditPayload } from '../utils/attachmentStorage';
+import { AttachmentDraft, AttachmentEditPayload, AttachmentStorage, MAX_ATTACHMENTS_PER_EXPENSE } from '../utils/attachmentStorage';
 import { ta } from '../utils/attachmentTranslations';
+import { SmartCaptureCard } from './SmartCaptureCard';
 
 interface AddEditExpenseModalProps {
   isOpen: boolean;
@@ -142,6 +143,53 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
     }
   };
 
+  const handleSmartCaptureApply = (
+    result: SmartCaptureResult,
+    attachment: AttachmentDraft | null
+  ) => {
+    if (result.amount != null && result.amount > 0) {
+      setAmountText(result.amount.toString());
+      setAmountError(null);
+    }
+
+    const suggestedDescription =
+      result.description && result.merchantOrBrand &&
+      !result.description.toLowerCase().includes(result.merchantOrBrand.toLowerCase())
+        ? `${result.description} (${result.merchantOrBrand})`
+        : result.description || result.merchantOrBrand;
+    if (suggestedDescription) {
+      setDescriptionText(suggestedDescription);
+      setDescriptionError(null);
+    }
+
+    if (DEFAULT_CATEGORIES.some((category) => category.name === result.category)) {
+      setSelectedCategory(result.category);
+    } else {
+      setSelectedCategory('Other');
+    }
+
+    if (result.notes) {
+      setNoteText((current) => {
+        const note = result.notes!.trim();
+        if (!note) return current;
+        if (!current.trim()) return note;
+        if (current.includes(note)) return current;
+        return `${current.trim()}\n${note}`;
+      });
+    }
+
+    if (attachment) {
+      const persistedCount = initialExpense
+        ? AttachmentStorage.getAttachmentsForExpense(initialExpense.id).filter(
+            (item) => !removedAttachmentIds.includes(item.id)
+          ).length
+        : 0;
+      if (persistedCount + attachmentDrafts.length < MAX_ATTACHMENTS_PER_EXPENSE) {
+        setAttachmentDrafts((current) => current.concat(attachment));
+      }
+    }
+  };
+
   const handleSave = async () => {
     let hasError = false;
     const amount = parseFloat(amountText);
@@ -204,6 +252,13 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
 
         {/* Scrollable Form Body */}
         <div className="p-6 space-y-5 overflow-y-auto flex-1">
+          <SmartCaptureCard
+            language={language}
+            currencyCode={currencyCode}
+            disabled={isSaving || isScanning}
+            onApply={handleSmartCaptureApply}
+          />
+
           {/* Scan Receipt Action Card */}
           <div className="bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 rounded-2xl p-4 transition-colors">
             <div className="flex items-center justify-between">
