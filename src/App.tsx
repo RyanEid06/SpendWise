@@ -26,6 +26,7 @@ import { SettingsScreen } from './screens/SettingsScreen';
 import { LockScreen } from './screens/LockScreen';
 import { AddEditExpenseModal } from './components/AddEditExpenseModal';
 import { SetBudgetModal } from './components/SetBudgetModal';
+import { AttachmentEditPayload, AttachmentStorage } from './utils/attachmentStorage';
 
 export const App: React.FC = () => {
   StorageManager.init();
@@ -164,6 +165,11 @@ export const App: React.FC = () => {
     let removeBackListener: (() => Promise<void>) | null = null;
 
     void CapacitorApp.addListener('backButton', () => {
+      if (document.querySelector('[data-attachment-viewer="true"]')) {
+        window.dispatchEvent(new Event('spendwise-close-attachment-preview'));
+        return;
+      }
+
       if (showAddModal || editingExpense !== null) {
         setShowAddModal(false);
         setEditingExpense(null);
@@ -244,47 +250,68 @@ export const App: React.FC = () => {
   }, [monthlyExpenses, totalSpent]);
 
   // Actions
-  const handleAddExpense = (
+  const handleAddExpense = async (
     amount: number,
     description: string,
     category: string,
     date: number,
-    note?: string | null
+    note: string | null,
+    attachmentChanges: AttachmentEditPayload
   ) => {
-    StorageManager.addExpense({
+    const created = StorageManager.addExpense({
       amount,
       description,
       category,
       date,
       note,
     });
+
+    try {
+      await AttachmentStorage.applyExpenseAttachmentChanges(
+        created.id,
+        attachmentChanges.newAttachments,
+        []
+      );
+    } catch (error) {
+      await StorageManager.deleteExpense(created.id);
+      setExpenses(StorageManager.getExpenses());
+      throw error;
+    }
+
     setExpenses(StorageManager.getExpenses());
   };
 
-  const handleUpdateExpense = (
+  const handleUpdateExpense = async (
     id: number,
     amount: number,
     description: string,
     category: string,
     date: number,
-    note?: string | null
+    note: string | null,
+    attachmentChanges: AttachmentEditPayload
   ) => {
     const existing = expenses.find((e) => e.id === id);
-    if (existing) {
-      StorageManager.updateExpense({
-        ...existing,
-        amount,
-        description,
-        category,
-        date,
-        note,
-      });
-      setExpenses(StorageManager.getExpenses());
-    }
+    if (!existing) return;
+
+    StorageManager.updateExpense({
+      ...existing,
+      amount,
+      description,
+      category,
+      date,
+      note,
+    });
+
+    await AttachmentStorage.applyExpenseAttachmentChanges(
+      id,
+      attachmentChanges.newAttachments,
+      attachmentChanges.removedAttachmentIds
+    );
+    setExpenses(StorageManager.getExpenses());
   };
 
-  const handleDeleteExpense = (expense: Expense) => {
-    StorageManager.deleteExpense(expense.id);
+  const handleDeleteExpense = async (expense: Expense) => {
+    await StorageManager.deleteExpense(expense.id);
     setExpenses(StorageManager.getExpenses());
   };
 
@@ -346,8 +373,8 @@ export const App: React.FC = () => {
     setLockTimeoutSecondsState(seconds);
   };
 
-  const handleClearAllData = () => {
-    StorageManager.clearAllData();
+  const handleClearAllData = async () => {
+    await StorageManager.clearAllData();
     setExpenses([]);
     setBudgets([]);
     setAiResult(null);
@@ -567,11 +594,26 @@ export const App: React.FC = () => {
           defaultDate={getDefaultTimestampForMonth(currentMY)}
           currencyCode={currencyCode}
           language={language}
-          onSave={(amount, description, category, date, note) => {
+          onSave={async (amount, description, category, date, note, attachmentChanges) => {
             if (editingExpense) {
-              handleUpdateExpense(editingExpense.id, amount, description, category, date, note);
+              await handleUpdateExpense(
+                editingExpense.id,
+                amount,
+                description,
+                category,
+                date,
+                note,
+                attachmentChanges
+              );
             } else {
-              handleAddExpense(amount, description, category, date, note);
+              await handleAddExpense(
+                amount,
+                description,
+                category,
+                date,
+                note,
+                attachmentChanges
+              );
             }
             setShowAddModal(false);
             setEditingExpense(null);

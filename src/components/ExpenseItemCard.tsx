@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Edit2, Trash2, Calendar, FileText, Tag } from 'lucide-react';
+import { ChevronDown, ChevronUp, Edit2, Trash2, Calendar, FileText, Image as ImageIcon, Tag } from 'lucide-react';
 import { Expense, Language } from '../types';
 import { getCategoryInfo } from '../utils/categories';
 import { formatCurrency } from '../utils/currency';
 import { formatDate, formatShortDate } from '../utils/date';
 import { getLocalizedCategoryName, t } from '../utils/translations';
+import { AttachmentStorage } from '../utils/attachmentStorage';
+import { ta } from '../utils/attachmentTranslations';
 
 interface ExpenseItemCardProps {
   expense: Expense;
@@ -24,6 +26,7 @@ export const ExpenseItemCard: React.FC<ExpenseItemCardProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const catInfo = getCategoryInfo(expense.category);
   const localizedCat = getLocalizedCategoryName(expense.category, language);
+  const attachmentCount = AttachmentStorage.getAttachmentsForExpense(expense.id).length;
 
   const toggleExpand = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -81,6 +84,26 @@ export const ExpenseItemCard: React.FC<ExpenseItemCardProps> = ({
             <span className="text-slate-500 dark:text-slate-400 text-xs shrink-0 whitespace-nowrap">
               {formatShortDate(expense.date)}
             </span>
+            {attachmentCount > 0 && (
+              <>
+                <span className="text-slate-300 dark:text-slate-600" aria-hidden="true">·</span>
+                <span
+                  className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 shrink-0"
+                  title={
+                    attachmentCount === 1
+                      ? ta(language, 'photoAttached')
+                      : ta(language, 'photosAttached', { count: attachmentCount })
+                  }
+                >
+                  <ImageIcon className="w-3.5 h-3.5" />
+                  <span className="sr-only">
+                    {attachmentCount === 1
+                      ? ta(language, 'photoAttached')
+                      : ta(language, 'photosAttached', { count: attachmentCount })}
+                  </span>
+                </span>
+              </>
+            )}
           </div>
         </div>
 
@@ -138,6 +161,25 @@ export const ExpenseItemCard: React.FC<ExpenseItemCardProps> = ({
                 {expense.note}
               </p>
             </div>
+          )}
+
+          {attachmentCount > 0 && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onClick();
+              }}
+              className="w-full min-h-[42px] px-3 py-2 rounded-xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center justify-between gap-2 cursor-pointer"
+            >
+              <span className="flex items-center gap-1.5">
+                <ImageIcon className="w-4 h-4" />
+                {attachmentCount === 1
+                  ? ta(language, 'photoAttached')
+                  : ta(language, 'photosAttached', { count: attachmentCount })}
+              </span>
+              <span>{ta(language, 'viewPhotos')}</span>
+            </button>
           )}
 
           {/* Full Date & Timestamp */}

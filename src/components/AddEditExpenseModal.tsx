@@ -6,6 +6,9 @@ import { DEFAULT_CATEGORIES } from '../utils/categories';
 import { getCurrency, formatCurrency } from '../utils/currency';
 import { fromInputDateFormat, toInputDateFormat } from '../utils/date';
 import { getLocalizedCategoryName, t } from '../utils/translations';
+import { ExpenseAttachmentsEditor } from './ExpenseAttachmentsEditor';
+import { AttachmentDraft, AttachmentEditPayload } from '../utils/attachmentStorage';
+import { ta } from '../utils/attachmentTranslations';
 
 interface AddEditExpenseModalProps {
   isOpen: boolean;
@@ -13,7 +16,14 @@ interface AddEditExpenseModalProps {
   defaultDate?: number;
   currencyCode: string;
   language: Language;
-  onSave: (amount: number, description: string, category: string, date: number, note?: string | null) => void;
+  onSave: (
+    amount: number,
+    description: string,
+    category: string,
+    date: number,
+    note: string | null,
+    attachmentChanges: AttachmentEditPayload
+  ) => void | Promise<void>;
   onClose: () => void;
 }
 
@@ -50,6 +60,13 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
   const [isScanning, setIsScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [scannedResult, setScannedResult] = useState<ReceiptScanResult | null>(null);
+
+  // WP07 attachment edits are staged in memory until Save. This prevents
+  // cancelled new-expense flows from leaving permanent orphan files.
+  const [attachmentDrafts, setAttachmentDrafts] = useState<AttachmentDraft[]>([]);
+  const [removedAttachmentIds, setRemovedAttachmentIds] = useState<string[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -125,7 +142,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     let hasError = false;
     const amount = parseFloat(amountText);
 
@@ -139,15 +156,27 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
       hasError = true;
     }
 
-    if (!hasError && !isNaN(amount)) {
-      onSave(
+    if (hasError || isNaN(amount) || isSaving) return;
+
+    setIsSaving(true);
+    setSaveError(null);
+
+    try {
+      await onSave(
         amount,
         descriptionText.trim(),
         selectedCategory,
         selectedDateMillis,
-        noteText.trim() || null
+        noteText.trim() || null,
+        {
+          newAttachments: attachmentDrafts,
+          removedAttachmentIds,
+        }
       );
-      onClose();
+    } catch {
+      setSaveError(ta(language, 'attachmentSaveError'));
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -265,6 +294,16 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
               </div>
             )}
           </div>
+
+          <ExpenseAttachmentsEditor
+            expenseId={initialExpense?.id}
+            language={language}
+            drafts={attachmentDrafts}
+            removedAttachmentIds={removedAttachmentIds}
+            onDraftsChange={setAttachmentDrafts}
+            onRemovedAttachmentIdsChange={setRemovedAttachmentIds}
+            disabled={isSaving}
+          />
 
           {/* Amount Field */}
           <div>
@@ -384,6 +423,12 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
           </div>
         </div>
 
+        {saveError && (
+          <div className="mx-4 mt-3 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 text-xs font-medium text-rose-700 dark:text-rose-300">
+            {saveError}
+          </div>
+        )}
+
         {/* Footer Actions */}
         <div className="p-4 bg-slate-50 dark:bg-[#0B0F19]/60 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-end space-x-3 rtl:space-x-reverse">
           <button
@@ -395,8 +440,9 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
           </button>
           <button
             type="button"
-            onClick={handleSave}
-            className="min-h-[44px] px-6 py-2.5 rounded-xl text-sm font-extrabold bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-sm transition-all cursor-pointer active:scale-95"
+            onClick={() => void handleSave()}
+            disabled={isSaving}
+            className="min-h-[44px] px-6 py-2.5 rounded-xl text-sm font-extrabold bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-sm transition-all cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {initialExpense ? t(language, 'updateExpenseBtn') : t(language, 'saveExpenseBtn')}
           </button>

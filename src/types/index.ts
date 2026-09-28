@@ -8,6 +8,21 @@ export interface Expense {
   createdAt: number;
 }
 
+export type ExpenseAttachmentKind = 'purchase' | 'receipt' | 'proof';
+
+export interface ExpenseAttachment {
+  id: string;
+  expenseId: number;
+  storageKey: string;
+  mimeType: string;
+  createdAt: number;
+  originalFilename?: string | null;
+  kind: ExpenseAttachmentKind;
+  byteSize: number;
+  width: number;
+  height: number;
+}
+
 export interface MonthlyBudget {
   monthKey: string; // Format: "yyyy-MM", e.g. "2026-09"
   startingAmount: number;

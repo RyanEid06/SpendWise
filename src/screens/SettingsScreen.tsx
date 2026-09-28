@@ -37,7 +37,7 @@ interface SettingsScreenProps {
   onCurrencyChange: (code: string, targetUnitsPerSourceUnit?: number) => void;
   onThemeChange: (mode: ThemeMode) => void;
   onLanguageChange: (lang: Language) => void;
-  onClearAllData: () => void;
+  onClearAllData: () => void | Promise<void>;
   onBackupRestored: () => void;
 }
 
@@ -148,10 +148,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     e.target.value = '';
   };
 
-  const handleConfirmImport = (replaceExisting: boolean) => {
+  const handleConfirmImport = async (replaceExisting: boolean) => {
     if (!pendingImportBackup) return;
     try {
-      const summary = StorageManager.restoreBackup(pendingImportBackup, replaceExisting);
+      const summary = await StorageManager.restoreBackup(pendingImportBackup, replaceExisting);
       setPendingImportBackup(null);
       onBackupRestored();
       setStatusMessage(
@@ -582,9 +582,16 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         cancelText={t(currentLanguage, 'cancelBtn')}
         isDestructive={true}
         onConfirm={() => {
-          onClearAllData();
-          setShowClearModal(false);
-          setStatusMessage('All local data has been erased.');
+          void (async () => {
+            try {
+              await onClearAllData();
+              setShowClearModal(false);
+              setStatusMessage('All local data has been erased.');
+              setErrorMessage(null);
+            } catch {
+              setErrorMessage('Unable to erase all local data.');
+            }
+          })();
         }}
         onCancel={() => setShowClearModal(false)}
       />

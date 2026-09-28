@@ -7,6 +7,7 @@ import { MonthSelector } from '../components/MonthSelector';
 import { ExpenseItemCard } from '../components/ExpenseItemCard';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import { getLocalizedMonthName, t } from '../utils/translations';
+import { ta } from '../utils/attachmentTranslations';
 
 interface HistoryScreenProps {
   currentMonthYear: MonthYear;
@@ -16,7 +17,7 @@ interface HistoryScreenProps {
   onPreviousMonth: () => void;
   onNextMonth: () => void;
   onExpenseClick: (expense: Expense) => void;
-  onDeleteExpense: (expense: Expense) => void;
+  onDeleteExpense: (expense: Expense) => void | Promise<void>;
   onAddExpenseClick: () => void;
 }
 
@@ -33,6 +34,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const filteredExpenses = useMemo(() => {
     const sorted = [...expenses].sort((a, b) => b.date - a.date || b.createdAt - a.createdAt);
@@ -146,6 +148,12 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
         </div>
       )}
 
+      {deleteError && (
+        <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 text-xs font-medium text-rose-700 dark:text-rose-300">
+          {ta(language, 'expenseDeleteError')}
+        </div>
+      )}
+
       {/* Confirmation Dialog for Deleting */}
       <ConfirmationModal
         isOpen={expenseToDelete !== null}
@@ -158,10 +166,13 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
         cancelText={t(language, 'cancelBtn')}
         isDestructive={true}
         onConfirm={() => {
-          if (expenseToDelete) {
-            onDeleteExpense(expenseToDelete);
-            setExpenseToDelete(null);
-          }
+          if (!expenseToDelete) return;
+          const target = expenseToDelete;
+          setExpenseToDelete(null);
+          setDeleteError(null);
+          void Promise.resolve(onDeleteExpense(target)).catch(() => {
+            setDeleteError(ta(language, 'expenseDeleteError'));
+          });
         }}
         onCancel={() => setExpenseToDelete(null)}
       />

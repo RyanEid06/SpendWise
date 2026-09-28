@@ -15,6 +15,7 @@ import {
   SUPPORTED_CURRENCIES,
 } from './currency';
 import { APP_VERSION_NAME } from './appVersion';
+import { AttachmentStorage } from './attachmentStorage';
 
 const STORAGE_KEYS = {
   EXPENSES: 'spendwise_expenses',
@@ -68,6 +69,7 @@ export class StorageManager {
     }
 
     localStorage.setItem(STORAGE_KEYS.INITIALIZED, 'true');
+    AttachmentStorage.scheduleMaintenance();
   }
 
   static getExpenses(): Expense[] {
@@ -125,11 +127,21 @@ export class StorageManager {
     }
   }
 
-  static deleteExpense(id: number) {
+  static async deleteExpense(id: number): Promise<void> {
     const expenses = this.getExpenses();
     const deleted = expenses.find((e) => e.id === id);
     const filtered = expenses.filter((e) => e.id !== id);
-    this.saveExpenses(filtered);
+    const detachedAttachments = AttachmentStorage.detachReferencesForExpense(id);
+
+    try {
+      this.saveExpenses(filtered);
+    } catch (error) {
+      AttachmentStorage.restoreReferences(detachedAttachments);
+      throw error;
+    }
+
+    await AttachmentStorage.deleteDetachedFiles(detachedAttachments);
+
     if (deleted) {
       const d = new Date(deleted.date);
       this.invalidateAnalysis(getMonthKey({ year: d.getFullYear(), month: d.getMonth() + 1 }));
@@ -390,10 +402,19 @@ export class StorageManager {
     } catch {}
   }
 
-  static clearAllData() {
-    localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify([]));
-    localStorage.setItem(STORAGE_KEYS.BUDGETS, JSON.stringify([]));
-    this.clearAnalysisCache();
+  static async clearAllData(): Promise<void> {
+    const detachedAttachments = AttachmentStorage.detachAllReferences();
+
+    try {
+      localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.BUDGETS, JSON.stringify([]));
+      this.clearAnalysisCache();
+    } catch (error) {
+      AttachmentStorage.restoreReferences(detachedAttachments);
+      throw error;
+    }
+
+    await AttachmentStorage.deleteDetachedFiles(detachedAttachments);
   }
 
   static validateBackup(input: unknown): SpendWiseBackup {
@@ -555,8 +576,14 @@ export class StorageManager {
   }
   // Restore or merge a fully validated backup. Target state is built before mutation,
   // and current state is restored if a write fails.
-  static restoreBackup(input: SpendWiseBackup, replaceExisting: boolean): ImportSummary {
+  static async restoreBackup(
+    input: SpendWiseBackup,
+    replaceExisting: boolean
+  ): Promise<ImportSummary> {
     const backup = this.validateBackup(input);
+    const detachedAttachments = replaceExisting
+      ? AttachmentStorage.detachAllReferences()
+      : [];
     const oldExpenses = this.getExpenses();
     const oldBudgets = this.getBudgets();
     const oldCurrency = this.getCurrencyCode();
@@ -657,7 +684,12 @@ export class StorageManager {
       this.setCurrencyCode(oldCurrency);
       this.setThemeMode(oldTheme);
       this.setLanguage(oldLanguage);
+      AttachmentStorage.restoreReferences(detachedAttachments);
       throw error;
+    }
+
+    if (replaceExisting) {
+      await AttachmentStorage.deleteDetachedFiles(detachedAttachments);
     }
 
     return {
