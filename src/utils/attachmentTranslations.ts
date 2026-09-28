@@ -16,7 +16,7 @@ const ATTACHMENT_TRANSLATIONS = {
     closePreview: 'Close photo',
     photoMissing: 'Photo file is unavailable',
     photoAddError: 'Could not add this photo.',
-    expenseDeleteError: 'Could not delete this expense and its local photos. Try again.'
+    expenseDeleteError: 'Could not delete this expense and its local photos. Try again.',
     photoTooLarge: 'This image is too large to store safely.',
     photoUnsupported: 'Choose a supported image file.',
     photoLimit: 'Up to {count} photos can be attached to one expense.',
@@ -38,7 +38,7 @@ const ATTACHMENT_TRANSLATIONS = {
     closePreview: 'Fermer la photo',
     photoMissing: 'Le fichier photo est indisponible',
     photoAddError: 'Impossible d’ajouter cette photo.',
-    expenseDeleteError: 'Impossible de supprimer cette dépense et ses photos locales. Réessayez.'
+    expenseDeleteError: 'Impossible de supprimer cette dépense et ses photos locales. Réessayez.',
     photoTooLarge: 'Cette image est trop volumineuse pour être stockée en toute sécurité.',
     photoUnsupported: 'Choisissez un fichier image pris en charge.',
     photoLimit: 'Vous pouvez joindre jusqu’à {count} photos à une dépense.',
@@ -60,7 +60,7 @@ const ATTACHMENT_TRANSLATIONS = {
     closePreview: 'إغلاق الصورة',
     photoMissing: 'ملف الصورة غير متوفر',
     photoAddError: 'تعذر إضافة هذه الصورة.',
-    expenseDeleteError: 'تعذر حذف هذا المصروف وصوره المحلية. حاول مرة أخرى.'
+    expenseDeleteError: 'تعذر حذف هذا المصروف وصوره المحلية. حاول مرة أخرى.',
     photoTooLarge: 'حجم هذه الصورة كبير جداً للتخزين بشكل آمن.',
     photoUnsupported: 'اختر ملف صورة مدعوماً.',
     photoLimit: 'يمكن إرفاق حتى {count} صور لكل مصروف.',
