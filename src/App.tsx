@@ -119,6 +119,10 @@ export const App: React.FC = () => {
       if (backgroundedAt <= 0) return;
       const elapsedSec = (Date.now() - backgroundedAt) / 1000;
       if (elapsedSec >= lockTimeoutSeconds) {
+        window.dispatchEvent(new Event('spendwise-native-back'));
+        setShowAddModal(false);
+        setEditingExpense(null);
+        setShowBudgetModal(false);
         setIsLocked(true);
       }
       backgroundedAt = 0;
@@ -167,6 +171,11 @@ export const App: React.FC = () => {
     void CapacitorApp.addListener('backButton', () => {
       if (document.querySelector('[data-attachment-viewer="true"]')) {
         window.dispatchEvent(new Event('spendwise-close-attachment-preview'));
+        return;
+      }
+
+      if (document.querySelector('[data-native-back-layer="true"]')) {
+        window.dispatchEvent(new Event('spendwise-native-back'));
         return;
       }
 

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Search, X, ReceiptText, Plus } from 'lucide-react';
 import { Expense, Language } from '../types';
 import { MonthYear } from '../utils/date';
@@ -54,8 +54,22 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
 
   const monthName = getLocalizedMonthName(currentMonthYear, language);
 
+  useEffect(() => {
+    const handleNativeBack = () => {
+      if (expenseToDelete !== null) {
+        setExpenseToDelete(null);
+      }
+    };
+
+    window.addEventListener('spendwise-native-back', handleNativeBack);
+    return () => window.removeEventListener('spendwise-native-back', handleNativeBack);
+  }, [expenseToDelete]);
+
   return (
-    <div className="space-y-4 pb-28 animate-screen-enter">
+    <div
+      className="space-y-4 pb-28 animate-screen-enter"
+      data-native-back-layer={expenseToDelete !== null ? 'true' : undefined}
+    >
       {/* Month Selector */}
       <MonthSelector
         currentMonthYear={currentMonthYear}

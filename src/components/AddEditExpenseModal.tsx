@@ -1,15 +1,15 @@
-import React, { useState, useRef } from 'react';
-import { apiFetch } from '../utils/api';
-import { Camera, X, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { X } from 'lucide-react';
 import { Expense, Language, ReceiptScanResult, SmartCaptureResult } from '../types';
 import { DEFAULT_CATEGORIES } from '../utils/categories';
-import { getCurrency, formatCurrency } from '../utils/currency';
+import { getCurrency } from '../utils/currency';
 import { fromInputDateFormat, toInputDateFormat } from '../utils/date';
 import { getLocalizedCategoryName, t } from '../utils/translations';
 import { ExpenseAttachmentsEditor } from './ExpenseAttachmentsEditor';
 import { AttachmentDraft, AttachmentEditPayload, AttachmentStorage, MAX_ATTACHMENTS_PER_EXPENSE } from '../utils/attachmentStorage';
 import { ta } from '../utils/attachmentTranslations';
 import { SmartCaptureCard } from './SmartCaptureCard';
+import { ReceiptScanCard } from './ReceiptScanCard';
 
 interface AddEditExpenseModalProps {
   isOpen: boolean;
@@ -40,8 +40,6 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
   if (!isOpen) return null;
 
   const currency = getCurrency(currencyCode);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   const [amountText, setAmountText] = useState(
     initialExpense ? initialExpense.amount.toString() : ''
   );
@@ -57,11 +55,6 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
   const [amountError, setAmountError] = useState<string | null>(null);
   const [descriptionError, setDescriptionError] = useState<string | null>(null);
 
-  // Receipt scanning states
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanError, setScanError] = useState<string | null>(null);
-  const [scannedResult, setScannedResult] = useState<ReceiptScanResult | null>(null);
-
   // WP07 attachment edits are staged in memory until Save. This prevents
   // cancelled new-expense flows from leaving permanent orphan files.
   const [attachmentDrafts, setAttachmentDrafts] = useState<AttachmentDraft[]>([]);
@@ -69,77 +62,29 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/') || file.size > 8 * 1024 * 1024) {
-      setScanError(t(language, 'receiptScanError'));
-      e.target.value = '';
-      return;
+  const handleReceiptScanApply = (extracted: ReceiptScanResult) => {
+    if (extracted.totalAmount != null && extracted.totalAmount > 0) {
+      setAmountText(extracted.totalAmount.toString());
+      setAmountError(null);
     }
-
-    setIsScanning(true);
-    setScanError(null);
-
-    try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64Data = reader.result as string;
-        try {
-          const res = await apiFetch(
-            '/api/gemini/scan-receipt',
-            {
-              method: 'POST',
-              body: JSON.stringify({
-                imageBase64: base64Data,
-                mimeType: file.type || 'image/jpeg',
-                language,
-              }),
-            },
-            45000
-          );
-
-          if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            throw new Error(errData.error || t(language, 'receiptScanError'));
-          }
-
-          const extracted: ReceiptScanResult = await res.json();
-          setScannedResult(extracted);
-
-          if (extracted.totalAmount != null && extracted.totalAmount > 0) {
-            setAmountText(extracted.totalAmount.toString());
-            setAmountError(null);
-          }
-          if (extracted.merchant) {
-            setDescriptionText(extracted.merchant);
-            setDescriptionError(null);
-          }
-          if (extracted.category && DEFAULT_CATEGORIES.some((c) => c.name === extracted.category)) {
-            setSelectedCategory(extracted.category);
-          }
-          if (extracted.dateMillis) {
-            setSelectedDateMillis(extracted.dateMillis);
-          }
-          if (extracted.notesSummary) {
-            setNoteText((prev) => (prev ? `${prev}\n${extracted.notesSummary}` : extracted.notesSummary!));
-          }
-        } catch {
-          setScanError(t(language, 'receiptScanError'));
-        } finally {
-          setIsScanning(false);
-          if (fileInputRef.current) fileInputRef.current.value = '';
-        }
-      };
-      reader.onerror = () => {
-        setScanError(t(language, 'receiptScanError'));
-        setIsScanning(false);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-      };
-      reader.readAsDataURL(file);
-    } catch {
-      setScanError(t(language, 'receiptScanError'));
-      setIsScanning(false);
+    if (extracted.merchant) {
+      setDescriptionText(extracted.merchant);
+      setDescriptionError(null);
+    }
+    if (extracted.category && DEFAULT_CATEGORIES.some((c) => c.name === extracted.category)) {
+      setSelectedCategory(extracted.category);
+    }
+    if (extracted.dateMillis != null) {
+      setSelectedDateMillis(extracted.dateMillis);
+    }
+    if (extracted.notesSummary) {
+      setNoteText((current) => {
+        const note = extracted.notesSummary!.trim();
+        if (!note) return current;
+        if (!current.trim()) return note;
+        if (current.includes(note)) return current;
+        return `${current.trim()}\n${note}`;
+      });
     }
   };
 
@@ -244,7 +189,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
           <button
             onClick={onClose}
             className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-            aria-label="Close dialog"
+            aria-label={t(language, 'cancelBtn')}
           >
             <X className="w-5 h-5" />
           </button>
@@ -255,100 +200,16 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
           <SmartCaptureCard
             language={language}
             currencyCode={currencyCode}
-            disabled={isSaving || isScanning}
+            disabled={isSaving}
             onApply={handleSmartCaptureApply}
           />
 
-          {/* Scan Receipt Action Card */}
-          <div className="bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 rounded-2xl p-4 transition-colors">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3 rtl:space-x-reverse min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-purple-200/80 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 flex items-center justify-center shrink-0">
-                  <Camera className="w-5 h-5" />
-                </div>
-                <div className="min-w-0">
-                  <h4 className="font-bold text-sm text-purple-950 dark:text-purple-100 truncate">
-                    {t(language, 'scanReceiptCardTitle')}
-                  </h4>
-                  <p className="text-xs text-purple-700/80 dark:text-purple-300/80 truncate">
-                    {t(language, 'scanReceiptCardSub')}
-                  </p>
-                </div>
-              </div>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileChange}
-              />
-
-              <button
-                type="button"
-                disabled={isScanning}
-                onClick={() => fileInputRef.current?.click()}
-                className="min-h-[44px] bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all disabled:opacity-50 cursor-pointer shadow-xs flex items-center space-x-1.5 rtl:space-x-reverse active:scale-95 shrink-0"
-              >
-                {isScanning ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>{t(language, 'scanningStatus')}</span>
-                  </>
-                ) : (
-                  <span>{t(language, 'uploadPhotoBtn')}</span>
-                )}
-              </button>
-            </div>
-
-            {/* Scanning Indicator */}
-            {isScanning && (
-              <div className="mt-3 flex items-center space-x-2 rtl:space-x-reverse text-xs text-purple-800 dark:text-purple-300 font-medium">
-                <Loader2 className="w-4 h-4 animate-spin text-purple-600 dark:text-purple-400 shrink-0" />
-                <span>{t(language, 'analyzingReceiptMsg')}</span>
-              </div>
-            )}
-
-            {/* Error Message */}
-            {scanError && (
-              <div className="mt-3 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-900 dark:text-rose-200 text-xs flex items-center space-x-2.5 rtl:space-x-reverse border border-rose-200 dark:border-rose-800">
-                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
-                <span>{scanError}</span>
-              </div>
-            )}
-
-            {/* Extracted Receipt Review Card */}
-            {scannedResult && !isScanning && (
-              <div className="mt-3.5 p-3.5 rounded-xl bg-purple-100/70 dark:bg-purple-900/40 border border-purple-200 dark:border-purple-800/80 space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center space-x-1.5 rtl:space-x-reverse text-purple-950 dark:text-purple-200 font-bold">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    <span>{t(language, 'receiptScanSuccess')}</span>
-                  </div>
-                  <span className="text-[11px] font-semibold text-purple-700 dark:text-purple-300">
-                    {t(language, 'reviewValuesPrompt')}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-xs pt-1">
-                  <div>
-                    <span className="text-slate-500 dark:text-slate-400">{t(language, 'merchantLabel')}</span>
-                    <p className="font-semibold text-slate-900 dark:text-white truncate">
-                      {scannedResult.merchant || t(language, 'uncertainLabel')}
-                    </p>
-                  </div>
-                  <div className="text-right rtl:text-left">
-                    <span className="text-slate-500 dark:text-slate-400">{t(language, 'totalLabel')}</span>
-                    <p className="font-bold tabular-nums text-slate-900 dark:text-white">
-                      {scannedResult.totalAmount != null
-                        ? formatCurrency(scannedResult.totalAmount, currencyCode)
-                        : t(language, 'uncertainLabel')}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <ReceiptScanCard
+            language={language}
+            currencyCode={currencyCode}
+            disabled={isSaving}
+            onApply={handleReceiptScanApply}
+          />
 
           <ExpenseAttachmentsEditor
             expenseId={initialExpense?.id}

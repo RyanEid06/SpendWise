@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   Lock,
   Download,
@@ -170,8 +170,34 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       }
     }
   };
+  useEffect(() => {
+    const handleNativeBack = () => {
+      if (pendingCurrencyCode) {
+        setPendingCurrencyCode(null);
+        return;
+      }
+      if (pendingImportBackup) {
+        setPendingImportBackup(null);
+        return;
+      }
+      if (showClearModal) {
+        setShowClearModal(false);
+      }
+    };
+
+    window.addEventListener('spendwise-native-back', handleNativeBack);
+    return () => window.removeEventListener('spendwise-native-back', handleNativeBack);
+  }, [pendingCurrencyCode, pendingImportBackup, showClearModal]);
+
   return (
-    <div className="space-y-4 pb-28 animate-screen-enter">
+    <div
+      className="space-y-4 pb-28 animate-screen-enter"
+      data-native-back-layer={
+        showClearModal || pendingImportBackup !== null || pendingCurrencyCode !== null
+          ? 'true'
+          : undefined
+      }
+    >
       {/* Title Header */}
       <div>
         <h2 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">

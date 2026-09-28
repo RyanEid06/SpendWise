@@ -71,7 +71,10 @@ function parseSmartCaptureResult(value: unknown, currentCurrencyCode: string): S
   if (item.currencyMismatch !== currencyMismatch) return null;
 
   const amount =
-    item.priceVisible && !currencyMismatch && candidateAmount != null
+    item.priceVisible &&
+    detectedCurrencyCode === currentCurrencyCode &&
+    !currencyMismatch &&
+    candidateAmount != null
       ? candidateAmount
       : null;
 
@@ -106,6 +109,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const requestIdRef = useRef(0);
+  const analysisInFlightRef = useRef(false);
   const attachmentAppliedRef = useRef(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -118,12 +122,14 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
   useEffect(() => {
     return () => {
       requestIdRef.current += 1;
+      analysisInFlightRef.current = false;
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
 
   const resetSelection = () => {
     requestIdRef.current += 1;
+    analysisInFlightRef.current = false;
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setSelectedFile(null);
     setPreviewUrl(null);
@@ -156,8 +162,17 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
   };
 
   const analyze = async () => {
-    if (!selectedFile || !preparedDraft || isAnalyzing || disabled) return;
+    if (
+      !selectedFile ||
+      !preparedDraft ||
+      isAnalyzing ||
+      analysisInFlightRef.current ||
+      disabled
+    ) {
+      return;
+    }
 
+    analysisInFlightRef.current = true;
     const requestId = ++requestIdRef.current;
     setIsAnalyzing(true);
     setError(null);
@@ -197,7 +212,10 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
       if (requestId !== requestIdRef.current) return;
       setError(t(language, 'smartCaptureError'));
     } finally {
-      if (requestId === requestIdRef.current) setIsAnalyzing(false);
+      if (requestId === requestIdRef.current) {
+        analysisInFlightRef.current = false;
+        setIsAnalyzing(false);
+      }
     }
   };
 
@@ -227,7 +245,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
         {selectedFile && (
           <button
             type="button"
-            disabled={isAnalyzing}
+            disabled={disabled}
             onClick={resetSelection}
             className="min-w-[36px] min-h-[36px] rounded-lg text-cyan-700 dark:text-cyan-300 hover:bg-cyan-100 dark:hover:bg-cyan-900/50 flex items-center justify-center disabled:opacity-50"
             aria-label={t(language, 'smartCaptureRemovePhoto')}

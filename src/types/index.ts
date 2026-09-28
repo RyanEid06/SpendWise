@@ -105,6 +105,8 @@ export interface ReceiptScanResult {
   category?: string | null;
   items: string[];
   notesSummary?: string | null;
+  detectedCurrencyCode?: string | null;
+  currencyMismatch: boolean;
   isUncertain: boolean;
   uncertaintyReason?: string | null;
 }
