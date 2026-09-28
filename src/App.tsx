@@ -311,11 +311,20 @@ export const App: React.FC = () => {
       note,
     });
 
-    await AttachmentStorage.applyExpenseAttachmentChanges(
-      id,
-      attachmentChanges.newAttachments,
-      attachmentChanges.removedAttachmentIds
-    );
+    try {
+      await AttachmentStorage.applyExpenseAttachmentChanges(
+        id,
+        attachmentChanges.newAttachments,
+        attachmentChanges.removedAttachmentIds
+      );
+    } catch (error) {
+      // Attachment writes are transactional. If they fail, restore the
+      // previous financial record so Save remains one logical operation.
+      StorageManager.updateExpense(existing);
+      setExpenses(StorageManager.getExpenses());
+      throw error;
+    }
+
     setExpenses(StorageManager.getExpenses());
   };
 

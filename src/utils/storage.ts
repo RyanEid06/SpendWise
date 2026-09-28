@@ -403,6 +403,11 @@ export class StorageManager {
   }
 
   static async clearAllData(): Promise<void> {
+    const original: CurrencyTransactionState = {
+      expenses: localStorage.getItem(STORAGE_KEYS.EXPENSES),
+      budgets: localStorage.getItem(STORAGE_KEYS.BUDGETS),
+      currency: localStorage.getItem(STORAGE_KEYS.CURRENCY),
+    };
     const detachedAttachments = AttachmentStorage.detachAllReferences();
 
     try {
@@ -410,7 +415,15 @@ export class StorageManager {
       localStorage.setItem(STORAGE_KEYS.BUDGETS, JSON.stringify([]));
       this.clearAnalysisCache();
     } catch (error) {
-      AttachmentStorage.restoreReferences(detachedAttachments);
+      // Clear must be all-or-nothing for financial records and attachment
+      // ownership. AI cache entries are disposable and need not be restored.
+      try {
+        this.setRawStorageValue(STORAGE_KEYS.EXPENSES, original.expenses);
+        this.setRawStorageValue(STORAGE_KEYS.BUDGETS, original.budgets);
+        this.setRawStorageValue(STORAGE_KEYS.CURRENCY, original.currency);
+      } finally {
+        AttachmentStorage.restoreReferences(detachedAttachments);
+      }
       throw error;
     }
 
