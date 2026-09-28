@@ -9,8 +9,8 @@ Keep the keystore and its passwords safe. If the key is lost, Android will not a
 
 ```json
 {
-  "versionName": "1.1.0",
-  "versionCode": 2
+  "versionName": "1.2.0",
+  "versionCode": 3
 }
 ```
 
@@ -18,7 +18,7 @@ For every future release:
 
 - increment `versionCode` by at least 1;
 - change `versionName` to the user-facing version;
-- create a matching tag such as `v1.2.0`.
+- create a matching tag such as `v1.3.0`.
 
 Android Gradle and the Settings screen both read this file.
 
@@ -69,8 +69,8 @@ Branch pushes run typecheck/Vite build, Capacitor sync, and `assembleDebug`. Sig
 Only publish a version tag after the branch is merged and debug CI is green:
 
 ```powershell
-git tag v1.1.0
-git push origin v1.1.0
+git tag v1.2.0
+git push origin v1.2.0
 ```
 
 The tag must exactly match `version.json`. The release job will:
@@ -79,6 +79,6 @@ The tag must exactly match `version.json`. The release job will:
 2. restore the signing key from GitHub Secrets;
 3. build a signed release APK;
 4. upload the APK as an Actions artifact;
-5. publish `SpendWise-v1.1.0.apk` on GitHub Releases.
+5. publish `SpendWise-v1.2.0.apk` on GitHub Releases.
 
 All future release APKs signed with this same key and a higher `versionCode` can update the existing app in place without clearing its local data.
