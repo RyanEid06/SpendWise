@@ -18,6 +18,7 @@ on:
       - wp12b/theme-brand-fx-polish
       - wp13/local-data-foundation
       - wp14/media-lifecycle-full-backup
+      - wp15/core-ux-simplification
     tags:
       - 'v*'
 
@@ -68,6 +69,9 @@ jobs:
 
       - name: Run media and Backup v2 tests
         run: npm run test:media-backup
+
+      - name: Run WP15 core UX architecture tests
+        run: npm run test:core-ux
 
       - name: Sync Capacitor Android
         run: npm run android:sync

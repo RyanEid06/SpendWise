@@ -28,6 +28,7 @@ import { SettingsScreen } from './screens/SettingsScreen';
 import { LockScreen } from './screens/LockScreen';
 import { AddEditExpenseModal } from './components/AddEditExpenseModal';
 import { SetBudgetModal } from './components/SetBudgetModal';
+import { ExpenseDetailModal } from './components/ExpenseDetailModal';
 import { AttachmentEditPayload } from './utils/attachmentStorage';
 
 export const App: React.FC = () => {
@@ -51,6 +52,7 @@ export const App: React.FC = () => {
   // Modal dialog states
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [viewingExpense, setViewingExpense] = useState<Expense | null>(null);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
 
   // AI Insights states
@@ -134,6 +136,7 @@ export const App: React.FC = () => {
         window.dispatchEvent(new Event('spendwise-native-back'));
         setShowAddModal(false);
         setEditingExpense(null);
+        setViewingExpense(null);
         setShowBudgetModal(false);
         setIsLocked(true);
       }
@@ -321,6 +324,7 @@ export const App: React.FC = () => {
   const handleDeleteExpense = async (expense: Expense) => {
     await StorageManager.deleteExpense(expense.id);
     setExpenses(StorageManager.getExpenses());
+    if (viewingExpense?.id === expense.id) setViewingExpense(null);
   };
 
   const handleSetStartingMoney = async (amount: number) => {
@@ -386,9 +390,11 @@ export const App: React.FC = () => {
     setExpenses([]);
     setBudgets([]);
     setAiResult(null);
+    setViewingExpense(null);
   };
 
   const handleBackupRestored = () => {
+    setViewingExpense(null);
     setExpenses(StorageManager.getExpenses());
     setBudgets(StorageManager.getBudgets());
     setCurrencyCodeState(StorageManager.getCurrencyCode());
@@ -512,7 +518,7 @@ export const App: React.FC = () => {
             language={language}
             onPreviousMonth={() => setCurrentMY((prev) => previousMonth(prev))}
             onNextMonth={() => setCurrentMY((prev) => nextMonth(prev))}
-            onExpenseClick={(expense) => setEditingExpense(expense)}
+            onExpenseClick={(expense) => setViewingExpense(expense)}
             onDeleteExpense={handleDeleteExpense}
             onAddExpenseClick={() => {
               setEditingExpense(null);
@@ -542,10 +548,7 @@ export const App: React.FC = () => {
             currentMonthYear={currentMY}
             currencyCode={currencyCode}
             language={language}
-            onNavigateToExpense={(expense) => {
-              setEditingExpense(expense);
-              setShowAddModal(true);
-            }}
+            onNavigateToExpense={(expense) => setViewingExpense(expense)}
           />
         )}
 
@@ -622,6 +625,15 @@ export const App: React.FC = () => {
             setShowAddModal(false);
             setEditingExpense(null);
           }}
+        />
+      )}
+
+      {viewingExpense && (
+        <ExpenseDetailModal
+          expense={viewingExpense}
+          currencyCode={currencyCode}
+          language={language}
+          onClose={() => setViewingExpense(null)}
         />
       )}
 

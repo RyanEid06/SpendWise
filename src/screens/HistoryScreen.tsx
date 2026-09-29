@@ -157,7 +157,6 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
               language={language}
               onClick={() => onExpenseClick(expense)}
               onDeleteClick={() => setExpenseToDelete(expense)}
-              editable={false}
             />
           ))}
         </div>
