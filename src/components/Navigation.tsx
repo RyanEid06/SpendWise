@@ -20,7 +20,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentScreen, language,
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#0B0F19]/95 backdrop-blur-md border-t border-slate-200/90 dark:border-slate-800/80 transition-colors" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#05080C]/95 backdrop-blur-md border-t border-slate-200/90 dark:border-[#202A33]/70 transition-colors" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       role="tablist"
       aria-label="Main Navigation"
     >

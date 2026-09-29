@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { apiFetch } from '../utils/api';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { apiFetchJson } from '../utils/api';
+import { getAiErrorMessage } from '../utils/apiErrors';
 import {
   BarChart3,
   Calendar,
@@ -50,6 +51,8 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
   const [aiExplanation, setAiExplanation] = useState<AiTrendExplanationResult | null>(null);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const aiRequestIdRef = useRef(0);
+  const aiInFlightRef = useRef(false);
 
   // Compute calculated statistics (backed by cache)
   const stats = useMemo(() => {
@@ -62,9 +65,19 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
   }, [expenses, budgets, selectedPeriod, currentMonthYear]);
 
   useEffect(() => {
+    aiRequestIdRef.current += 1;
+    aiInFlightRef.current = false;
+    setIsLoadingAi(false);
     setAiExplanation(null);
     setAiError(null);
   }, [expenses, budgets, currentMonthYear, selectedPeriod, currencyCode, language]);
+
+  useEffect(() => {
+    return () => {
+      aiRequestIdRef.current += 1;
+      aiInFlightRef.current = false;
+    };
+  }, []);
 
   const periods: { key: TimePeriod; label: string }[] = [
     { key: 'CURRENT_MONTH', label: t(language, 'periodCurrent') },
@@ -75,18 +88,22 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
   ];
 
   const handleExplainWithAi = async () => {
+    if (aiInFlightRef.current) return;
+
     if (stats.totalTransactions === 0) {
       setAiError(t(language, 'noMonthlyRecords'));
       return;
     }
 
+    aiInFlightRef.current = true;
+    const requestId = ++aiRequestIdRef.current;
     setIsLoadingAi(true);
     setAiError(null);
 
     const localFallback = StatisticsEngine.generateLocalTrendExplanation(stats, currencyCode);
 
     try {
-      const res = await apiFetch(
+      const data = await apiFetchJson<AiTrendExplanationResult>(
         '/api/gemini/explain-trends',
         {
           method: 'POST',
@@ -99,17 +116,17 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
         30000
       );
 
-      if (!res.ok) {
-        throw new Error('Using verified local calculation');
-      }
-
-      const data = await res.json();
+      if (requestId !== aiRequestIdRef.current) return;
       setAiExplanation(data);
-    } catch {
-      // Fallback cleanly to verified local synthesis without breaking UI
+    } catch (error) {
+      if (requestId !== aiRequestIdRef.current) return;
       setAiExplanation(localFallback);
+      setAiError(getAiErrorMessage(language, error));
     } finally {
-      setIsLoadingAi(false);
+      if (requestId === aiRequestIdRef.current) {
+        aiInFlightRef.current = false;
+        setIsLoadingAi(false);
+      }
     }
   };
 
@@ -122,7 +139,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
   return (
     <div className="space-y-4 pb-28 animate-screen-enter">
       {/* Header title */}
-      <div className="flex items-center justify-between px-1">
+      <div className="flex items-start justify-between gap-2 px-1">
         <div>
           <h2 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
             {t(language, 'statsTitle')}
@@ -160,14 +177,14 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
       </div>
 
       {/* High-Level Stat Cards Grid */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 min-[390px]:grid-cols-2 gap-3">
         {/* Total Spent in Period */}
         <div className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 rounded-3xl p-4 shadow-xs space-y-1 transition-colors">
           <div className="flex items-center space-x-2 rtl:space-x-reverse text-xs font-semibold text-slate-500 dark:text-slate-400">
             <span className="w-2 h-2 rounded-full bg-rose-500" aria-hidden="true"></span>
             <span>{t(language, 'statTotalSpent')}</span>
           </div>
-          <div className="text-xl font-extrabold tabular-nums text-slate-900 dark:text-white tracking-tight">
+          <div dir="ltr" className="min-w-0 text-xl font-extrabold tabular-nums text-slate-900 dark:text-white tracking-tight [overflow-wrap:anywhere] leading-tight">
             {formatCurrency(stats.totalSpent, currencyCode)}
           </div>
           <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
@@ -184,7 +201,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
             <span className="w-2 h-2 rounded-full bg-indigo-500" aria-hidden="true"></span>
             <span>{t(language, 'statAvgExpense')}</span>
           </div>
-          <div className="text-xl font-extrabold tabular-nums text-slate-900 dark:text-white tracking-tight">
+          <div dir="ltr" className="min-w-0 text-xl font-extrabold tabular-nums text-slate-900 dark:text-white tracking-tight [overflow-wrap:anywhere] leading-tight">
             {formatCurrency(stats.averageTransactionAmount, currencyCode)}
           </div>
           <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
@@ -198,7 +215,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
             <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>{t(language, 'statFrequency')}</span>
           </div>
-          <div className="text-xl font-extrabold tabular-nums text-slate-900 dark:text-white tracking-tight">
+          <div className="min-w-0 text-xl font-extrabold tabular-nums text-slate-900 dark:text-white tracking-tight [overflow-wrap:anywhere] leading-tight">
             {stats.averageTransactionsPerMonth.toFixed(1)} {t(language, 'statPerMonth')}
           </div>
           <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
@@ -212,7 +229,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
             <ArrowUpRight className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 rtl:rotate-90" />
             <span>{t(language, 'statLargestExpense')}</span>
           </div>
-          <div className="text-xl font-extrabold tabular-nums text-amber-600 dark:text-amber-400 tracking-tight">
+          <div dir="ltr" className="min-w-0 text-xl font-extrabold tabular-nums text-amber-600 dark:text-amber-400 tracking-tight [overflow-wrap:anywhere] leading-tight">
             {stats.overallLargestExpense
               ? formatCurrency(stats.overallLargestExpense.amount, currencyCode)
               : '—'}
@@ -225,7 +242,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
 
       {/* AI Trend Explanation Action Card */}
       <div className="bg-gradient-to-r from-indigo-50 to-indigo-100/70 dark:from-indigo-950/80 dark:to-[#131B2E] border border-indigo-200 dark:border-indigo-800/50 rounded-3xl p-4.5 space-y-3 shadow-xs transition-colors">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col min-[390px]:flex-row min-[390px]:items-center justify-between gap-3">
           <div className="flex items-center space-x-3 rtl:space-x-reverse min-w-0">
             <div className="w-9 h-9 rounded-2xl bg-indigo-600/15 dark:bg-indigo-600/30 text-indigo-700 dark:text-indigo-400 flex items-center justify-center shrink-0">
               <Sparkles className="w-5 h-5" />
@@ -240,7 +257,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
           <button
             onClick={handleExplainWithAi}
             disabled={isLoadingAi || stats.totalTransactions === 0}
-            className="min-h-[44px] flex items-center space-x-1.5 rtl:space-x-reverse px-4 py-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50 active:scale-95 shrink-0"
+            className="w-full min-[390px]:w-auto min-h-[44px] flex items-center justify-center space-x-1.5 rtl:space-x-reverse px-4 py-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50 active:scale-95 shrink-0"
           >
             {isLoadingAi ? (
               <>
@@ -301,8 +318,8 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
 
       {/* Section 1: Monthly Spending Chart & Remaining Money */}
       <div className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 rounded-3xl p-5 shadow-xs space-y-4 transition-colors">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2 rtl:space-x-reverse">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="flex items-start space-x-2 rtl:space-x-reverse min-w-0">
             <BarChart3 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             <h3 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base">
               {t(language, 'monthlySpendingTitle')}
@@ -329,12 +346,12 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
 
               return (
                 <div key={item.monthKey} className="space-y-1.5 p-3 rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/70 dark:border-slate-800/60">
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                  <div className="flex flex-wrap items-start justify-between gap-2 text-xs">
+                    <div className="flex items-start space-x-2 rtl:space-x-reverse min-w-0">
                       <Calendar className="w-3.5 h-3.5 text-slate-400" />
                       <span className="font-bold text-slate-900 dark:text-white">{localizedMonthName}{item.isPartialMonth && <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400"> {'\u00B7'} {t(language, 'partialMonthLabel')}</span>}</span>
                     </div>
-                    <span className="font-extrabold tabular-nums text-sm text-slate-900 dark:text-white">
+                    <span dir="ltr" className="min-w-0 max-w-full font-extrabold tabular-nums text-sm text-slate-900 dark:text-white text-right rtl:text-left [overflow-wrap:anywhere] leading-tight">
                       {formatCurrency(item.totalSpent, currencyCode)}
                     </span>
                   </div>
@@ -348,7 +365,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                   </div>
 
                   {/* Sub details: Remaining & Largest Expense */}
-                  <div className="flex items-center justify-between text-[11px] pt-1 text-slate-500 dark:text-slate-400">
+                  <div className="flex flex-col min-[390px]:flex-row min-[390px]:items-start justify-between gap-1.5 text-[11px] pt-1 text-slate-500 dark:text-slate-400">
                     <div>
                       {item.isBudgetSet ? (
                         <span
@@ -357,14 +374,16 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                           }`}
                         >
                           {isRemainingNegative ? t(language, 'overByLabel') : t(language, 'remainingLabel')}
-                          {formatCurrency(Math.abs(item.remainingMoney), currencyCode)}
+                          <span dir="ltr" className="inline-block [overflow-wrap:anywhere]">
+                            {formatCurrency(Math.abs(item.remainingMoney), currencyCode)}
+                          </span>
                         </span>
                       ) : (
                         <span className="text-slate-400 dark:text-slate-500 italic">{t(language, 'noBudgetSetLabel')}</span>
                       )}
                     </div>
 
-                    <div className="text-slate-500 dark:text-slate-400">
+                    <div className="min-w-0 text-slate-500 dark:text-slate-400 [overflow-wrap:anywhere]">
                       {item.transactionCount} {t(language, 'txnsLabel')}
                       {item.largestExpense && (
                         <span className="mx-1 text-slate-700 dark:text-slate-300">
@@ -382,8 +401,8 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
 
       {/* Section 2: Category Percentage Distribution */}
       <div className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 rounded-3xl p-5 shadow-xs space-y-4 transition-colors">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2 rtl:space-x-reverse">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="flex items-start space-x-2 rtl:space-x-reverse min-w-0">
             <PieChart className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
             <h3 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base">
               {t(language, 'catDistributionTitle')}
@@ -418,7 +437,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
               {stats.categoryPercentages.map((item) => (
                 <div
                   key={item.category}
-                  className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/70 dark:border-slate-800/60"
+                  className="flex items-start justify-between gap-2 p-2.5 rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/70 dark:border-slate-800/60"
                 >
                   <div className="flex items-center space-x-2 rtl:space-x-reverse min-w-0">
                     <span className="text-base shrink-0" aria-hidden="true">{item.iconEmoji}</span>
@@ -426,8 +445,8 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                       {getLocalizedCategoryName(item.category, language)}
                     </span>
                   </div>
-                  <div className="text-right rtl:text-left shrink-0">
-                    <span className="text-xs font-bold tabular-nums text-slate-900 dark:text-white">
+                  <div className="min-w-0 max-w-[56%] text-right rtl:text-left flex flex-wrap justify-end items-baseline gap-x-1 [overflow-wrap:anywhere]">
+                    <span dir="ltr" className="text-xs font-bold tabular-nums text-slate-900 dark:text-white [overflow-wrap:anywhere]">
                       {formatCurrency(item.amount, currencyCode)}
                     </span>
                     <span
@@ -446,8 +465,8 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
 
       {/* Section 3: Category Trends Over Time */}
       <div className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 rounded-3xl p-5 shadow-xs space-y-4 transition-colors">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2 rtl:space-x-reverse">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="flex items-start space-x-2 rtl:space-x-reverse min-w-0">
             <TrendingUp className="w-5 h-5 text-amber-600 dark:text-amber-400" />
             <h3 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base">
               {t(language, 'catTrendsTitle')}
@@ -482,11 +501,11 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                         setExpandedCategory(isExpanded ? null : catTrend.category);
                       }
                     }}
-                    className="min-h-[52px] p-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-900/60 transition-colors"
+                    className="min-h-[52px] p-3.5 flex items-start justify-between gap-2 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-900/60 transition-colors"
                   >
                     <div className="flex items-center space-x-3 rtl:space-x-reverse min-w-0">
                       <div>
-                        <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                        <div className="flex flex-wrap items-center gap-2">
                           <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
                             {localizedCat}
                           </h4>
@@ -503,7 +522,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        <p dir="ltr" className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 [overflow-wrap:anywhere]">
                           {formatCurrency(catTrend.totalSpent, currencyCode)} ({catTrend.percentageOfPeriod.toFixed(1)}%)
                         </p>
                       </div>
@@ -530,10 +549,10 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                         return (
                           <div
                             key={m.monthKey}
-                            className="flex items-center justify-between text-xs py-1.5 px-2.5 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200/50 dark:border-transparent"
+                            className="flex flex-col min-[380px]:flex-row min-[380px]:items-center justify-between gap-1 text-xs py-1.5 px-2.5 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200/50 dark:border-transparent"
                           >
                             <span className="text-slate-700 dark:text-slate-300 font-medium">{monthLabel}:</span>
-                            <span className="font-bold tabular-nums text-slate-900 dark:text-white">
+                            <span dir="ltr" className="min-w-0 font-bold tabular-nums text-slate-900 dark:text-white text-right rtl:text-left [overflow-wrap:anywhere]">
                               {formatCurrency(m.amount, currencyCode)}
                               <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal mx-1">
                                 ({m.count} {t(language, 'txnsLabel')})
@@ -574,11 +593,11 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                 onClick={() => exp && onNavigateToExpense && onNavigateToExpense(exp)}
                 role={exp ? 'button' : undefined}
                 tabIndex={exp ? 0 : undefined}
-                className={`min-h-[52px] p-3 rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/70 dark:border-slate-800/60 flex items-center justify-between transition-all ${
+                className={`min-h-[52px] p-3 rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/70 dark:border-slate-800/60 flex items-start justify-between gap-3 transition-all ${
                   exp ? 'cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 active:scale-[0.99]' : 'opacity-60'
                 }`}
               >
-                <div>
+                <div className="min-w-0 flex-1">
                   <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">{monthLabel}</div>
                   <div className="text-sm font-bold text-slate-900 dark:text-white truncate max-w-xs">
                     {exp ? exp.description : t(language, 'statNoneRecorded')}
@@ -590,8 +609,8 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                   )}
                 </div>
 
-                <div className="text-right rtl:text-left">
-                  <div className="font-extrabold tabular-nums text-sm sm:text-base text-amber-600 dark:text-amber-400">
+                <div className="min-w-0 max-w-[45%] text-right rtl:text-left">
+                  <div dir="ltr" className="font-extrabold tabular-nums text-sm sm:text-base text-amber-600 dark:text-amber-400 [overflow-wrap:anywhere] leading-tight">
                     {exp ? formatCurrency(exp.amount, currencyCode) : '—'}
                   </div>
                 </div>

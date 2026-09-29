@@ -12,6 +12,10 @@ on:
       - wp4/android-financial-ux
       - wp5/final-release-gate
       - wp9/final-integration
+      - wp10/native-camera-photo-ux
+      - wp11/gemini-backend-reliability
+      - wp12a/financial-responsive-lbp-ui
+      - wp12b/theme-brand-fx-polish
     tags:
       - 'v*'
 
@@ -50,6 +54,12 @@ jobs:
 
       - name: Verify web app
         run: npm run verify
+
+      - name: Run AI reliability tests
+        run: npm run test:reliability
+
+      - name: Run currency defaults tests
+        run: npm run test:currency
 
       - name: Sync Capacitor Android
         run: npm run android:sync

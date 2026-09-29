@@ -93,12 +93,12 @@ export const CurrencyConversionModal: React.FC<CurrencyConversionModalProps> = (
       aria-labelledby="currency-conversion-title"
     >
       <div className="bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden transition-colors">
-        <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-slate-800">
+        <div className="flex items-start justify-between gap-2 px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-slate-800">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0">
               <ArrowRightLeft className="w-4 h-4" />
             </div>
-            <h3 id="currency-conversion-title" className="font-bold text-slate-900 dark:text-white text-base sm:text-lg leading-tight">
+            <h3 id="currency-conversion-title" className="min-w-0 font-bold text-slate-900 dark:text-white text-base sm:text-lg leading-tight [overflow-wrap:anywhere]">
               {t(language, 'currencyConvertTitle', { source: source.code, target: target.code })}
             </h3>
           </div>
@@ -150,12 +150,12 @@ export const CurrencyConversionModal: React.FC<CurrencyConversionModalProps> = (
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 min-[390px]:grid-cols-2 gap-2">
             <div className="rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/70 dark:border-slate-800/70 p-3 min-w-0">
               <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
                 {t(language, 'currencyCurrentLabel')}
               </div>
-              <div className="font-extrabold tabular-nums text-sm text-slate-900 dark:text-white break-words" dir="ltr">
+              <div className="font-extrabold tabular-nums text-sm text-slate-900 dark:text-white [overflow-wrap:anywhere] leading-tight" dir="ltr">
                 {formatCurrency(previewAmount, source.code)}
               </div>
             </div>
@@ -163,7 +163,7 @@ export const CurrencyConversionModal: React.FC<CurrencyConversionModalProps> = (
               <div className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 mb-1">
                 {t(language, 'currencyConvertedLabel')}
               </div>
-              <div className="font-extrabold tabular-nums text-sm text-emerald-900 dark:text-emerald-200 break-words" dir="ltr">
+              <div className="font-extrabold tabular-nums text-sm text-emerald-900 dark:text-emerald-200 [overflow-wrap:anywhere] leading-tight" dir="ltr">
                 {previewConverted == null ? '—' : formatCurrency(previewConverted, target.code)}
               </div>
             </div>
@@ -182,7 +182,7 @@ export const CurrencyConversionModal: React.FC<CurrencyConversionModalProps> = (
           )}
         </div>
 
-        <div className="p-4 bg-slate-50 dark:bg-[#0B0F19]/60 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-end gap-3 rtl:flex-row-reverse">
+        <div className="p-4 bg-slate-50 dark:bg-[#0B0F19]/60 border-t border-slate-200/80 dark:border-slate-800 flex flex-col-reverse min-[360px]:flex-row items-stretch min-[360px]:items-center justify-end gap-2 min-[360px]:gap-3">
           <button
             type="button"
             onClick={onClose}

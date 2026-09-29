@@ -60,7 +60,11 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
   const [attachmentDrafts, setAttachmentDrafts] = useState<AttachmentDraft[]>([]);
   const [removedAttachmentIds, setRemovedAttachmentIds] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [smartCapturePreparing, setSmartCapturePreparing] = useState(false);
+  const [receiptPreparing, setReceiptPreparing] = useState(false);
+  const [attachmentsPreparing, setAttachmentsPreparing] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const isPhotoPreparing = smartCapturePreparing || receiptPreparing || attachmentsPreparing;
 
   const handleReceiptScanApply = (extracted: ReceiptScanResult) => {
     if (extracted.totalAmount != null && extracted.totalAmount > 0) {
@@ -149,7 +153,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
       hasError = true;
     }
 
-    if (hasError || isNaN(amount) || isSaving) return;
+    if (hasError || isNaN(amount) || isSaving || isPhotoPreparing) return;
 
     setIsSaving(true);
     setSaveError(null);
@@ -182,8 +186,8 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
     >
       <div className="bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden my-6 max-h-[90vh] flex flex-col transition-colors">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200/80 dark:border-slate-800">
-          <h2 id="modal-title" className="text-lg font-bold text-slate-900 dark:text-white">
+        <div className="flex items-start justify-between gap-2 px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-slate-800">
+          <h2 id="modal-title" className="min-w-0 text-lg font-bold text-slate-900 dark:text-white leading-tight [overflow-wrap:anywhere]">
             {initialExpense ? t(language, 'modalEditTitle') : t(language, 'modalAddTitle')}
           </h2>
           <button
@@ -201,6 +205,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
             language={language}
             currencyCode={currencyCode}
             disabled={isSaving}
+            onPreparingChange={setSmartCapturePreparing}
             onApply={handleSmartCaptureApply}
           />
 
@@ -208,6 +213,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
             language={language}
             currencyCode={currencyCode}
             disabled={isSaving}
+            onPreparingChange={setReceiptPreparing}
             onApply={handleReceiptScanApply}
           />
 
@@ -218,6 +224,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
             removedAttachmentIds={removedAttachmentIds}
             onDraftsChange={setAttachmentDrafts}
             onRemovedAttachmentIdsChange={setRemovedAttachmentIds}
+            onPreparingChange={setAttachmentsPreparing}
             disabled={isSaving}
           />
 
@@ -227,19 +234,22 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
               {t(language, 'amountLabel')}
             </label>
             <div className="relative rounded-2xl">
-              <div className="absolute inset-y-0 left-0 rtl:left-auto rtl:right-0 pl-4 rtl:pl-0 rtl:pr-4 flex items-center pointer-events-none font-bold text-slate-400 text-lg">
+              <div
+                className={`absolute inset-y-0 flex items-center pointer-events-none font-bold text-slate-400 text-base ${currency.symbolPrefix === false ? 'right-0 pr-4' : 'left-0 pl-4'}`}
+              >
                 {currency.symbol}
               </div>
               <input
                 type="number"
-                step="0.01"
-                placeholder="0.00"
+                step={currency.code === 'LBP' || currency.code === 'JPY' ? '1' : '0.01'}
+                placeholder={currency.code === 'LBP' || currency.code === 'JPY' ? '0' : '0.00'}
+                dir="ltr"
                 value={amountText}
                 onChange={(e) => {
                   setAmountText(e.target.value);
                   setAmountError(null);
                 }}
-                className={`w-full pl-10 rtl:pl-4 rtl:pr-10 pr-4 py-3 rounded-2xl border text-lg font-bold tabular-nums bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-white focus:outline-none focus:ring-2 transition-all ${
+                className={`w-full ${currency.symbolPrefix === false ? 'pl-4 pr-14' : 'pl-14 pr-4'} py-3 rounded-2xl border text-lg font-bold tabular-nums bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-white focus:outline-none focus:ring-2 transition-all ${
                   amountError
                     ? 'border-rose-500 focus:ring-rose-500'
                     : 'border-slate-200 dark:border-slate-800 focus:ring-emerald-500'
@@ -346,7 +356,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
         )}
 
         {/* Footer Actions */}
-        <div className="p-4 bg-slate-50 dark:bg-[#0B0F19]/60 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-end space-x-3 rtl:space-x-reverse">
+        <div className="p-4 bg-slate-50 dark:bg-[#0B0F19]/60 border-t border-slate-200/80 dark:border-slate-800 flex flex-col-reverse min-[360px]:flex-row items-stretch min-[360px]:items-center justify-end gap-2 min-[360px]:gap-3">
           <button
             type="button"
             onClick={onClose}
@@ -357,7 +367,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
           <button
             type="button"
             onClick={() => void handleSave()}
-            disabled={isSaving}
+            disabled={isSaving || isPhotoPreparing}
             className="min-h-[44px] px-6 py-2.5 rounded-xl text-sm font-extrabold bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-sm transition-all cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {initialExpense ? t(language, 'updateExpenseBtn') : t(language, 'saveExpenseBtn')}

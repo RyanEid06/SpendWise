@@ -5,7 +5,25 @@ export interface CurrencyOption {
   symbolPrefix?: boolean;
 }
 
-export const LBP_RATE = 90000; // Suggested default: 1 USD = 90,000 LBP
+export const LBP_RATE = 90000; // User-selected default: 1 USD = 90,000 LBP
+export const DEFAULT_FX_SNAPSHOT_DATE = '2026-09-29';
+
+// Snapshot defaults: target currency units per 1 USD. These are deliberately
+// static suggestions for the conversion dialog, not a live FX feed.
+export const USD_BASED_DEFAULT_RATES: Readonly<Record<string, number>> = Object.freeze({
+  USD: 1,
+  LBP: LBP_RATE,
+  EUR: 0.8790,
+  GBP: 0.7552,
+  AED: 3.6730,
+  SAR: 3.7542,
+  EGP: 52.15,
+  CAD: 1.4174,
+  AUD: 1.4251,
+  JPY: 157.32,
+  INR: 95.98,
+});
+
 export const MAX_CURRENCY_RATE = 1e12;
 export const MAX_STORED_AMOUNT = 1e15;
 
@@ -69,9 +87,14 @@ export function getSuggestedConversionRate(sourceCode: string, targetCode: strin
   const source = sourceCode.toUpperCase();
   const target = targetCode.toUpperCase();
 
-  if (source === 'USD' && target === 'LBP') return LBP_RATE;
-  if (source === 'LBP' && target === 'USD') return 1 / LBP_RATE;
-  return null;
+  if (source === target) return 1;
+
+  const sourcePerUsd = USD_BASED_DEFAULT_RATES[source];
+  const targetPerUsd = USD_BASED_DEFAULT_RATES[target];
+  if (!sourcePerUsd || !targetPerUsd) return null;
+
+  const crossRate = targetPerUsd / sourcePerUsd;
+  return Number(crossRate.toPrecision(12));
 }
 
 export function convertUsdToLbp(usd: number): number {

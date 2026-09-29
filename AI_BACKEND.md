@@ -1,5 +1,7 @@
 # SpendWise AI backend
 
+WP11 centralizes Gemini reliability without changing the existing AI feature set.
+
 SpendWise uses a small Express backend so the Gemini API key never ships inside the APK.
 
 ## Request flow
@@ -16,6 +18,7 @@ Set these on the deployed backend:
 - `SPENDWISE_API_TOKEN` â€” long random access token required by production AI endpoints.
 - `ALLOWED_ORIGINS` â€” comma-separated exact origins. Include `https://localhost` for the Capacitor Android app.
 - `GEMINI_MODEL` â€” optional. Defaults to `gemini-3.8-flash`.
+- `GEMINI_TIMEOUT_MS` â€” optional provider timeout in milliseconds. Defaults to `22000` and is clamped to 5-40 seconds.
 - `NODE_ENV=production`
 
 Do not use a `VITE_` prefix for the Gemini key.
@@ -36,7 +39,7 @@ Health check:
 GET /api/health
 ```
 
-The health response never returns secrets.
+The health response never returns secrets. It reports only high-level readiness plus the configured AI timeout.
 
 ## APK / GitHub Actions configuration
 
@@ -72,3 +75,10 @@ AI prose is requested in the currently selected SpendWise language (`en`, `fr`, 
 Any small Node.js HTTPS host is sufficient. Keep the backend URL stable after it is placed in the APK. If only the Gemini key, model, or server-side prompt changes later, the APK does not need to be rebuilt.
 
 If `SPENDWISE_API_TOKEN` changes, the APK must be rebuilt because the matching client access token is baked in at build time.
+
+
+## Reliability behavior
+
+All Gemini endpoints use one bounded execution path. Provider requests use the official SDK HTTP timeout, structured JSON schemas, and server-side validation/sanitization. SpendWise performs at most one application-level retry, only for transient transport/provider-unavailable failures. Provider or SpendWise rate limits, authentication/configuration failures, timeouts, malformed model output, and invalid requests are not retried blindly.
+
+AI errors use a small machine-readable JSON contract such as `AI_TIMEOUT`, `AI_RATE_LIMITED`, `AI_TEMPORARILY_UNAVAILABLE`, and `AI_INVALID_RESPONSE`. Provider stack traces, request bodies, images, financial datasets, and secrets are never returned to clients or written by the AI failure logger.

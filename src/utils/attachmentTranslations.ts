@@ -1,4 +1,5 @@
 import { Language } from '../types';
+import { PhotoAcquisitionError } from './imageAcquisition';
 
 const ATTACHMENT_TRANSLATIONS = {
   en: {
@@ -22,6 +23,13 @@ const ATTACHMENT_TRANSLATIONS = {
     photoLimit: 'Up to {count} photos can be attached to one expense.',
     attachmentSaveError: 'The expense could not save its photo changes. Try again.',
     processingPhoto: 'Preparing photo...',
+    takePhoto: 'Take Photo',
+    choosePhoto: 'Choose Photo',
+    cameraPermissionRequired: 'Camera access is required to take a photo. Allow it in system settings, or choose a photo instead.',
+    galleryPermissionRequired: 'Photo access is required to choose from your gallery.',
+    cameraUnavailable: 'The camera is unavailable on this device. You can still choose a photo.',
+    photoAcquisitionError: 'Could not open or read this photo. Try again.',
+    photoPrepareError: 'Unable to prepare this photo.',
   },
   fr: {
     attachmentsTitle: 'Photos',
@@ -44,6 +52,13 @@ const ATTACHMENT_TRANSLATIONS = {
     photoLimit: 'Vous pouvez joindre jusqu’à {count} photos à une dépense.',
     attachmentSaveError: 'Les modifications des photos n’ont pas pu être enregistrées. Réessayez.',
     processingPhoto: 'Préparation de la photo...',
+    takePhoto: 'Prendre une photo',
+    choosePhoto: 'Choisir une photo',
+    cameraPermissionRequired: 'L’accès à l’appareil photo est requis. Autorisez-le dans les réglages système, ou choisissez une photo.',
+    galleryPermissionRequired: 'L’accès aux photos est requis pour choisir une image de la galerie.',
+    cameraUnavailable: 'L’appareil photo est indisponible sur cet appareil. Vous pouvez toujours choisir une photo.',
+    photoAcquisitionError: 'Impossible d’ouvrir ou de lire cette photo. Réessayez.',
+    photoPrepareError: 'Impossible de préparer cette photo.',
   },
   ar: {
     attachmentsTitle: 'الصور',
@@ -66,6 +81,13 @@ const ATTACHMENT_TRANSLATIONS = {
     photoLimit: 'يمكن إرفاق حتى {count} صور لكل مصروف.',
     attachmentSaveError: 'تعذر حفظ تغييرات الصور مع المصروف. حاول مرة أخرى.',
     processingPhoto: 'جارٍ تجهيز الصورة...',
+    takePhoto: 'التقاط صورة',
+    choosePhoto: 'اختيار صورة',
+    cameraPermissionRequired: 'يلزم السماح بالوصول إلى الكاميرا لالتقاط صورة. فعّل الإذن من إعدادات النظام، أو اختر صورة بدلاً من ذلك.',
+    galleryPermissionRequired: 'يلزم السماح بالوصول إلى الصور لاختيار صورة من المعرض.',
+    cameraUnavailable: 'الكاميرا غير متاحة على هذا الجهاز. لا يزال بإمكانك اختيار صورة.',
+    photoAcquisitionError: 'تعذر فتح هذه الصورة أو قراءتها. حاول مرة أخرى.',
+    photoPrepareError: 'تعذر تجهيز هذه الصورة.',
   },
 } as const;
 
@@ -84,4 +106,13 @@ export function ta(
     }
   }
   return text;
+}
+
+export function photoAcquisitionErrorText(lang: Language, error: unknown): string {
+  if (error instanceof PhotoAcquisitionError) {
+    if (error.code === 'CAMERA_PERMISSION_REQUIRED') return ta(lang, 'cameraPermissionRequired');
+    if (error.code === 'GALLERY_PERMISSION_REQUIRED') return ta(lang, 'galleryPermissionRequired');
+    if (error.code === 'CAMERA_UNAVAILABLE') return ta(lang, 'cameraUnavailable');
+  }
+  return ta(lang, 'photoAcquisitionError');
 }

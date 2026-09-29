@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
+  Camera,
   Image as ImageIcon,
   ImagePlus,
+  Loader2,
   Maximize2,
   Trash2,
   X,
@@ -13,7 +15,13 @@ import {
   AttachmentStorage,
   MAX_ATTACHMENTS_PER_EXPENSE,
 } from '../utils/attachmentStorage';
-import { ta } from '../utils/attachmentTranslations';
+import { photoAcquisitionErrorText, ta } from '../utils/attachmentTranslations';
+import {
+  choosePhotos,
+  takePhoto,
+  waitForPhotoUiPaint,
+  type AcquiredPhoto,
+} from '../utils/imageAcquisition';
 
 interface ExpenseAttachmentsEditorProps {
   expenseId?: number;
@@ -22,12 +30,19 @@ interface ExpenseAttachmentsEditorProps {
   removedAttachmentIds: string[];
   onDraftsChange: (drafts: AttachmentDraft[]) => void;
   onRemovedAttachmentIdsChange: (ids: string[]) => void;
+  onPreparingChange?: (preparing: boolean) => void;
   disabled?: boolean;
 }
 
 type PreviewState = {
   url: string;
   label: string;
+};
+
+type PendingPhoto = {
+  id: string;
+  photo: AcquiredPhoto;
+  kind: ExpenseAttachmentKind;
 };
 
 function kindLabel(language: Language, kind: ExpenseAttachmentKind): string {
@@ -43,7 +58,11 @@ function errorMessage(language: Language, error: unknown): string {
   if (code === 'ATTACHMENT_LIMIT') {
     return ta(language, 'photoLimit', { count: MAX_ATTACHMENTS_PER_EXPENSE });
   }
-  return ta(language, 'photoAddError');
+  return ta(language, 'photoPrepareError');
+}
+
+function createPendingId(index: number): string {
+  return `pending-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 export const ExpenseAttachmentsEditor: React.FC<ExpenseAttachmentsEditorProps> = ({
@@ -53,23 +72,43 @@ export const ExpenseAttachmentsEditor: React.FC<ExpenseAttachmentsEditorProps> =
   removedAttachmentIds,
   onDraftsChange,
   onRemovedAttachmentIdsChange,
+  onPreparingChange,
   disabled = false,
 }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const preparationGenerationRef = useRef(0);
+  const acquisitionInFlightRef = useRef(false);
+  const cancelledPendingIdsRef = useRef<Set<string>>(new Set());
+  const draftsRef = useRef(drafts);
   const [selectedKind, setSelectedKind] = useState<ExpenseAttachmentKind>('proof');
+  const [isAcquiring, setIsAcquiring] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
+  const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [persistedUrls, setPersistedUrls] = useState<Record<string, string>>({});
   const [missingIds, setMissingIds] = useState<Set<string>>(new Set());
   const [draftUrls, setDraftUrls] = useState<string[]>([]);
   const [preview, setPreview] = useState<PreviewState | null>(null);
 
+  draftsRef.current = drafts;
+
   const persisted = useMemo(
     () => (expenseId ? AttachmentStorage.getAttachmentsForExpense(expenseId) : []),
     [expenseId]
   );
   const visiblePersisted = persisted.filter((item) => !removedAttachmentIds.includes(item.id));
-  const totalVisible = visiblePersisted.length + drafts.length;
+  const totalVisible = visiblePersisted.length + drafts.length + pendingPhotos.length;
+
+  useEffect(() => {
+    onPreparingChange?.(isPreparing);
+  }, [isPreparing, onPreparingChange]);
+
+  useEffect(() => {
+    return () => {
+      preparationGenerationRef.current += 1;
+      acquisitionInFlightRef.current = false;
+      cancelledPendingIdsRef.current.clear();
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -129,29 +168,99 @@ export const ExpenseAttachmentsEditor: React.FC<ExpenseAttachmentsEditorProps> =
     };
   }, [preview]);
 
-  const handleFiles = async (files: FileList | null) => {
-    if (!files || files.length === 0 || disabled) return;
+  const preparePhotos = async (photos: AcquiredPhoto[]) => {
+    if (photos.length === 0) return;
 
-    const available = MAX_ATTACHMENTS_PER_EXPENSE - totalVisible;
+    const generation = ++preparationGenerationRef.current;
+    const kind = selectedKind;
+    cancelledPendingIdsRef.current.clear();
+    const pending = photos.map((photo, index) => ({
+      id: createPendingId(index),
+      photo,
+      kind,
+    }));
+    setPendingPhotos(pending);
+    setIsPreparing(true);
+    setError(null);
+
+    await waitForPhotoUiPaint();
+
+    const prepared: AttachmentDraft[] = [];
+    try {
+      for (const item of pending) {
+        if (generation !== preparationGenerationRef.current) return;
+        const file = await item.photo.loadFile();
+        const draft = await AttachmentStorage.prepareImageDraft(file, item.kind);
+        if (generation !== preparationGenerationRef.current) return;
+        if (!cancelledPendingIdsRef.current.has(item.id)) {
+          prepared.push(draft);
+        }
+      }
+
+      if (generation !== preparationGenerationRef.current) return;
+      if (prepared.length > 0) {
+        const next = draftsRef.current.concat(prepared);
+        draftsRef.current = next;
+        onDraftsChange(next);
+      }
+    } catch (err) {
+      if (generation === preparationGenerationRef.current) {
+        setError(errorMessage(language, err));
+      }
+    } finally {
+      if (generation === preparationGenerationRef.current) {
+        setPendingPhotos([]);
+        cancelledPendingIdsRef.current.clear();
+        setIsPreparing(false);
+      }
+    }
+  };
+
+  const beginCameraAcquisition = async () => {
+    if (disabled || isPreparing || acquisitionInFlightRef.current) return;
+
+    const available =
+      MAX_ATTACHMENTS_PER_EXPENSE - visiblePersisted.length - draftsRef.current.length;
     if (available <= 0) {
       setError(ta(language, 'photoLimit', { count: MAX_ATTACHMENTS_PER_EXPENSE }));
       return;
     }
 
-    setIsPreparing(true);
+    acquisitionInFlightRef.current = true;
+    setIsAcquiring(true);
     setError(null);
-    const prepared: AttachmentDraft[] = [];
-
     try {
-      for (const file of Array.from(files).slice(0, available)) {
-        prepared.push(await AttachmentStorage.prepareImageDraft(file, selectedKind));
-      }
-      onDraftsChange(drafts.concat(prepared));
-    } catch (err) {
-      setError(errorMessage(language, err));
+      const photo = await takePhoto();
+      if (photo) await preparePhotos([photo]);
+    } catch (acquisitionError) {
+      setError(photoAcquisitionErrorText(language, acquisitionError));
     } finally {
-      setIsPreparing(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      acquisitionInFlightRef.current = false;
+      setIsAcquiring(false);
+    }
+  };
+
+  const beginGalleryAcquisition = async () => {
+    if (disabled || isPreparing || acquisitionInFlightRef.current) return;
+
+    const available =
+      MAX_ATTACHMENTS_PER_EXPENSE - visiblePersisted.length - draftsRef.current.length;
+    if (available <= 0) {
+      setError(ta(language, 'photoLimit', { count: MAX_ATTACHMENTS_PER_EXPENSE }));
+      return;
+    }
+
+    acquisitionInFlightRef.current = true;
+    setIsAcquiring(true);
+    setError(null);
+    try {
+      const photos = await choosePhotos(available);
+      await preparePhotos(photos.slice(0, available));
+    } catch (acquisitionError) {
+      setError(photoAcquisitionErrorText(language, acquisitionError));
+    } finally {
+      acquisitionInFlightRef.current = false;
+      setIsAcquiring(false);
     }
   };
 
@@ -162,7 +271,14 @@ export const ExpenseAttachmentsEditor: React.FC<ExpenseAttachmentsEditorProps> =
 
   const removeDraft = (index: number) => {
     setPreview(null);
-    onDraftsChange(drafts.filter((_, draftIndex) => draftIndex !== index));
+    const next = draftsRef.current.filter((_, draftIndex) => draftIndex !== index);
+    draftsRef.current = next;
+    onDraftsChange(next);
+  };
+
+  const removePendingPhoto = (id: string) => {
+    cancelledPendingIdsRef.current.add(id);
+    setPendingPhotos((current) => current.filter((item) => item.id !== id));
   };
 
   return (
@@ -230,6 +346,33 @@ export const ExpenseAttachmentsEditor: React.FC<ExpenseAttachmentsEditorProps> =
             );
           })}
 
+          {pendingPhotos.map((item) => (
+            <div
+              key={item.id}
+              className="relative aspect-square rounded-xl overflow-hidden border border-amber-300 dark:border-amber-800 bg-white dark:bg-slate-900"
+            >
+              <img
+                src={item.photo.previewUrl}
+                alt={kindLabel(language, item.kind)}
+                className="w-full h-full object-cover opacity-80"
+              />
+              <div className="absolute inset-x-0 bottom-0 bg-slate-950/75 text-white px-1.5 py-1.5 text-[9px] font-semibold flex items-center justify-center gap-1">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                <span>{ta(language, 'processingPhoto')}</span>
+              </div>
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => removePendingPhoto(item.id)}
+                className="absolute top-1.5 right-1.5 rtl:right-auto rtl:left-1.5 w-8 h-8 rounded-lg bg-black/70 hover:bg-rose-600 text-white flex items-center justify-center cursor-pointer disabled:opacity-50"
+                aria-label={ta(language, 'removePhoto')}
+                title={ta(language, 'removePhoto')}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+
           {drafts.map((draft, index) => {
             const url = draftUrls[index];
             return (
@@ -266,36 +409,36 @@ export const ExpenseAttachmentsEditor: React.FC<ExpenseAttachmentsEditorProps> =
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row gap-2">
-        <select
-          value={selectedKind}
-          disabled={disabled || isPreparing}
-          onChange={(event) => setSelectedKind(event.target.value as ExpenseAttachmentKind)}
-          aria-label={ta(language, 'attachmentKind')}
-          className="min-h-[44px] flex-1 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#111928] text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-        >
-          <option value="purchase">{ta(language, 'kindPurchase')}</option>
-          <option value="receipt">{ta(language, 'kindReceipt')}</option>
-          <option value="proof">{ta(language, 'kindProof')}</option>
-        </select>
+      <select
+        value={selectedKind}
+        disabled={disabled || isPreparing || isAcquiring}
+        onChange={(event) => setSelectedKind(event.target.value as ExpenseAttachmentKind)}
+        aria-label={ta(language, 'attachmentKind')}
+        className="w-full min-h-[44px] px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#111928] text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+      >
+        <option value="purchase">{ta(language, 'kindPurchase')}</option>
+        <option value="receipt">{ta(language, 'kindReceipt')}</option>
+        <option value="proof">{ta(language, 'kindProof')}</option>
+      </select>
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={(event) => void handleFiles(event.target.files)}
-        />
-
+      <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
-          disabled={disabled || isPreparing || totalVisible >= MAX_ATTACHMENTS_PER_EXPENSE}
-          onClick={() => fileInputRef.current?.click()}
-          className="min-h-[44px] px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-extrabold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={disabled || isPreparing || isAcquiring || totalVisible >= MAX_ATTACHMENTS_PER_EXPENSE}
+          onClick={() => void beginCameraAcquisition()}
+          className="min-h-[44px] px-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-extrabold flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <ImagePlus className="w-4 h-4" />
-          <span>{isPreparing ? ta(language, 'processingPhoto') : ta(language, 'addPhoto')}</span>
+          <Camera className="w-4 h-4" />
+          <span>{ta(language, 'takePhoto')}</span>
+        </button>
+        <button
+          type="button"
+          disabled={disabled || isPreparing || isAcquiring || totalVisible >= MAX_ATTACHMENTS_PER_EXPENSE}
+          onClick={() => void beginGalleryAcquisition()}
+          className="min-h-[44px] px-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-extrabold flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isAcquiring ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
+          <span>{ta(language, 'choosePhoto')}</span>
         </button>
       </div>
 

@@ -14,6 +14,7 @@ interface ExpenseItemCardProps {
   language: Language;
   onClick: () => void;
   onDeleteClick: (e: React.MouseEvent) => void;
+  editable?: boolean;
 }
 
 export const ExpenseItemCard: React.FC<ExpenseItemCardProps> = ({
@@ -22,6 +23,7 @@ export const ExpenseItemCard: React.FC<ExpenseItemCardProps> = ({
   language,
   onClick,
   onDeleteClick,
+  editable = true,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const catInfo = getCategoryInfo(expense.category);
@@ -54,7 +56,7 @@ export const ExpenseItemCard: React.FC<ExpenseItemCardProps> = ({
             setIsExpanded((prev) => !prev);
           }
         }}
-        className="p-3.5 flex items-center justify-between gap-3 cursor-pointer group active:scale-[0.995] transition-all select-none"
+        className="p-3.5 grid grid-cols-[auto_minmax(0,1fr)_auto] min-[390px]:grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-2 cursor-pointer group active:scale-[0.995] transition-all select-none"
       >
         {/* Left: Category Icon */}
         <div
@@ -73,7 +75,7 @@ export const ExpenseItemCard: React.FC<ExpenseItemCardProps> = ({
           </h4>
 
           {/* Category & Date on their own dedicated line to prevent ANY overlapping */}
-          <div className="flex items-center gap-1.5 text-xs mt-1 text-slate-500 dark:text-slate-400">
+          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs mt-1 text-slate-500 dark:text-slate-400">
             <span
               style={{ color: catInfo.color }}
               className="font-semibold text-[11px] px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800/80 shrink-0"
@@ -107,15 +109,16 @@ export const ExpenseItemCard: React.FC<ExpenseItemCardProps> = ({
           </div>
         </div>
 
-        {/* Right: Amount & Little Arrow (Chevron) */}
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="text-right rtl:text-left">
-            <div className="font-extrabold text-sm sm:text-base tabular-nums text-slate-900 dark:text-white">
-              {formatCurrency(expense.amount, currencyCode)}
-            </div>
-          </div>
+        {/* Amount moves below the metadata on very narrow phones, then returns inline. */}
+        <div
+          dir="ltr"
+          className="col-start-2 col-span-2 row-start-2 min-[390px]:col-start-3 min-[390px]:col-span-1 min-[390px]:row-start-1 min-w-0 text-right rtl:text-left font-extrabold text-sm sm:text-base tabular-nums text-slate-900 dark:text-white [overflow-wrap:anywhere] leading-tight"
+        >
+          {formatCurrency(expense.amount, currencyCode)}
+        </div>
 
-          {/* Little Arrow Toggle Button */}
+        {/* Little Arrow Toggle Button */}
+        <div className="col-start-3 row-start-1 min-[390px]:col-start-4">
           <button
             type="button"
             onClick={toggleExpand}
@@ -163,7 +166,7 @@ export const ExpenseItemCard: React.FC<ExpenseItemCardProps> = ({
             </div>
           )}
 
-          {attachmentCount > 0 && (
+          {attachmentCount > 0 && editable && (
             <button
               type="button"
               onClick={(event) => {
@@ -190,17 +193,19 @@ export const ExpenseItemCard: React.FC<ExpenseItemCardProps> = ({
 
           {/* Action Buttons Row */}
           <div className="flex items-center gap-2 pt-1 border-t border-slate-200/60 dark:border-slate-800/60">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onClick();
-              }}
-              className="flex-1 min-h-[42px] px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer active:scale-98"
-            >
-              <Edit2 className="w-3.5 h-3.5" />
-              <span>{t(language, 'editExpenseBtnLabel')}</span>
-            </button>
+            {editable && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClick();
+                }}
+                className="flex-1 min-h-[42px] px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer active:scale-98"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+                <span>{t(language, 'editExpenseBtnLabel')}</span>
+              </button>
+            )}
 
             <button
               type="button"

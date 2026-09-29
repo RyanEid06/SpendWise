@@ -102,11 +102,11 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
           )}
         </div>
 
-        <div className="flex items-center justify-between px-1 text-xs text-slate-500 dark:text-slate-400 font-medium">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-1 text-xs text-slate-500 dark:text-slate-400 font-medium">
           <span>
             {filteredExpenses.length} {filteredExpenses.length === 1 ? t(language, 'expenseSingle') : t(language, 'expensePlural')}
           </span>
-          <span className="font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400 text-sm">
+          <span dir="ltr" className="min-w-0 font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400 text-sm [overflow-wrap:anywhere]">
             {t(language, 'total')} {formatCurrency(totalSpent, currencyCode)}
           </span>
         </div>
@@ -157,6 +157,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
               language={language}
               onClick={() => onExpenseClick(expense)}
               onDeleteClick={() => setExpenseToDelete(expense)}
+              editable={false}
             />
           ))}
         </div>

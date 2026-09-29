@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
-import { apiFetch } from './utils/api';
+import { apiFetchJson } from './utils/api';
+import { getAiErrorMessage } from './utils/apiErrors';
+import { t } from './utils/translations';
 import { Plus } from 'lucide-react';
 import { Expense, MonthlyBudget, Screen, ThemeMode, CategorySpend, AiAnalysisResult, Language } from './types';
 import {
@@ -60,15 +62,27 @@ export const App: React.FC = () => {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiNotice, setAiNotice] = useState<string | null>(null);
+  const aiRequestIdRef = useRef(0);
+  const aiInFlightRef = useRef(false);
 
   // Load cached AI analysis whenever currentMY changes
   useEffect(() => {
+    aiRequestIdRef.current += 1;
+    aiInFlightRef.current = false;
+    setIsAiLoading(false);
     const key = getMonthKey(currentMY);
     const cached = StorageManager.getCachedAnalysis(key);
     setAiResult(cached);
     setAiError(null);
     setAiNotice(null);
   }, [currentMY, expenses, currencyCode, language]);
+
+  useEffect(() => {
+    return () => {
+      aiRequestIdRef.current += 1;
+      aiInFlightRef.current = false;
+    };
+  }, []);
 
   // Handle Theme class on document.documentElement with system listener
   useEffect(() => {
@@ -410,6 +424,8 @@ export const App: React.FC = () => {
 
   // Run AI Analysis
   const handleAnalyzeSpending = useCallback(async () => {
+    if (aiInFlightRef.current) return;
+
     if (expenses.length === 0) {
       setAiError('No expenses recorded yet. Please add some expenses before analyzing your spending.');
       return;
@@ -424,6 +440,8 @@ export const App: React.FC = () => {
       return;
     }
 
+    aiInFlightRef.current = true;
+    const requestId = ++aiRequestIdRef.current;
     setIsAiLoading(true);
     setAiError(null);
     setAiNotice(null);
@@ -433,7 +451,7 @@ export const App: React.FC = () => {
     const localFallback = analyzer.generateStatisticalAnalysis(summary, currencyCode);
 
     try {
-      const response = await apiFetch(
+      const data = await apiFetchJson<AiAnalysisResult>(
         '/api/gemini/analyze',
         {
           method: 'POST',
@@ -446,27 +464,20 @@ export const App: React.FC = () => {
         30000
       );
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Server responded with ${response.status}`);
-      }
-
-      const data: AiAnalysisResult = await response.json();
+      if (requestId !== aiRequestIdRef.current) return;
       StorageManager.cacheAnalysis(data);
       setAiResult(data);
-    } catch (err: any) {
-      // Fallback to local statistical calculation gracefully
-      console.warn('Gemini spending analysis error, using statistical fallback:', err);
+    } catch (error) {
+      if (requestId !== aiRequestIdRef.current) return;
+      console.warn('AI spending analysis unavailable; using local statistical fallback.');
       StorageManager.cacheAnalysis(localFallback);
       setAiResult(localFallback);
-      const isApiKeyMissing = err.message?.includes('Gemini API key');
-      setAiNotice(
-        isApiKeyMissing
-          ? 'Gemini API key not configured. Using verified local statistical analysis.'
-          : 'Unable to reach Gemini AI service right now. Using verified local statistical analysis.'
-      );
+      setAiNotice(`${getAiErrorMessage(language, error)} ${t(language, 'aiFallbackNotice')}`);
     } finally {
-      setIsAiLoading(false);
+      if (requestId === aiRequestIdRef.current) {
+        aiInFlightRef.current = false;
+        setIsAiLoading(false);
+      }
     }
   }, [expenses, monthlyExpenses, currentMY, currencyCode, language]);
 
@@ -475,16 +486,19 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 flex flex-col font-sans antialiased transition-colors duration-200">
+    <div className="min-h-screen bg-slate-100 dark:bg-[#05080C] text-slate-900 dark:text-slate-100 flex flex-col font-sans antialiased transition-colors duration-200">
       {/* Android Top Status Bar & App Header */}
-      <header className="sticky top-0 z-40 bg-slate-100/95 dark:bg-[#0B0F19]/95 backdrop-blur-md px-4 pb-2 transition-colors border-b border-slate-200/50 dark:border-slate-800/50" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)' }}>
+      <header className="sticky top-0 z-40 bg-slate-100/95 dark:bg-[#05080C]/95 backdrop-blur-md px-4 pb-2 transition-colors border-b border-slate-200/50 dark:border-[#202A33]/70" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)' }}>
         <div className="max-w-md mx-auto space-y-1.5">
           {/* App Branding (Clean, language switcher moved to Settings) */}
           <div className="flex items-center justify-between pt-0.5">
             <div className="flex items-center space-x-2 rtl:space-x-reverse">
-              <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black text-xs">
-                S
-              </div>
+              <img
+                src="/app-icon.jpg"
+                alt=""
+                aria-hidden="true"
+                className="w-7 h-7 rounded-lg object-cover shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10"
+              />
               <h1 className="font-extrabold text-sm sm:text-base tracking-tight text-slate-900 dark:text-white">
                 SpendWise
               </h1>
@@ -511,10 +525,6 @@ export const App: React.FC = () => {
             onNextMonth={() => setCurrentMY((prev) => nextMonth(prev))}
             onSetBudgetClick={() => setShowBudgetModal(true)}
             onExpenseClick={(expense) => setEditingExpense(expense)}
-            onAddExpenseClick={() => {
-              setEditingExpense(null);
-              setShowAddModal(true);
-            }}
           />
         )}
 
@@ -546,10 +556,6 @@ export const App: React.FC = () => {
             onPreviousMonth={() => setCurrentMY((prev) => previousMonth(prev))}
             onNextMonth={() => setCurrentMY((prev) => nextMonth(prev))}
             onAnalyzeClick={handleAnalyzeSpending}
-            onAddExpenseClick={() => {
-              setEditingExpense(null);
-              setShowAddModal(true);
-            }}
           />
         )}
 
@@ -587,8 +593,8 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      {/* Floating Action Button (Cleanly positioned on secondary screens; Home uses stationary bottom button) */}
-      {currentScreen !== 'settings' && currentScreen !== 'home' && (
+      {/* Persistent Add Expense action is intentionally limited to Home and History. */}
+      {(currentScreen === 'home' || currentScreen === 'history') && (
         <button
           onClick={() => {
             setEditingExpense(null);
