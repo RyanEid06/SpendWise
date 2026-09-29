@@ -126,6 +126,14 @@ export const TRANSLATIONS = {
     smartCaptureRemovePhoto: 'Remove Smart Capture photo',
     smartCaptureInvalidImage: 'This image could not be prepared. Choose a supported purchase photo.',
     smartCaptureError: 'Smart Capture could not analyze this photo. You can retry or enter the expense manually.',
+    aiErrorNetwork: 'The SpendWise AI service could not be reached. Check your connection and try again.',
+    aiErrorTimeout: 'AI analysis took too long. Please try again.',
+    aiErrorUnavailable: 'AI is temporarily unavailable. Please try again shortly.',
+    aiErrorRateLimited: 'Too many AI requests right now. Please wait briefly and try again.',
+    aiErrorNotConfigured: 'AI is not configured on this SpendWise backend.',
+    aiErrorInvalidResponse: 'AI returned an unusable response. Please try again.',
+    aiErrorGeneric: 'AI analysis could not be completed. Please try again.',
+    aiFallbackNotice: 'AI is unavailable right now. Showing verified local statistical analysis instead.',
 
     // Set Budget Modal
     setBudgetModalTitle: 'Starting Budget',
@@ -418,6 +426,14 @@ export const TRANSLATIONS = {
     smartCaptureRemovePhoto: 'Retirer la photo Smart Capture',
     smartCaptureInvalidImage: 'Cette image n’a pas pu être préparée. Choisissez une photo d’achat prise en charge.',
     smartCaptureError: 'Capture intelligente n’a pas pu analyser cette photo. Réessayez ou saisissez la dépense manuellement.',
+    aiErrorNetwork: 'Le service IA SpendWise est inaccessible. Vérifiez votre connexion et réessayez.',
+    aiErrorTimeout: 'L’analyse IA a pris trop de temps. Réessayez.',
+    aiErrorUnavailable: 'L’IA est temporairement indisponible. Réessayez dans un instant.',
+    aiErrorRateLimited: 'Trop de requêtes IA pour le moment. Patientez brièvement puis réessayez.',
+    aiErrorNotConfigured: 'L’IA n’est pas configurée sur ce serveur SpendWise.',
+    aiErrorInvalidResponse: 'L’IA a renvoyé une réponse inutilisable. Réessayez.',
+    aiErrorGeneric: 'L’analyse IA n’a pas pu être terminée. Réessayez.',
+    aiFallbackNotice: 'L’IA est indisponible pour le moment. Une analyse statistique locale vérifiée est affichée.',
 
     // Set Budget Modal
     setBudgetModalTitle: 'Budget de départ',
@@ -710,6 +726,14 @@ export const TRANSLATIONS = {
     smartCaptureRemovePhoto: 'إزالة صورة الإضافة الذكية',
     smartCaptureInvalidImage: 'تعذر تجهيز هذه الصورة. اختر صورة مشتريات مدعومة.',
     smartCaptureError: 'تعذر على الإضافة الذكية تحليل هذه الصورة. يمكنك إعادة المحاولة أو إدخال المصروف يدوياً.',
+    aiErrorNetwork: 'تعذر الوصول إلى خدمة الذكاء الاصطناعي في SpendWise. تحقق من الاتصال وحاول مجدداً.',
+    aiErrorTimeout: 'استغرق تحليل الذكاء الاصطناعي وقتاً طويلاً. حاول مجدداً.',
+    aiErrorUnavailable: 'خدمة الذكاء الاصطناعي غير متاحة مؤقتاً. حاول مجدداً بعد قليل.',
+    aiErrorRateLimited: 'هناك طلبات كثيرة على خدمة الذكاء الاصطناعي حالياً. انتظر قليلاً ثم حاول مجدداً.',
+    aiErrorNotConfigured: 'خدمة الذكاء الاصطناعي غير مهيأة على خادم SpendWise.',
+    aiErrorInvalidResponse: 'أعاد الذكاء الاصطناعي استجابة غير صالحة للاستخدام. حاول مجدداً.',
+    aiErrorGeneric: 'تعذر إكمال تحليل الذكاء الاصطناعي. حاول مجدداً.',
+    aiFallbackNotice: 'الذكاء الاصطناعي غير متاح حالياً. يتم عرض تحليل إحصائي محلي موثوق بدلاً منه.',
 
     // Set Budget Modal
     setBudgetModalTitle: 'الميزانية المبدئية',
