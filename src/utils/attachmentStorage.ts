@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { Directory, Filesystem } from '@capacitor/filesystem';
 import { ExpenseAttachment, ExpenseAttachmentKind } from '../types';
+import { analyzeMediaIntegrity, MediaBinaryInventoryItem, MediaIntegrityReport, planSafeMediaRepair } from './mediaIntegrity';
 import { LocalDataStore } from './localDataStore';
 
 const ATTACHMENT_DIR = 'expense-attachments';
@@ -110,6 +111,34 @@ async function idbDelete(key: string): Promise<void> {
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error || new Error('ATTACHMENT_DELETE_FAILED'));
       tx.onabort = () => reject(tx.error || new Error('ATTACHMENT_DELETE_FAILED'));
+    });
+  } finally {
+    db.close();
+  }
+}
+
+async function idbEntries(): Promise<MediaBinaryInventoryItem[]> {
+  const db = await openMediaDb();
+  try {
+    return await new Promise<MediaBinaryInventoryItem[]>((resolve, reject) => {
+      const tx = db.transaction(MEDIA_STORE_NAME, 'readonly');
+      const store = tx.objectStore(MEDIA_STORE_NAME);
+      const request = store.openCursor();
+      const results: MediaBinaryInventoryItem[] = [];
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor) {
+          resolve(results);
+          return;
+        }
+        const value = cursor.value;
+        results.push({
+          storageKey: String(cursor.key),
+          byteSize: value instanceof Blob ? value.size : 0,
+        });
+        cursor.continue();
+      };
+      request.onerror = () => reject(request.error || new Error('ATTACHMENT_READ_FAILED'));
     });
   } finally {
     db.close();
@@ -304,6 +333,89 @@ export class AttachmentStorage {
 
   static async readAttachmentUrl(item: ExpenseAttachment): Promise<string> {
     return readBinaryUrl(item);
+  }
+
+  static async readAttachmentBlob(item: ExpenseAttachment): Promise<Blob> {
+    if (isNative()) {
+      const result = await Filesystem.readFile({ path: item.storageKey, directory: Directory.Data });
+      if (result.data instanceof Blob) return result.data;
+      const binary = atob(String(result.data));
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
+      return new Blob([bytes], { type: item.mimeType });
+    }
+    return idbGet(item.storageKey);
+  }
+
+  static async stageBackupMedia(
+    source: Pick<ExpenseAttachment, 'mimeType' | 'createdAt' | 'originalFilename' | 'kind' | 'width' | 'height'>,
+    targetExpenseId: number,
+    blob: Blob
+  ): Promise<ExpenseAttachment> {
+    if (source.mimeType !== 'image/jpeg' || blob.size <= 0 || blob.size > MAX_STORED_IMAGE_BYTES) {
+      throw new Error('BACKUP_MEDIA_INVALID');
+    }
+    const id = generateAttachmentId();
+    const storageKey = getStorageKey(id);
+    await saveBinary(storageKey, blob);
+    return {
+      id,
+      expenseId: targetExpenseId,
+      storageKey,
+      mimeType: 'image/jpeg',
+      createdAt: source.createdAt,
+      originalFilename: source.originalFilename ?? null,
+      kind: source.kind,
+      byteSize: blob.size,
+      width: source.width,
+      height: source.height,
+    };
+  }
+
+  static async listBinaryInventory(): Promise<MediaBinaryInventoryItem[]> {
+    if (isNative()) {
+      try {
+        const listing = await Filesystem.readdir({ path: ATTACHMENT_DIR, directory: Directory.Data });
+        return listing.files
+          .filter((file) => file.type === 'file')
+          .map((file) => ({
+            storageKey: ATTACHMENT_DIR + '/' + file.name,
+            byteSize: Number(file.size || 0),
+          }));
+      } catch {
+        return [];
+      }
+    }
+    try {
+      return await idbEntries();
+    } catch {
+      return [];
+    }
+  }
+
+  static async auditIntegrity(): Promise<MediaIntegrityReport> {
+    return analyzeMediaIntegrity(
+      LocalDataStore.getExpenses(),
+      LocalDataStore.getAttachments(),
+      await this.listBinaryInventory()
+    );
+  }
+
+  static async repairIntegrity(): Promise<{ report: MediaIntegrityReport; removedMetadata: number; deletedFiles: number }> {
+    const report = await this.auditIntegrity();
+    const plan = planSafeMediaRepair(report);
+    const before = LocalDataStore.snapshot();
+    const next = {
+      ...before,
+      attachments: before.attachments.filter((item) => !plan.removeAttachmentIds.includes(item.id)),
+    };
+    if (plan.removeAttachmentIds.length > 0) await LocalDataStore.replaceState(next);
+    await Promise.allSettled(plan.deleteStorageKeys.map((storageKey) => deleteBinary(storageKey)));
+    return {
+      report: await this.auditIntegrity(),
+      removedMetadata: plan.removeAttachmentIds.length,
+      deletedFiles: plan.deleteStorageKeys.length,
+    };
   }
 
   static revokePreviewUrl(url: string | null | undefined): void {

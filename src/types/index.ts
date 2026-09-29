@@ -157,6 +157,15 @@ export interface ImportSummary {
   wasReplaced: boolean;
 }
 
+export interface MediaStorageSummary {
+  photoCount: number;
+  totalBytes: number;
+  purchaseCount: number;
+  receiptCount: number;
+  proofCount: number;
+  integrityIssueCount: number;
+}
+
 export interface CategoryBaseline {
   category: string;
   historicalMonthlyAverage: number;

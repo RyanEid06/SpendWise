@@ -13,7 +13,8 @@
     "android:sync": "cap sync android",
     "test:reliability": "tsx --test tests/reliability.test.ts",
     "test:currency": "tsx --test tests/currency.test.ts",
-    "test:persistence": "tsx --test tests/persistence.test.ts"
+    "test:persistence": "tsx --test tests/persistence.test.ts",
+    "test:media-backup": "tsx --test tests/media-backup.test.ts"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",
@@ -28,7 +29,8 @@
     "react-dom": "^19.0.0",
     "tailwind-merge": "^3.0.1",
     "tsx": "^4.19.2",
-    "@capacitor-community/sqlite": "^8.1.1"
+    "@capacitor-community/sqlite": "^8.1.1",
+    "jszip": "^3.10.2"
   },
   "devDependencies": {
     "@capacitor/android": "^8.5.2",

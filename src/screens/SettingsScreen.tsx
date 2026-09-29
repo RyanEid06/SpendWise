@@ -13,8 +13,11 @@ import {
   CheckCircle2,
   Globe,
   Info,
+  Images,
+  Archive,
+  Image as ImageIcon,
 } from 'lucide-react';
-import { Language, SpendWiseBackup, ThemeMode } from '../types';
+import { Language, MediaStorageSummary, SpendWiseBackup, ThemeMode } from '../types';
 import { getSuggestedConversionRate, SUPPORTED_CURRENCIES } from '../utils/currency';
 import { StorageManager } from '../utils/storage';
 import { ConfirmationModal } from '../components/ConfirmationModal';
@@ -22,7 +25,10 @@ import { ImportPreviewModal } from '../components/ImportPreviewModal';
 import { CurrencyConversionModal } from '../components/CurrencyConversionModal';
 import { t } from '../utils/translations';
 import { APP_VERSION_CODE, APP_VERSION_NAME } from '../utils/appVersion';
-import { exportTextFile } from '../utils/fileExport';
+import { exportBlobFile, exportTextFile } from '../utils/fileExport';
+import { MediaLibraryScreen } from './MediaLibraryScreen';
+import { BackupV2ImportModal } from '../components/BackupV2ImportModal';
+import type { BackupV2Preview } from '../utils/backupV2';
 
 interface SettingsScreenProps {
   currentCurrencyCode: string;
@@ -63,7 +69,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [showClearModal, setShowClearModal] = useState(false);
+  const [showMediaLibrary, setShowMediaLibrary] = useState(false);
+  const [mediaSummary, setMediaSummary] = useState<MediaStorageSummary | null>(null);
+  const [isBackupBusy, setIsBackupBusy] = useState(false);
   const [pendingImportBackup, setPendingImportBackup] = useState<SpendWiseBackup | null>(null);
+  const [pendingV2Backup, setPendingV2Backup] = useState<{ file: File; preview: BackupV2Preview } | null>(null);
   const [pendingCurrencyCode, setPendingCurrencyCode] = useState<string | null>(null);
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -87,6 +97,52 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     { code: 'ar', name: 'العربية', nativeName: 'العربية (RTL)' },
   ];
 
+  const mediaCopy = {
+    en: {
+      section: 'Storage & Media', sectionSub: 'Private SpendWise photo storage and integrity.',
+      library: 'Media Library', librarySub: 'Browse, inspect and export attached photos.',
+      photos: 'photos', storage: 'Photo storage', integrity: 'Integrity', healthy: 'Healthy',
+      issues: 'issues', dataOnly: 'Backup v2 · Data only', dataOnlySub: 'Ledger and settings without photo binaries.',
+      fullBackup: 'Backup v2 · Data + photos', fullBackupSub: 'Portable ZIP with ledger and private attachment photos.',
+      legacy: 'Legacy Backup v1 JSON', imported: 'Backup v2 restored',
+    },
+    fr: {
+      section: 'Stockage & médias', sectionSub: 'Stockage privé des photos SpendWise et intégrité.',
+      library: 'Médiathèque', librarySub: 'Parcourir, vérifier et exporter les photos jointes.',
+      photos: 'photos', storage: 'Stockage photos', integrity: 'Intégrité', healthy: 'Correcte',
+      issues: 'problèmes', dataOnly: 'Backup v2 · Données seules', dataOnlySub: 'Registre et réglages sans fichiers photo.',
+      fullBackup: 'Backup v2 · Données + photos', fullBackupSub: 'ZIP portable avec registre et photos privées.',
+      legacy: 'Backup v1 JSON hérité', imported: 'Backup v2 restauré',
+    },
+    ar: {
+      section: 'التخزين والوسائط', sectionSub: 'تخزين صور SpendWise الخاصة وفحص سلامتها.',
+      library: 'مكتبة الوسائط', librarySub: 'استعراض الصور المرفقة وفحصها وتصديرها.',
+      photos: 'صور', storage: 'مساحة الصور', integrity: 'السلامة', healthy: 'سليمة',
+      issues: 'مشكلات', dataOnly: 'النسخة v2 · بيانات فقط', dataOnlySub: 'السجل والإعدادات بدون ملفات الصور.',
+      fullBackup: 'النسخة v2 · بيانات + صور', fullBackupSub: 'ملف ZIP محمول يتضمن السجل والصور الخاصة.',
+      legacy: 'نسخة v1 JSON القديمة', imported: 'تمت استعادة النسخة v2',
+    },
+  } as const;
+  const mc = mediaCopy[currentLanguage];
+
+  const humanBytes = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const refreshMediaSummary = async () => {
+    try {
+      setMediaSummary(await StorageManager.getMediaStorageSummary());
+    } catch {
+      setMediaSummary(null);
+    }
+  };
+
+  useEffect(() => {
+    void refreshMediaSummary();
+  }, [showMediaLibrary, totalExpensesCount]);
+
   // Export JSON handler
   const handleExportJson = async () => {
     try {
@@ -107,6 +163,26 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     }
   };
 
+  const handleExportV2 = async (includeMedia: boolean) => {
+    if (isBackupBusy) return;
+    setIsBackupBusy(true);
+    try {
+      const blob = await StorageManager.createBackupV2(includeMedia);
+      const dateStamp = new Date().toISOString().split('T')[0];
+      await exportBlobFile({
+        fileName: `spendwise_backup_v2_${includeMedia ? 'full' : 'data'}_${dateStamp}.zip`,
+        blob,
+        shareTitle: includeMedia ? mc.fullBackup : mc.dataOnly,
+      });
+      setStatusMessage(includeMedia ? mc.fullBackup : mc.dataOnly);
+      setErrorMessage(null);
+    } catch {
+      setErrorMessage('Backup v2 export failed.');
+    } finally {
+      setIsBackupBusy(false);
+    }
+  };
+
   // Export CSV handler
   const handleExportCsv = async () => {
     try {
@@ -123,29 +199,28 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       setErrorMessage('CSV Export failed.');
     }
   };
-  // Import JSON file reader
   const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      setErrorMessage('Backup file is too large.');
-      e.target.value = '';
-      return;
-    }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
+    void (async () => {
       try {
-        const text = event.target?.result as string;
-        const parsed = StorageManager.validateBackup(JSON.parse(text));
-        setPendingImportBackup(parsed);
+        if (file.name.toLowerCase().endsWith('.json') || file.type === 'application/json') {
+          if (file.size > 5 * 1024 * 1024) throw new Error('BACKUP_FILE_TOO_LARGE');
+          const parsed = StorageManager.validateBackup(JSON.parse(await file.text()));
+          setPendingV2Backup(null);
+          setPendingImportBackup(parsed);
+        } else {
+          const preview = await StorageManager.previewBackupV2(file);
+          setPendingImportBackup(null);
+          setPendingV2Backup({ file, preview });
+        }
         setErrorMessage(null);
       } catch {
-        setErrorMessage('Invalid backup file.');
+        setErrorMessage('Invalid or unsupported backup file.');
       }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
+    })();
   };
 
   const handleConfirmImport = async (replaceExisting: boolean) => {
@@ -170,10 +245,40 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       }
     }
   };
+  const handleConfirmV2Import = async (replaceExisting: boolean) => {
+    if (!pendingV2Backup) return;
+    if (isBackupBusy) return;
+    setIsBackupBusy(true);
+    try {
+      const summary = await StorageManager.restoreBackupV2(pendingV2Backup.file, replaceExisting);
+      setPendingV2Backup(null);
+      onBackupRestored();
+      await refreshMediaSummary();
+      setStatusMessage(
+        `${mc.imported}: ${summary.expensesImported} expenses, ${summary.photosImported} photos`
+      );
+      setErrorMessage(summary.warnings.length ? summary.warnings.join(', ') : null);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'BACKUP_CURRENCY_MISMATCH') {
+        setErrorMessage(
+          'This backup uses a different currency. Merge is blocked to prevent amounts from being relabeled incorrectly.'
+        );
+      } else {
+        setErrorMessage('Backup v2 restore failed. Your current data was kept whenever rollback was possible.');
+      }
+    } finally {
+      setIsBackupBusy(false);
+    }
+  };
+
   useEffect(() => {
     const handleNativeBack = () => {
       if (pendingCurrencyCode) {
         setPendingCurrencyCode(null);
+        return;
+      }
+      if (pendingV2Backup) {
+        setPendingV2Backup(null);
         return;
       }
       if (pendingImportBackup) {
@@ -187,13 +292,17 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
     window.addEventListener('spendwise-native-back', handleNativeBack);
     return () => window.removeEventListener('spendwise-native-back', handleNativeBack);
-  }, [pendingCurrencyCode, pendingImportBackup, showClearModal]);
+  }, [pendingCurrencyCode, pendingImportBackup, pendingV2Backup, showClearModal]);
+
+  if (showMediaLibrary) {
+    return <MediaLibraryScreen language={currentLanguage} onClose={() => setShowMediaLibrary(false)} />;
+  }
 
   return (
     <div
       className="space-y-4 pb-28 animate-screen-enter"
       data-native-back-layer={
-        showClearModal || pendingImportBackup !== null || pendingCurrencyCode !== null
+        showClearModal || pendingImportBackup !== null || pendingV2Backup !== null || pendingCurrencyCode !== null
           ? 'true'
           : undefined
       }
@@ -378,6 +487,50 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           )}
         </div>
       </div>
+      {/* Storage & Media */}
+      <div className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 rounded-3xl p-5 shadow-xs space-y-3.5 transition-colors">
+        <div className="flex items-center gap-2.5 rtl:flex-row-reverse">
+          <Images className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+          <div>
+            <h3 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base">{mc.section}</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{mc.sectionSub}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 text-xs">
+          <div className="rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/70 dark:border-slate-800/60 p-3">
+            <div className="text-slate-500 dark:text-slate-400">{mc.photos}</div>
+            <div className="mt-1 font-extrabold tabular-nums">{mediaSummary?.photoCount ?? 0}</div>
+          </div>
+          <div className="rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/70 dark:border-slate-800/60 p-3">
+            <div className="text-slate-500 dark:text-slate-400">{mc.storage}</div>
+            <div className="mt-1 font-extrabold tabular-nums">{humanBytes(mediaSummary?.totalBytes ?? 0)}</div>
+          </div>
+          <div className="rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/70 dark:border-slate-800/60 p-3">
+            <div className="text-slate-500 dark:text-slate-400">{mc.integrity}</div>
+            <div className={`mt-1 font-extrabold ${(mediaSummary?.integrityIssueCount ?? 0) === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+              {(mediaSummary?.integrityIssueCount ?? 0) === 0 ? mc.healthy : `${mediaSummary?.integrityIssueCount} ${mc.issues}`}
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowMediaLibrary(true)}
+          className="w-full min-h-[56px] flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/70 dark:border-slate-800/60 hover:border-slate-300 dark:hover:border-slate-700 transition-all text-left rtl:text-right cursor-pointer active:scale-[0.99]"
+        >
+          <div className="flex items-center gap-3 rtl:flex-row-reverse">
+            <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 flex items-center justify-center">
+              <Images className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">{mc.library}</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">{mc.librarySub}</p>
+            </div>
+          </div>
+        </button>
+      </div>
+
       {/* Backup & Export Data */}
       <div className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 rounded-3xl p-5 shadow-xs space-y-3.5 transition-colors">
         <div>
@@ -390,6 +543,30 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         </div>
 
         <div className="space-y-2">
+          <button
+            type="button"
+            disabled={isBackupBusy}
+            onClick={() => void handleExportV2(false)}
+            className="w-full min-h-[56px] flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/70 dark:border-slate-800/60 hover:border-slate-300 dark:hover:border-slate-700 transition-all text-left rtl:text-right cursor-pointer disabled:opacity-50"
+          >
+            <div className="flex items-center gap-3 rtl:flex-row-reverse">
+              <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-400 flex items-center justify-center"><Archive className="w-4 h-4" /></div>
+              <div><p className="font-bold text-xs sm:text-sm">{mc.dataOnly}</p><p className="text-[11px] text-slate-500 dark:text-slate-400">{mc.dataOnlySub}</p></div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            disabled={isBackupBusy}
+            onClick={() => void handleExportV2(true)}
+            className="w-full min-h-[56px] flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/70 dark:border-slate-800/60 hover:border-slate-300 dark:hover:border-slate-700 transition-all text-left rtl:text-right cursor-pointer disabled:opacity-50"
+          >
+            <div className="flex items-center gap-3 rtl:flex-row-reverse">
+              <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 flex items-center justify-center"><ImageIcon className="w-4 h-4" /></div>
+              <div><p className="font-bold text-xs sm:text-sm">{mc.fullBackup}</p><p className="text-[11px] text-slate-500 dark:text-slate-400">{mc.fullBackupSub}</p></div>
+            </div>
+          </button>
+
           {/* Create Backup JSON */}
           <button
             type="button"
@@ -402,7 +579,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               </div>
               <div>
                 <p className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
-                  {t(currentLanguage, 'createBackupBtn')}
+                  {mc.legacy}
                 </p>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   {t(currentLanguage, 'createBackupSub')}
@@ -436,7 +613,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           <input
             ref={fileInputRef}
             type="file"
-            accept=".json,application/json"
+            accept=".json,.zip,application/json,application/zip"
             onChange={handleFileImport}
             className="hidden"
           />
@@ -637,6 +814,15 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           language={currentLanguage}
           onConfirm={handleConfirmImport}
           onClose={() => setPendingImportBackup(null)}
+        />
+      )}
+
+      {pendingV2Backup && (
+        <BackupV2ImportModal
+          preview={pendingV2Backup.preview}
+          language={currentLanguage}
+          onConfirm={(replaceExisting) => void handleConfirmV2Import(replaceExisting)}
+          onClose={() => setPendingV2Backup(null)}
         />
       )}
 

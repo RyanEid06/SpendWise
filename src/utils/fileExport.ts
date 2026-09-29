@@ -56,3 +56,44 @@ export async function exportTextFile(options: TextFileExportOptions): Promise<vo
 
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
+
+
+export interface BlobFileExportOptions {
+  fileName: string;
+  blob: Blob;
+  shareTitle: string;
+}
+
+export async function exportBlobFile(options: BlobFileExportOptions): Promise<void> {
+  if (Capacitor.isNativePlatform()) {
+    const bytes = new Uint8Array(await options.blob.arrayBuffer());
+    let binary = '';
+    const chunk = 0x8000;
+    for (let offset = 0; offset < bytes.length; offset += chunk) {
+      binary += String.fromCharCode(...bytes.subarray(offset, Math.min(offset + chunk, bytes.length)));
+    }
+    const result = await Filesystem.writeFile({
+      path: options.fileName,
+      data: btoa(binary),
+      directory: Directory.Cache,
+    });
+    const canShare = await Share.canShare();
+    if (!canShare.value) throw new Error('Native sharing is unavailable on this device.');
+    await Share.share({
+      title: options.shareTitle,
+      files: [result.uri],
+      dialogTitle: options.shareTitle,
+    });
+    return;
+  }
+
+  const url = URL.createObjectURL(options.blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = options.fileName;
+  anchor.style.display = 'none';
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}

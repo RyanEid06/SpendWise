@@ -6,6 +6,7 @@ import {
   MonthlyBudget,
   SpendWiseBackup,
   ThemeMode,
+  MediaStorageSummary,
 } from '../types';
 import { formatDate, getMonthKey, toInputDateFormat } from './date';
 import {
@@ -18,6 +19,14 @@ import { APP_VERSION_NAME } from './appVersion';
 import { AttachmentEditPayload, AttachmentStorage } from './attachmentStorage';
 import { LEGACY_FINANCIAL_KEYS } from './financialState';
 import { LocalDataStore } from './localDataStore';
+import {
+  BackupV2Preview,
+  BackupV2RestoreSummary,
+  createBackupV2Archive,
+  previewValidatedBackupV2,
+  restoreBackupV2WithAdapters,
+  validateBackupV2Archive,
+} from './backupV2';
 
 const STORAGE_KEYS = {
   CURRENCY: LEGACY_FINANCIAL_KEYS.CURRENCY,
@@ -378,6 +387,57 @@ export class StorageManager {
         createdAt: expense.createdAt,
       })),
     };
+  }
+
+  static async getMediaStorageSummary(): Promise<MediaStorageSummary> {
+    const report = await AttachmentStorage.auditIntegrity();
+    return {
+      photoCount: report.totalMetadataRecords,
+      totalBytes: report.totalBinaryBytes,
+      purchaseCount: report.kindCounts.purchase,
+      receiptCount: report.kindCounts.receipt,
+      proofCount: report.kindCounts.proof,
+      integrityIssueCount: report.issues.length,
+    };
+  }
+
+  static async createBackupV2(includeMedia: boolean): Promise<Blob> {
+    return createBackupV2Archive({
+      appVersion: APP_VERSION_NAME,
+      state: LocalDataStore.snapshot(),
+      settings: {
+        currencyCode: this.getCurrencyCode(),
+        themeMode: this.getThemeMode(),
+        language: this.getLanguage(),
+      },
+      includeMedia,
+      readMedia: (attachment) => AttachmentStorage.readAttachmentBlob(attachment),
+    });
+  }
+
+  static async previewBackupV2(file: Blob): Promise<BackupV2Preview> {
+    return previewValidatedBackupV2(await validateBackupV2Archive(file));
+  }
+
+  static async restoreBackupV2(file: Blob, replaceExisting: boolean): Promise<BackupV2RestoreSummary> {
+    const summary = await restoreBackupV2WithAdapters(file, replaceExisting, {
+      getState: () => LocalDataStore.snapshot(),
+      getSettings: () => ({
+        currencyCode: this.getCurrencyCode(),
+        themeMode: this.getThemeMode(),
+        language: this.getLanguage(),
+      }),
+      replaceState: (state) => LocalDataStore.replaceState(state),
+      setSettings: async (settings) => {
+        this.setThemeMode(settings.themeMode);
+        this.setLanguage(settings.language);
+      },
+      stageMedia: (source, targetExpenseId, blob) =>
+        AttachmentStorage.stageBackupMedia(source, targetExpenseId, blob),
+      deleteFiles: (items) => AttachmentStorage.deleteDetachedFiles(items),
+    });
+    this.clearAnalysisCache();
+    return summary;
   }
 
   static createCsvExport(): string {
