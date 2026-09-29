@@ -61,6 +61,23 @@ jobs:
       - name: Run currency defaults tests
         run: npm run test:currency
 
+      - name: Sync Capacitor Android
+        run: npm run android:sync
+
+      - name: Make Gradle executable
+        run: chmod +x android/gradlew
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: SpendWise-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
       - name: Smoke test deployed Gemini backend
         shell: bash
         run: |
@@ -77,7 +94,7 @@ jobs:
               console.error("Backend health is not AI-ready:", h);
               process.exit(1);
             }
-            console.log("Backend AI health ready; model:", h.model);
+            console.log("Backend AI health ready; model:", h.model, "fallback:", h.fallbackModel || "not-deployed");
           '
 
           BODY='{"summary":{"totalMonthsRecorded":0,"historicalMonthlyAverage":0,"currentMonthKey":"2026-09","currentMonthTotal":0,"previousMonthTotal":null,"categoryBaselines":[],"currentMonthExpenses":[],"recurringCandidates":[]},"currencyCode":"USD","language":"en"}'
@@ -105,22 +122,6 @@ jobs:
           NODE
           rm -f "$RESPONSE_FILE"
 
-      - name: Sync Capacitor Android
-        run: npm run android:sync
-
-      - name: Make Gradle executable
-        run: chmod +x android/gradlew
-
-      - name: Build debug APK
-        working-directory: android
-        run: ./gradlew assembleDebug
-
-      - name: Upload debug APK
-        uses: actions/upload-artifact@v7
-        with:
-          name: SpendWise-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
 
   signed-release:
     if: startsWith(github.ref, 'refs/tags/v')
