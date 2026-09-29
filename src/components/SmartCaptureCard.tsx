@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AlertCircle, Camera, CheckCircle2, ImagePlus, Loader2, Sparkles, X } from 'lucide-react';
 import { Language, SmartCaptureResult } from '../types';
-import { apiFetch } from '../utils/api';
+import { apiFetchJson } from '../utils/api';
+import { getAiErrorMessage, SpendWiseApiError } from '../utils/apiErrors';
 import { AttachmentDraft, AttachmentStorage } from '../utils/attachmentStorage';
 import { photoAcquisitionErrorText, ta } from '../utils/attachmentTranslations';
 import { getLocalizedCategoryName, t } from '../utils/translations';
@@ -236,7 +237,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
       const imageBase64 = await blobToDataUrl(preparedDraft.blob);
       if (requestId !== requestIdRef.current) return;
 
-      const response = await apiFetch(
+      const responseData = await apiFetchJson<unknown>(
         '/api/gemini/smart-capture',
         {
           method: 'POST',
@@ -250,18 +251,13 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
         45000
       );
 
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(typeof data.error === 'string' ? data.error : 'SMART_CAPTURE_FAILED');
-      }
-
-      const data = parseSmartCaptureResult(await response.json(), currencyCode);
-      if (!data) throw new Error('SMART_CAPTURE_INVALID_RESPONSE');
+      const data = parseSmartCaptureResult(responseData, currencyCode);
+      if (!data) throw new SpendWiseApiError('invalid_response');
       if (requestId !== requestIdRef.current) return;
       setResult(data);
-    } catch {
+    } catch (error) {
       if (requestId !== requestIdRef.current) return;
-      setError(t(language, 'smartCaptureError'));
+      setError(getAiErrorMessage(language, error));
     } finally {
       if (requestId === requestIdRef.current) {
         analysisInFlightRef.current = false;
