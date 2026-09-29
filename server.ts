@@ -14,8 +14,15 @@ import fs from 'fs';
 const app = express();
 const port = Number(process.env.PORT || 3000);
 const GEMINI_MODEL = (process.env.GEMINI_MODEL || 'gemini-3.8-flash').trim();
-const GEMINI_FALLBACK_MODEL = (process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.7-flash').trim();
-const GEMINI_MODELS = [...new Set([GEMINI_MODEL, GEMINI_FALLBACK_MODEL].filter(Boolean))];
+const GEMINI_FALLBACK_MODELS = (
+  process.env.GEMINI_FALLBACK_MODELS ||
+  process.env.GEMINI_FALLBACK_MODEL ||
+  'gemini-3.7-flash,gemini-3.5-flash-lite'
+)
+  .split(',')
+  .map((model) => model.trim())
+  .filter(Boolean);
+const GEMINI_MODELS = [...new Set([GEMINI_MODEL, ...GEMINI_FALLBACK_MODELS].filter(Boolean))];
 const MAX_IMAGE_BASE64_LENGTH = 12_000_000;
 const RATE_WINDOW_MS = 60_000;
 const RATE_LIMIT = 30;
@@ -779,7 +786,8 @@ app.get('/api/health', (_req: Request, res: Response) => {
   return res.json({
     ok: true,
     model: GEMINI_MODEL,
-    fallbackModel: GEMINI_FALLBACK_MODEL || null,
+    fallbackModel: GEMINI_FALLBACK_MODELS[0] || null,
+    fallbackModels: GEMINI_FALLBACK_MODELS,
     aiConfigured: Boolean(process.env.GEMINI_API_KEY?.trim()),
     accessProtected: Boolean(process.env.SPENDWISE_API_TOKEN?.trim()),
     aiTimeoutMs: GEMINI_TIMEOUT_MS,
