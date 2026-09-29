@@ -386,7 +386,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
             </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 text-xs">
+          <div className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-3 text-xs">
             <div className="min-w-0">
               <span className="text-slate-500 dark:text-slate-400">{t(language, 'merchantLabel')}</span>
               <p className="font-semibold text-slate-900 dark:text-white break-words">
@@ -395,7 +395,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
             </div>
             <div className="min-w-0 text-right rtl:text-left">
               <span className="text-slate-500 dark:text-slate-400">{t(language, 'totalLabel')}</span>
-              <p className="font-bold tabular-nums text-slate-900 dark:text-white">
+              <p dir="ltr" className="min-w-0 font-bold tabular-nums text-slate-900 dark:text-white [overflow-wrap:anywhere] leading-tight">
                 {result.totalAmount != null
                   ? formatCurrency(result.totalAmount, currencyCode)
                   : t(language, 'uncertainLabel')}
