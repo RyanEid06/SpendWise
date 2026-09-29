@@ -83,22 +83,27 @@ jobs:
           BODY='{"summary":{"totalMonthsRecorded":0,"historicalMonthlyAverage":0,"currentMonthKey":"2026-09","currentMonthTotal":0,"previousMonthTotal":null,"categoryBaselines":[],"currentMonthExpenses":[],"recurringCandidates":[]},"currencyCode":"USD","language":"en"}'
           RESPONSE_FILE="$(mktemp)"
           HTTP_STATUS="$(curl --silent --show-error --retry 1 --retry-all-errors --connect-timeout 15 --max-time 90             -o "$RESPONSE_FILE" -w "%{http_code}"             -H "Content-Type: application/json"             -H "X-SpendWise-Token: ${VITE_API_ACCESS_TOKEN}"             --data "$BODY"             "${VITE_API_BASE_URL%/}/api/gemini/analyze")"
-          RESPONSE="$(cat "$RESPONSE_FILE")"
+          node - "$HTTP_STATUS" "$RESPONSE_FILE" <<'NODE'
+          const fs = require('fs');
+          const status = Number(process.argv[2] || 0);
+          const responseFile = process.argv[3];
+          const body = fs.readFileSync(responseFile, 'utf8');
+          let r = {};
+          try { r = JSON.parse(body); } catch {}
+          if (status < 200 || status >= 300) {
+            console.error("Gemini smoke failed:", status, {
+              error: r.error,
+              message: r.message,
+            });
+            process.exit(1);
+          }
+          if (r.isAiGenerated !== true || typeof r.spendingOverview !== "string") {
+            console.error("Gemini smoke response was not valid JSON.");
+            process.exit(1);
+          }
+          console.log("Live Gemini smoke test passed.");
+          NODE
           rm -f "$RESPONSE_FILE"
-          HTTP_STATUS="$HTTP_STATUS" RESPONSE="$RESPONSE" node -e '
-            const status = Number(process.env.HTTP_STATUS || 0);
-            let r = {};
-            try { r = JSON.parse(process.env.RESPONSE || "{}"); } catch {}
-            if (status < 200 || status >= 300) {
-              console.error("Gemini smoke failed:", status, r);
-              process.exit(1);
-            }
-            if (r.isAiGenerated !== true || typeof r.spendingOverview !== "string") {
-              console.error("Gemini smoke response was not valid.");
-              process.exit(1);
-            }
-            console.log("Live Gemini smoke test passed.");
-          '
 
       - name: Sync Capacitor Android
         run: npm run android:sync
