@@ -184,7 +184,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
             <span className="w-2 h-2 rounded-full bg-rose-500" aria-hidden="true"></span>
             <span>{t(language, 'statTotalSpent')}</span>
           </div>
-          <div className="min-w-0 text-xl font-extrabold tabular-nums text-slate-900 dark:text-white tracking-tight [overflow-wrap:anywhere] leading-tight">
+          <div dir="ltr" className="min-w-0 text-xl font-extrabold tabular-nums text-slate-900 dark:text-white tracking-tight [overflow-wrap:anywhere] leading-tight">
             {formatCurrency(stats.totalSpent, currencyCode)}
           </div>
           <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
@@ -201,7 +201,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
             <span className="w-2 h-2 rounded-full bg-indigo-500" aria-hidden="true"></span>
             <span>{t(language, 'statAvgExpense')}</span>
           </div>
-          <div className="min-w-0 text-xl font-extrabold tabular-nums text-slate-900 dark:text-white tracking-tight [overflow-wrap:anywhere] leading-tight">
+          <div dir="ltr" className="min-w-0 text-xl font-extrabold tabular-nums text-slate-900 dark:text-white tracking-tight [overflow-wrap:anywhere] leading-tight">
             {formatCurrency(stats.averageTransactionAmount, currencyCode)}
           </div>
           <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
@@ -229,7 +229,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
             <ArrowUpRight className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 rtl:rotate-90" />
             <span>{t(language, 'statLargestExpense')}</span>
           </div>
-          <div className="min-w-0 text-xl font-extrabold tabular-nums text-amber-600 dark:text-amber-400 tracking-tight [overflow-wrap:anywhere] leading-tight">
+          <div dir="ltr" className="min-w-0 text-xl font-extrabold tabular-nums text-amber-600 dark:text-amber-400 tracking-tight [overflow-wrap:anywhere] leading-tight">
             {stats.overallLargestExpense
               ? formatCurrency(stats.overallLargestExpense.amount, currencyCode)
               : '—'}
@@ -374,7 +374,9 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                           }`}
                         >
                           {isRemainingNegative ? t(language, 'overByLabel') : t(language, 'remainingLabel')}
-                          {formatCurrency(Math.abs(item.remainingMoney), currencyCode)}
+                          <span dir="ltr" className="inline-block [overflow-wrap:anywhere]">
+                            {formatCurrency(Math.abs(item.remainingMoney), currencyCode)}
+                          </span>
                         </span>
                       ) : (
                         <span className="text-slate-400 dark:text-slate-500 italic">{t(language, 'noBudgetSetLabel')}</span>
@@ -444,7 +446,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                     </span>
                   </div>
                   <div className="min-w-0 max-w-[56%] text-right rtl:text-left flex flex-wrap justify-end items-baseline gap-x-1 [overflow-wrap:anywhere]">
-                    <span className="text-xs font-bold tabular-nums text-slate-900 dark:text-white">
+                    <span dir="ltr" className="text-xs font-bold tabular-nums text-slate-900 dark:text-white [overflow-wrap:anywhere]">
                       {formatCurrency(item.amount, currencyCode)}
                     </span>
                     <span
