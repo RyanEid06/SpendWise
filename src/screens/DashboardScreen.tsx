@@ -22,7 +22,6 @@ interface DashboardScreenProps {
   onNextMonth: () => void;
   onSetBudgetClick: () => void;
   onExpenseClick: (expense: Expense) => void;
-  onAddExpenseClick: () => void;
 }
 
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({
@@ -40,7 +39,6 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   onNextMonth,
   onSetBudgetClick,
   onExpenseClick,
-  onAddExpenseClick,
 }) => {
   return (
     <div className="space-y-4 pb-12 animate-screen-enter">
@@ -80,17 +78,6 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         language={language}
       />
 
-      {/* 5. Fixed/Stationary Add Expense Button at bottom of Home ("down, down, down") */}
-      <div className="pt-2">
-        <button
-          type="button"
-          onClick={onAddExpenseClick}
-          className="w-full min-h-[52px] py-3.5 px-4 rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:scale-98 text-slate-950 font-extrabold text-sm sm:text-base flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
-        >
-          <span className="text-xl leading-none font-black">+</span>
-          <span>{t(language, 'addExpenseBtn')}</span>
-        </button>
-      </div>
     </div>
   );
 };
