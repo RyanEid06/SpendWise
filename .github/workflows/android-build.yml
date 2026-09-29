@@ -58,6 +58,9 @@ jobs:
       - name: Run AI reliability tests
         run: npm run test:reliability
 
+      - name: Run currency defaults tests
+        run: npm run test:currency
+
       - name: Sync Capacitor Android
         run: npm run android:sync
 
