@@ -4,6 +4,7 @@ import {
   AiReliabilityError,
   cleanupRateBuckets,
   executeGeminiJson,
+  executeGeminiJsonWithModelFallback,
   normalizeGeminiFailure,
 } from '../server/geminiReliability';
 import { classifyApiFailure } from '../src/utils/apiErrors';
@@ -85,4 +86,51 @@ test('frontend error classifier maps stable backend contract', () => {
   assert.equal(classifyApiFailure(503, 'AI_NOT_CONFIGURED'), 'not_configured');
   assert.equal(classifyApiFailure(502, 'AI_INVALID_RESPONSE'), 'invalid_response');
   assert.equal(classifyApiFailure(503, 'AI_TEMPORARILY_UNAVAILABLE'), 'temporary_unavailable');
+});
+
+
+test('falls back to the secondary model only after transient provider unavailability', async () => {
+  const models: string[] = [];
+  const result = await executeGeminiJsonWithModelFallback({
+    endpoint: '/test-fallback',
+    requestId: 'request-fallback',
+    models: ['primary-model', 'fallback-model'],
+    timeoutMs: 1000,
+    retryDelayMs: 0,
+    request: async (model) => {
+      models.push(model);
+      if (model === 'primary-model') throw { status: 503 };
+      return { text: '{"ok":true}' };
+    },
+    validate: (value) =>
+      value && typeof value === 'object' && (value as Record<string, unknown>).ok === true
+        ? true
+        : null,
+  });
+
+  assert.equal(result, true);
+  assert.deepEqual(models, ['primary-model', 'primary-model', 'fallback-model']);
+});
+
+test('does not hide rate limits by switching models', async () => {
+  const models: string[] = [];
+
+  await assert.rejects(
+    executeGeminiJsonWithModelFallback({
+      endpoint: '/test-no-fallback',
+      requestId: 'request-no-fallback',
+      models: ['primary-model', 'fallback-model'],
+      timeoutMs: 1000,
+      retryDelayMs: 0,
+      request: async (model) => {
+        models.push(model);
+        throw { status: 429 };
+      },
+      validate: () => true,
+    }),
+    (error: unknown) =>
+      error instanceof AiReliabilityError && error.code === 'AI_RATE_LIMITED'
+  );
+
+  assert.deepEqual(models, ['primary-model']);
 });
