@@ -18,7 +18,7 @@ Set these on the deployed backend:
 - `SPENDWISE_API_TOKEN` â€” long random access token required by production AI endpoints.
 - `ALLOWED_ORIGINS` â€” comma-separated exact origins. Include `https://localhost` for the Capacitor Android app.
 - `GEMINI_MODEL` â€” optional. Defaults to `gemini-3.8-flash`.
-- `GEMINI_FALLBACK_MODEL` â€” optional. Defaults to `gemini-3.7-flash`. It is used only after the primary model remains temporarily unavailable after its bounded retry.
+- `GEMINI_FALLBACK_MODELS` â€” optional comma-separated list. Defaults to `gemini-3.7-flash,gemini-3.5-flash-lite`. The legacy singular `GEMINI_FALLBACK_MODEL` is also accepted.
 - `GEMINI_TIMEOUT_MS` â€” optional provider timeout in milliseconds. Defaults to `22000` and is clamped to 5-40 seconds.
 - `NODE_ENV=production`
 
@@ -87,4 +87,4 @@ AI errors use a small machine-readable JSON contract such as `AI_TIMEOUT`, `AI_R
 
 ## Model fallback
 
-SpendWise tries the configured primary Gemini model first. If that model remains temporarily unavailable after the normal bounded retry, the backend makes one bounded attempt sequence with the fallback model. Authentication/configuration failures, rate limits, timeouts, invalid responses, and invalid requests do not silently switch models.
+SpendWise tries the configured primary Gemini model first. If it is temporarily unavailable or rate-limited, the backend advances through the configured fallback models. A 429 is returned only after every configured model is rate-limited. Authentication/configuration failures, timeouts, invalid responses, and invalid requests do not silently switch models.
