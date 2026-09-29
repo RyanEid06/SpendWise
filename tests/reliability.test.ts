@@ -112,13 +112,13 @@ test('falls back to the secondary model only after transient provider unavailabi
   assert.deepEqual(models, ['primary-model', 'primary-model', 'fallback-model']);
 });
 
-test('does not hide rate limits by switching models', async () => {
+test('falls back across models on rate limits and surfaces 429 only after all are exhausted', async () => {
   const models: string[] = [];
 
   await assert.rejects(
     executeGeminiJsonWithModelFallback({
-      endpoint: '/test-no-fallback',
-      requestId: 'request-no-fallback',
+      endpoint: '/test-rate-limit-fallback',
+      requestId: 'request-rate-limit-fallback',
       models: ['primary-model', 'fallback-model'],
       timeoutMs: 1000,
       retryDelayMs: 0,
@@ -132,5 +132,5 @@ test('does not hide rate limits by switching models', async () => {
       error instanceof AiReliabilityError && error.code === 'AI_RATE_LIMITED'
   );
 
-  assert.deepEqual(models, ['primary-model']);
+  assert.deepEqual(models, ['primary-model', 'fallback-model']);
 });
