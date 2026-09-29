@@ -27,9 +27,9 @@ export const MonthSelector: React.FC<MonthSelectorProps> = ({
         <ChevronLeft className="w-5 h-5 rtl:rotate-180" />
       </button>
 
-      <div className="flex items-center space-x-2 rtl:space-x-reverse px-3 py-1">
+      <div className="min-w-0 flex items-center justify-center gap-2 px-2 py-1 text-center">
         <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-        <span className="font-bold text-slate-900 dark:text-white text-sm sm:text-base tracking-tight">
+        <span className="min-w-0 font-bold text-slate-900 dark:text-white text-sm sm:text-base tracking-tight leading-tight [overflow-wrap:anywhere]">
           {getLocalizedMonthName(currentMonthYear, language)}
         </span>
       </div>
