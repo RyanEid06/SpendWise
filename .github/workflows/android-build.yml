@@ -19,6 +19,7 @@ on:
       - wp13/local-data-foundation
       - wp14/media-lifecycle-full-backup
       - wp15/core-ux-simplification
+      - wp16/navigation-accessibility-freeze
     tags:
       - 'v*'
 
@@ -72,6 +73,9 @@ jobs:
 
       - name: Run WP15 core UX architecture tests
         run: npm run test:core-ux
+
+      - name: Run WP16 final freeze tests
+        run: npm run test:final-freeze
 
       - name: Sync Capacitor Android
         run: npm run android:sync

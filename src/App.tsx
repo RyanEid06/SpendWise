@@ -5,7 +5,7 @@ import { apiFetchJson } from './utils/api';
 import { getAiErrorMessage } from './utils/apiErrors';
 import { t } from './utils/translations';
 import { Plus } from 'lucide-react';
-import { Expense, MonthlyBudget, Screen, ThemeMode, CategorySpend, AiAnalysisResult, Language } from './types';
+import { Expense, MonthlyBudget, Screen, PrimaryScreen, ThemeMode, CategorySpend, AiAnalysisResult, Language } from './types';
 import {
   currentMonthYear,
   getDisplayName,
@@ -29,10 +29,12 @@ import { LockScreen } from './screens/LockScreen';
 import { AddEditExpenseModal } from './components/AddEditExpenseModal';
 import { SetBudgetModal } from './components/SetBudgetModal';
 import { ExpenseDetailModal } from './components/ExpenseDetailModal';
+import { AppTopBar } from './components/AppTopBar';
 import { AttachmentEditPayload } from './utils/attachmentStorage';
 
 export const App: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
+  const [settingsReturnScreen, setSettingsReturnScreen] = useState<PrimaryScreen>('home');
   const [currentMY, setCurrentMY] = useState(currentMonthYear());
 
   // Data states
@@ -54,6 +56,22 @@ export const App: React.FC = () => {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [viewingExpense, setViewingExpense] = useState<Expense | null>(null);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
+
+  const selectPrimaryScreen = useCallback((screen: PrimaryScreen) => {
+    setSettingsReturnScreen(screen);
+    setCurrentScreen(screen);
+  }, []);
+
+  const openSettings = useCallback(() => {
+    if (currentScreen !== 'settings') {
+      setSettingsReturnScreen(currentScreen as PrimaryScreen);
+      setCurrentScreen('settings');
+    }
+  }, [currentScreen]);
+
+  const closeSettings = useCallback(() => {
+    setCurrentScreen(settingsReturnScreen);
+  }, [settingsReturnScreen]);
 
   // AI Insights states
   const [aiResult, setAiResult] = useState<AiAnalysisResult | null>(() =>
@@ -205,8 +223,14 @@ export const App: React.FC = () => {
         return;
       }
 
+      if (currentScreen === 'settings') {
+        setCurrentScreen(settingsReturnScreen);
+        return;
+      }
+
       if (currentScreen !== 'home') {
         setCurrentScreen('home');
+        setSettingsReturnScreen('home');
         return;
       }
 
@@ -223,7 +247,7 @@ export const App: React.FC = () => {
       disposed = true;
       if (removeBackListener) void removeBackListener();
     };
-  }, [currentScreen, showAddModal, editingExpense, showBudgetModal]);
+  }, [currentScreen, showAddModal, editingExpense, showBudgetModal, settingsReturnScreen]);
 
   // Filter expenses for current month
   const monthlyExpenses = useMemo(() => {
@@ -469,28 +493,32 @@ export const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-[#05080C] text-slate-900 dark:text-slate-100 flex flex-col font-sans antialiased transition-colors duration-200">
-      {/* Android Top Status Bar & App Header */}
-      <header className="sticky top-0 z-40 bg-slate-100/95 dark:bg-[#05080C]/95 backdrop-blur-md px-4 pb-2 transition-colors border-b border-slate-200/50 dark:border-[#202A33]/70" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)' }}>
-        <div className="max-w-md mx-auto space-y-1.5">
-          {/* App Branding (Clean, language switcher moved to Settings) */}
-          <div className="flex items-center justify-between pt-0.5">
-            <div className="flex items-center space-x-2 rtl:space-x-reverse">
-              <img
-                src="/app-icon.jpg"
-                alt=""
-                aria-hidden="true"
-                className="w-7 h-7 rounded-lg object-cover shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10"
-              />
-              <h1 className="font-extrabold text-sm sm:text-base tracking-tight text-slate-900 dark:text-white">
-                SpendWise
-              </h1>
-            </div>
-          </div>
-        </div>
-      </header>
+      <a
+        href="#main-content"
+        className="sw-skip-link"
+      >
+        {language === 'ar' ? 'الانتقال إلى المحتوى' : language === 'fr' ? 'Aller au contenu' : 'Skip to content'}
+      </a>
+
+      <AppTopBar
+        currentScreen={currentScreen}
+        language={language}
+        onOpenSettings={openSettings}
+        onCloseSettings={closeSettings}
+      />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-md w-full mx-auto px-4 pt-1" style={{ paddingBottom: 'calc(9rem + env(safe-area-inset-bottom, 0px))' }}>
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="flex-1 max-w-md sm:max-w-lg w-full mx-auto px-4 pt-1"
+        style={{
+          paddingBottom:
+            currentScreen === 'settings'
+              ? 'calc(2rem + env(safe-area-inset-bottom, 0px))'
+              : 'calc(9rem + env(safe-area-inset-bottom, 0px))',
+        }}
+      >
         {currentScreen === 'home' && (
           <DashboardScreen
             currentMonthYear={currentMY}
@@ -586,8 +614,14 @@ export const App: React.FC = () => {
         </button>
       )}
 
-      {/* Bottom Navigation */}
-      <Navigation currentScreen={currentScreen} language={language} onSelectScreen={setCurrentScreen} />
+      {/* Settings is intentionally secondary; the four primary destinations own bottom navigation. */}
+      {currentScreen !== 'settings' && (
+        <Navigation
+          currentScreen={currentScreen}
+          language={language}
+          onSelectScreen={selectPrimaryScreen}
+        />
+      )}
 
       {/* Add / Edit Expense Modal Dialog */}
       {(showAddModal || editingExpense !== null) && (
