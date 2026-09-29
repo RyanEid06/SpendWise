@@ -486,16 +486,19 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 flex flex-col font-sans antialiased transition-colors duration-200">
+    <div className="min-h-screen bg-slate-100 dark:bg-[#05080C] text-slate-900 dark:text-slate-100 flex flex-col font-sans antialiased transition-colors duration-200">
       {/* Android Top Status Bar & App Header */}
-      <header className="sticky top-0 z-40 bg-slate-100/95 dark:bg-[#0B0F19]/95 backdrop-blur-md px-4 pb-2 transition-colors border-b border-slate-200/50 dark:border-slate-800/50" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)' }}>
+      <header className="sticky top-0 z-40 bg-slate-100/95 dark:bg-[#05080C]/95 backdrop-blur-md px-4 pb-2 transition-colors border-b border-slate-200/50 dark:border-[#202A33]/70" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)' }}>
         <div className="max-w-md mx-auto space-y-1.5">
           {/* App Branding (Clean, language switcher moved to Settings) */}
           <div className="flex items-center justify-between pt-0.5">
             <div className="flex items-center space-x-2 rtl:space-x-reverse">
-              <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black text-xs">
-                S
-              </div>
+              <img
+                src="/app-icon.jpg"
+                alt=""
+                aria-hidden="true"
+                className="w-7 h-7 rounded-lg object-cover shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10"
+              />
               <h1 className="font-extrabold text-sm sm:text-base tracking-tight text-slate-900 dark:text-white">
                 SpendWise
               </h1>
@@ -522,10 +525,6 @@ export const App: React.FC = () => {
             onNextMonth={() => setCurrentMY((prev) => nextMonth(prev))}
             onSetBudgetClick={() => setShowBudgetModal(true)}
             onExpenseClick={(expense) => setEditingExpense(expense)}
-            onAddExpenseClick={() => {
-              setEditingExpense(null);
-              setShowAddModal(true);
-            }}
           />
         )}
 
@@ -557,10 +556,6 @@ export const App: React.FC = () => {
             onPreviousMonth={() => setCurrentMY((prev) => previousMonth(prev))}
             onNextMonth={() => setCurrentMY((prev) => nextMonth(prev))}
             onAnalyzeClick={handleAnalyzeSpending}
-            onAddExpenseClick={() => {
-              setEditingExpense(null);
-              setShowAddModal(true);
-            }}
           />
         )}
 
@@ -598,8 +593,8 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      {/* Floating Action Button (Cleanly positioned on secondary screens; Home uses stationary bottom button) */}
-      {currentScreen !== 'settings' && currentScreen !== 'home' && (
+      {/* Persistent Add Expense action is intentionally limited to Home and History. */}
+      {(currentScreen === 'home' || currentScreen === 'history') && (
         <button
           onClick={() => {
             setEditingExpense(null);
