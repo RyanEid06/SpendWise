@@ -78,19 +78,22 @@ export const SetBudgetModal: React.FC<SetBudgetModalProps> = ({
               {t(language, 'startingBudgetLabel')}
             </label>
             <div className="relative rounded-2xl">
-              <div className="absolute inset-y-0 left-0 rtl:left-auto rtl:right-0 pl-4 rtl:pl-0 rtl:pr-4 flex items-center pointer-events-none font-bold text-slate-400 text-lg">
+              <div
+                className={`absolute inset-y-0 flex items-center pointer-events-none font-bold text-slate-400 text-base ${currency.symbolPrefix === false ? 'right-0 pr-4' : 'left-0 pl-4'}`}
+              >
                 {currency.symbol}
               </div>
               <input
                 type="number"
-                step="0.01"
-                placeholder="0.00"
+                step={currency.code === 'LBP' || currency.code === 'JPY' ? '1' : '0.01'}
+                placeholder={currency.code === 'LBP' || currency.code === 'JPY' ? '0' : '0.00'}
+                dir="ltr"
                 value={amountText}
                 onChange={(e) => {
                   setAmountText(e.target.value);
                   setError(null);
                 }}
-                className={`w-full pl-10 rtl:pl-4 rtl:pr-10 pr-4 py-3 rounded-2xl border text-lg font-bold tabular-nums bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-white focus:outline-none focus:ring-2 transition-all ${
+                className={`w-full ${currency.symbolPrefix === false ? 'pl-4 pr-14' : 'pl-14 pr-4'} py-3 rounded-2xl border text-lg font-bold tabular-nums bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-white focus:outline-none focus:ring-2 transition-all ${
                   error
                     ? 'border-rose-500 focus:ring-rose-500'
                     : 'border-slate-200 dark:border-slate-800 focus:ring-emerald-500'
@@ -102,7 +105,7 @@ export const SetBudgetModal: React.FC<SetBudgetModalProps> = ({
 
         </div>
 
-        <div className="p-4 bg-slate-50 dark:bg-[#0B0F19]/60 border-t border-slate-200/80 dark:border-slate-800/80 flex items-center justify-end space-x-3 rtl:space-x-reverse">
+        <div className="p-4 bg-slate-50 dark:bg-[#0B0F19]/60 border-t border-slate-200/80 dark:border-slate-800/80 flex flex-col-reverse min-[360px]:flex-row items-stretch min-[360px]:items-center justify-end gap-2 min-[360px]:gap-3">
           <button
             type="button"
             onClick={onClose}
