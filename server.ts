@@ -1040,6 +1040,7 @@ app.post('/api/gemini/smart-capture', async (req: Request, res: Response) => {
     const sanitized = await executeGeminiJsonWithModelFallback({
       endpoint: '/api/gemini/smart-capture',
       requestId: aiRequestId(),
+      models: GEMINI_MODELS,
       timeoutMs: GEMINI_TIMEOUT_MS,
       retryDelayMs: GEMINI_RETRY_DELAY_MS,
       logFailure: logAiFailure,
@@ -1156,6 +1157,7 @@ app.post('/api/gemini/scan-receipt', async (req: Request, res: Response) => {
     const parsed = await executeGeminiJsonWithModelFallback({
       endpoint: '/api/gemini/scan-receipt',
       requestId: aiRequestId(),
+      models: GEMINI_MODELS,
       timeoutMs: GEMINI_TIMEOUT_MS,
       retryDelayMs: GEMINI_RETRY_DELAY_MS,
       logFailure: logAiFailure,
