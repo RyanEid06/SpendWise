@@ -54,7 +54,7 @@ export const ExpenseItemCard: React.FC<ExpenseItemCardProps> = ({
             setIsExpanded((prev) => !prev);
           }
         }}
-        className="p-3.5 flex items-center justify-between gap-3 cursor-pointer group active:scale-[0.995] transition-all select-none"
+        className="p-3.5 grid grid-cols-[auto_minmax(0,1fr)_auto] min-[390px]:grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-2 cursor-pointer group active:scale-[0.995] transition-all select-none"
       >
         {/* Left: Category Icon */}
         <div
@@ -73,7 +73,7 @@ export const ExpenseItemCard: React.FC<ExpenseItemCardProps> = ({
           </h4>
 
           {/* Category & Date on their own dedicated line to prevent ANY overlapping */}
-          <div className="flex items-center gap-1.5 text-xs mt-1 text-slate-500 dark:text-slate-400">
+          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs mt-1 text-slate-500 dark:text-slate-400">
             <span
               style={{ color: catInfo.color }}
               className="font-semibold text-[11px] px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800/80 shrink-0"
@@ -107,15 +107,16 @@ export const ExpenseItemCard: React.FC<ExpenseItemCardProps> = ({
           </div>
         </div>
 
-        {/* Right: Amount & Little Arrow (Chevron) */}
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="text-right rtl:text-left">
-            <div className="font-extrabold text-sm sm:text-base tabular-nums text-slate-900 dark:text-white">
-              {formatCurrency(expense.amount, currencyCode)}
-            </div>
-          </div>
+        {/* Amount moves below the metadata on very narrow phones, then returns inline. */}
+        <div
+          dir="ltr"
+          className="col-start-2 col-span-2 row-start-2 min-[390px]:col-start-3 min-[390px]:col-span-1 min-[390px]:row-start-1 min-w-0 text-right rtl:text-left font-extrabold text-sm sm:text-base tabular-nums text-slate-900 dark:text-white [overflow-wrap:anywhere] leading-tight"
+        >
+          {formatCurrency(expense.amount, currencyCode)}
+        </div>
 
-          {/* Little Arrow Toggle Button */}
+        {/* Little Arrow Toggle Button */}
+        <div className="col-start-3 row-start-1 min-[390px]:col-start-4">
           <button
             type="button"
             onClick={toggleExpand}
