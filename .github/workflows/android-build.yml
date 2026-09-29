@@ -12,6 +12,7 @@ on:
       - wp4/android-financial-ux
       - wp5/final-release-gate
       - wp9/final-integration
+      - wp10/native-camera-photo-ux
     tags:
       - 'v*'
 

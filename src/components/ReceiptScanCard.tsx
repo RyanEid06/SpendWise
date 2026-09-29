@@ -1,16 +1,24 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AlertCircle, Camera, CheckCircle2, Loader2 } from 'lucide-react';
+import { AlertCircle, Camera, CheckCircle2, ImagePlus, Loader2, X } from 'lucide-react';
 import { Language, ReceiptScanResult } from '../types';
 import { apiFetch } from '../utils/api';
-import { AttachmentStorage } from '../utils/attachmentStorage';
+import { AttachmentDraft, AttachmentStorage } from '../utils/attachmentStorage';
+import { photoAcquisitionErrorText, ta } from '../utils/attachmentTranslations';
 import { DEFAULT_CATEGORIES } from '../utils/categories';
 import { formatCurrency } from '../utils/currency';
 import { getLocalizedCategoryName, t } from '../utils/translations';
+import {
+  choosePhotos,
+  takePhoto,
+  waitForPhotoUiPaint,
+  type PhotoAcquisitionSource,
+} from '../utils/imageAcquisition';
 
 interface ReceiptScanCardProps {
   language: Language;
   currencyCode: string;
   disabled?: boolean;
+  onPreparingChange?: (preparing: boolean) => void;
   onApply: (result: ReceiptScanResult) => void;
 }
 
@@ -127,24 +135,115 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
   language,
   currencyCode,
   disabled = false,
+  onPreparingChange,
   onApply,
 }) => {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const preparationRequestIdRef = useRef(0);
   const requestIdRef = useRef(0);
+  const acquisitionInFlightRef = useRef(false);
   const analysisInFlightRef = useRef(false);
+  const preparedPreviewUrlRef = useRef<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [preparedDraft, setPreparedDraft] = useState<AttachmentDraft | null>(null);
+  const [isAcquiring, setIsAcquiring] = useState(false);
+  const [isPreparing, setIsPreparing] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [result, setResult] = useState<ReceiptScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    onPreparingChange?.(isPreparing);
+  }, [isPreparing, onPreparingChange]);
+
+  useEffect(() => {
     return () => {
+      preparationRequestIdRef.current += 1;
       requestIdRef.current += 1;
+      acquisitionInFlightRef.current = false;
       analysisInFlightRef.current = false;
+      if (preparedPreviewUrlRef.current) URL.revokeObjectURL(preparedPreviewUrlRef.current);
     };
   }, []);
 
-  const analyzeFile = async (file: File | null) => {
-    if (!file || disabled || analysisInFlightRef.current) return;
+  const clearPreparedPreview = () => {
+    if (preparedPreviewUrlRef.current) {
+      URL.revokeObjectURL(preparedPreviewUrlRef.current);
+      preparedPreviewUrlRef.current = null;
+    }
+  };
+
+  const resetSelection = () => {
+    preparationRequestIdRef.current += 1;
+    requestIdRef.current += 1;
+    analysisInFlightRef.current = false;
+    clearPreparedPreview();
+    setPreviewUrl(null);
+    setPreparedDraft(null);
+    setIsPreparing(false);
+    setIsScanning(false);
+    setResult(null);
+    setError(null);
+  };
+
+  const beginPhotoSelection = async (source: PhotoAcquisitionSource) => {
+    if (disabled || acquisitionInFlightRef.current || isScanning) return;
+
+    acquisitionInFlightRef.current = true;
+    setIsAcquiring(true);
+    setError(null);
+
+    let acquired = null;
+    try {
+      acquired =
+        source === 'camera' ? await takePhoto() : (await choosePhotos(1))[0] || null;
+    } catch (acquisitionError) {
+      setError(photoAcquisitionErrorText(language, acquisitionError));
+      return;
+    } finally {
+      acquisitionInFlightRef.current = false;
+      setIsAcquiring(false);
+    }
+
+    if (!acquired) return;
+
+    requestIdRef.current += 1;
+    analysisInFlightRef.current = false;
+    const preparationRequestId = ++preparationRequestIdRef.current;
+    clearPreparedPreview();
+    setPreviewUrl(acquired.previewUrl);
+    setPreparedDraft(null);
+    setResult(null);
+    setError(null);
+    setIsScanning(false);
+    setIsPreparing(true);
+
+    await waitForPhotoUiPaint();
+
+    try {
+      const file = await acquired.loadFile();
+      const draft = await AttachmentStorage.prepareImageDraft(file, 'receipt');
+      if (preparationRequestId !== preparationRequestIdRef.current) return;
+
+      const preparedPreviewUrl = URL.createObjectURL(draft.blob);
+      clearPreparedPreview();
+      preparedPreviewUrlRef.current = preparedPreviewUrl;
+      setPreparedDraft(draft);
+      setPreviewUrl(preparedPreviewUrl);
+    } catch {
+      if (preparationRequestId !== preparationRequestIdRef.current) return;
+      setPreparedDraft(null);
+      setError(ta(language, 'photoPrepareError'));
+    } finally {
+      if (preparationRequestId === preparationRequestIdRef.current) {
+        setIsPreparing(false);
+      }
+    }
+  };
+
+  const analyze = async () => {
+    if (!preparedDraft || disabled || isPreparing || isScanning || analysisInFlightRef.current) {
+      return;
+    }
 
     analysisInFlightRef.current = true;
     const requestId = ++requestIdRef.current;
@@ -153,10 +252,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
     setError(null);
 
     try {
-      const prepared = await AttachmentStorage.prepareImageDraft(file, 'receipt');
-      if (requestId !== requestIdRef.current) return;
-
-      const imageBase64 = await blobToDataUrl(prepared.blob);
+      const imageBase64 = await blobToDataUrl(preparedDraft.blob);
       if (requestId !== requestIdRef.current) return;
 
       const response = await apiFetch(
@@ -165,7 +261,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
           method: 'POST',
           body: JSON.stringify({
             imageBase64,
-            mimeType: prepared.mimeType,
+            mimeType: preparedDraft.mimeType,
             language,
             currencyCode,
           }),
@@ -190,45 +286,83 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
         analysisInFlightRef.current = false;
         setIsScanning(false);
       }
-      if (inputRef.current) inputRef.current.value = '';
     }
   };
 
   return (
     <section className="rounded-2xl border border-purple-200 dark:border-purple-800/60 bg-purple-50 dark:bg-purple-950/40 p-4 space-y-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-purple-200/80 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 flex items-center justify-center shrink-0">
-            <Camera className="w-5 h-5" />
-          </div>
-          <div className="min-w-0">
-            <h4 className="font-bold text-sm text-purple-950 dark:text-purple-100">
-              {t(language, 'scanReceiptCardTitle')}
-            </h4>
-            <p className="text-xs leading-relaxed text-purple-700/80 dark:text-purple-300/80">
-              {t(language, 'scanReceiptCardSub')}
-            </p>
-          </div>
+      <div className="flex items-start gap-3 min-w-0">
+        <div className="w-10 h-10 rounded-xl bg-purple-200/80 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 flex items-center justify-center shrink-0">
+          <Camera className="w-5 h-5" />
         </div>
+        <div className="min-w-0 flex-1">
+          <h4 className="font-bold text-sm text-purple-950 dark:text-purple-100">
+            {t(language, 'scanReceiptCardTitle')}
+          </h4>
+          <p className="text-xs leading-relaxed text-purple-700/80 dark:text-purple-300/80">
+            {t(language, 'scanReceiptCardSub')}
+          </p>
+        </div>
+        {previewUrl && (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={resetSelection}
+            className="min-w-[36px] min-h-[36px] rounded-lg text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 flex items-center justify-center disabled:opacity-50"
+            aria-label={t(language, 'receiptRemovePhoto')}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
 
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          className="hidden"
-          onChange={(event) => void analyzeFile(event.target.files?.[0] || null)}
-        />
-
+      <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
-          disabled={disabled || isScanning}
-          onClick={() => inputRef.current?.click()}
-          className="w-full sm:w-auto min-h-[44px] bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xs flex items-center justify-center gap-1.5 active:scale-95 shrink-0"
+          disabled={disabled || isAcquiring || isScanning}
+          onClick={() => void beginPhotoSelection('camera')}
+          className="min-h-[44px] rounded-xl border border-purple-300 dark:border-purple-800 bg-white/80 dark:bg-[#111928]/80 text-purple-800 dark:text-purple-200 text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50"
         >
-          {isScanning && <Loader2 className="w-4 h-4 animate-spin" />}
-          <span>{isScanning ? t(language, 'scanningStatus') : t(language, 'uploadPhotoBtn')}</span>
+          <Camera className="w-4 h-4" />
+          <span>{ta(language, 'takePhoto')}</span>
+        </button>
+        <button
+          type="button"
+          disabled={disabled || isAcquiring || isScanning}
+          onClick={() => void beginPhotoSelection('gallery')}
+          className="min-h-[44px] rounded-xl border border-purple-300 dark:border-purple-800 bg-white/80 dark:bg-[#111928]/80 text-purple-800 dark:text-purple-200 text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          {isAcquiring ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
+          <span>{ta(language, 'choosePhoto')}</span>
         </button>
       </div>
+
+      {previewUrl && (
+        <>
+          <div className="relative rounded-xl overflow-hidden border border-purple-200 dark:border-purple-800 bg-black/5 dark:bg-black/30">
+            <img
+              src={previewUrl}
+              alt={t(language, 'receiptPreviewAlt')}
+              className="w-full max-h-48 object-contain"
+            />
+            {isPreparing && (
+              <div className="absolute inset-x-0 bottom-0 bg-slate-950/75 text-white px-3 py-2 text-xs font-semibold flex items-center justify-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>{ta(language, 'processingPhoto')}</span>
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            disabled={disabled || isPreparing || !preparedDraft || isScanning}
+            onClick={() => void analyze()}
+            className="w-full min-h-[44px] bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xs flex items-center justify-center gap-1.5 active:scale-95"
+          >
+            {isScanning && <Loader2 className="w-4 h-4 animate-spin" />}
+            <span>{isScanning ? t(language, 'scanningStatus') : t(language, 'receiptAnalyzePhoto')}</span>
+          </button>
+        </>
+      )}
 
       {isScanning && (
         <div className="flex items-center gap-2 text-xs text-purple-800 dark:text-purple-300 font-medium">

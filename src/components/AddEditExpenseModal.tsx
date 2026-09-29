@@ -60,7 +60,11 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
   const [attachmentDrafts, setAttachmentDrafts] = useState<AttachmentDraft[]>([]);
   const [removedAttachmentIds, setRemovedAttachmentIds] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [smartCapturePreparing, setSmartCapturePreparing] = useState(false);
+  const [receiptPreparing, setReceiptPreparing] = useState(false);
+  const [attachmentsPreparing, setAttachmentsPreparing] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const isPhotoPreparing = smartCapturePreparing || receiptPreparing || attachmentsPreparing;
 
   const handleReceiptScanApply = (extracted: ReceiptScanResult) => {
     if (extracted.totalAmount != null && extracted.totalAmount > 0) {
@@ -149,7 +153,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
       hasError = true;
     }
 
-    if (hasError || isNaN(amount) || isSaving) return;
+    if (hasError || isNaN(amount) || isSaving || isPhotoPreparing) return;
 
     setIsSaving(true);
     setSaveError(null);
@@ -201,6 +205,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
             language={language}
             currencyCode={currencyCode}
             disabled={isSaving}
+            onPreparingChange={setSmartCapturePreparing}
             onApply={handleSmartCaptureApply}
           />
 
@@ -208,6 +213,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
             language={language}
             currencyCode={currencyCode}
             disabled={isSaving}
+            onPreparingChange={setReceiptPreparing}
             onApply={handleReceiptScanApply}
           />
 
@@ -218,6 +224,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
             removedAttachmentIds={removedAttachmentIds}
             onDraftsChange={setAttachmentDrafts}
             onRemovedAttachmentIdsChange={setRemovedAttachmentIds}
+            onPreparingChange={setAttachmentsPreparing}
             disabled={isSaving}
           />
 
@@ -357,7 +364,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
           <button
             type="button"
             onClick={() => void handleSave()}
-            disabled={isSaving}
+            disabled={isSaving || isPhotoPreparing}
             className="min-h-[44px] px-6 py-2.5 rounded-xl text-sm font-extrabold bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-sm transition-all cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {initialExpense ? t(language, 'updateExpenseBtn') : t(language, 'saveExpenseBtn')}
