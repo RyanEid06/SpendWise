@@ -50,12 +50,12 @@ export const SetBudgetModal: React.FC<SetBudgetModalProps> = ({
       aria-labelledby="budget-modal-title"
     >
       <div className="bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden transition-colors">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200/80 dark:border-slate-800/80">
+        <div className="flex items-start justify-between gap-2 px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-slate-800/80">
           <div className="flex items-center space-x-2.5 rtl:space-x-reverse">
             <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0">
               <Wallet className="w-4 h-4" />
             </div>
-            <h3 id="budget-modal-title" className="font-bold text-slate-900 dark:text-white text-lg">
+            <h3 id="budget-modal-title" className="min-w-0 font-bold text-slate-900 dark:text-white text-lg leading-tight [overflow-wrap:anywhere]">
               {t(language, 'setBudgetModalTitle')}
             </h3>
           </div>
