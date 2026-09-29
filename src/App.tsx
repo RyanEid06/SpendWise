@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
-import { apiFetch } from './utils/api';
+import { apiFetchJson } from './utils/api';
+import { getAiErrorMessage } from './utils/apiErrors';
+import { t } from './utils/translations';
 import { Plus } from 'lucide-react';
 import { Expense, MonthlyBudget, Screen, ThemeMode, CategorySpend, AiAnalysisResult, Language } from './types';
 import {
@@ -60,15 +62,27 @@ export const App: React.FC = () => {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiNotice, setAiNotice] = useState<string | null>(null);
+  const aiRequestIdRef = useRef(0);
+  const aiInFlightRef = useRef(false);
 
   // Load cached AI analysis whenever currentMY changes
   useEffect(() => {
+    aiRequestIdRef.current += 1;
+    aiInFlightRef.current = false;
+    setIsAiLoading(false);
     const key = getMonthKey(currentMY);
     const cached = StorageManager.getCachedAnalysis(key);
     setAiResult(cached);
     setAiError(null);
     setAiNotice(null);
   }, [currentMY, expenses, currencyCode, language]);
+
+  useEffect(() => {
+    return () => {
+      aiRequestIdRef.current += 1;
+      aiInFlightRef.current = false;
+    };
+  }, []);
 
   // Handle Theme class on document.documentElement with system listener
   useEffect(() => {
@@ -410,6 +424,8 @@ export const App: React.FC = () => {
 
   // Run AI Analysis
   const handleAnalyzeSpending = useCallback(async () => {
+    if (aiInFlightRef.current) return;
+
     if (expenses.length === 0) {
       setAiError('No expenses recorded yet. Please add some expenses before analyzing your spending.');
       return;
@@ -424,6 +440,8 @@ export const App: React.FC = () => {
       return;
     }
 
+    aiInFlightRef.current = true;
+    const requestId = ++aiRequestIdRef.current;
     setIsAiLoading(true);
     setAiError(null);
     setAiNotice(null);
@@ -433,7 +451,7 @@ export const App: React.FC = () => {
     const localFallback = analyzer.generateStatisticalAnalysis(summary, currencyCode);
 
     try {
-      const response = await apiFetch(
+      const data = await apiFetchJson<AiAnalysisResult>(
         '/api/gemini/analyze',
         {
           method: 'POST',
@@ -446,27 +464,20 @@ export const App: React.FC = () => {
         30000
       );
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Server responded with ${response.status}`);
-      }
-
-      const data: AiAnalysisResult = await response.json();
+      if (requestId !== aiRequestIdRef.current) return;
       StorageManager.cacheAnalysis(data);
       setAiResult(data);
-    } catch (err: any) {
-      // Fallback to local statistical calculation gracefully
-      console.warn('Gemini spending analysis error, using statistical fallback:', err);
+    } catch (error) {
+      if (requestId !== aiRequestIdRef.current) return;
+      console.warn('AI spending analysis unavailable; using local statistical fallback.');
       StorageManager.cacheAnalysis(localFallback);
       setAiResult(localFallback);
-      const isApiKeyMissing = err.message?.includes('Gemini API key');
-      setAiNotice(
-        isApiKeyMissing
-          ? 'Gemini API key not configured. Using verified local statistical analysis.'
-          : 'Unable to reach Gemini AI service right now. Using verified local statistical analysis.'
-      );
+      setAiNotice(`${getAiErrorMessage(language, error)} ${t(language, 'aiFallbackNotice')}`);
     } finally {
-      setIsAiLoading(false);
+      if (requestId === aiRequestIdRef.current) {
+        aiInFlightRef.current = false;
+        setIsAiLoading(false);
+      }
     }
   }, [expenses, monthlyExpenses, currentMY, currencyCode, language]);
 
