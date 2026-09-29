@@ -61,6 +61,36 @@ jobs:
       - name: Run currency defaults tests
         run: npm run test:currency
 
+      - name: Smoke test deployed Gemini backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${VITE_API_BASE_URL:-}" ] || [ -z "${VITE_API_ACCESS_TOKEN:-}" ]; then
+            echo "::error::Missing VITE_API_BASE_URL or VITE_API_ACCESS_TOKEN for deployed AI smoke test."
+            exit 1
+          fi
+
+          HEALTH="$(curl --silent --show-error --fail --retry 2 --retry-all-errors --connect-timeout 15 --max-time 90             "${VITE_API_BASE_URL%/}/api/health")"
+          HEALTH="$HEALTH" node -e '
+            const h = JSON.parse(process.env.HEALTH || "{}");
+            if (!h.ok || !h.aiConfigured || !h.accessProtected) {
+              console.error("Backend health is not AI-ready:", h);
+              process.exit(1);
+            }
+            console.log("Backend AI health ready; model:", h.model);
+          '
+
+          BODY='{"summary":{"totalMonthsRecorded":0,"historicalMonthlyAverage":0,"currentMonthKey":"2026-09","currentMonthTotal":0,"previousMonthTotal":null,"categoryBaselines":[],"currentMonthExpenses":[],"recurringCandidates":[]},"currencyCode":"USD","language":"en"}'
+          RESPONSE="$(curl --silent --show-error --fail-with-body --retry 1 --retry-all-errors --connect-timeout 15 --max-time 90             -H "Content-Type: application/json"             -H "X-SpendWise-Token: ${VITE_API_ACCESS_TOKEN}"             --data "$BODY"             "${VITE_API_BASE_URL%/}/api/gemini/analyze")"
+          RESPONSE="$RESPONSE" node -e '
+            const r = JSON.parse(process.env.RESPONSE || "{}");
+            if (r.isAiGenerated !== true || typeof r.spendingOverview !== "string") {
+              console.error("Gemini smoke response was not valid.");
+              process.exit(1);
+            }
+            console.log("Live Gemini smoke test passed.");
+          '
+
       - name: Sync Capacitor Android
         run: npm run android:sync
 
