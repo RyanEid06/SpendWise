@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { apiFetch } from '../utils/api';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { apiFetchJson } from '../utils/api';
+import { getAiErrorMessage } from '../utils/apiErrors';
 import {
   BarChart3,
   Calendar,
@@ -50,6 +51,8 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
   const [aiExplanation, setAiExplanation] = useState<AiTrendExplanationResult | null>(null);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const aiRequestIdRef = useRef(0);
+  const aiInFlightRef = useRef(false);
 
   // Compute calculated statistics (backed by cache)
   const stats = useMemo(() => {
@@ -62,9 +65,19 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
   }, [expenses, budgets, selectedPeriod, currentMonthYear]);
 
   useEffect(() => {
+    aiRequestIdRef.current += 1;
+    aiInFlightRef.current = false;
+    setIsLoadingAi(false);
     setAiExplanation(null);
     setAiError(null);
   }, [expenses, budgets, currentMonthYear, selectedPeriod, currencyCode, language]);
+
+  useEffect(() => {
+    return () => {
+      aiRequestIdRef.current += 1;
+      aiInFlightRef.current = false;
+    };
+  }, []);
 
   const periods: { key: TimePeriod; label: string }[] = [
     { key: 'CURRENT_MONTH', label: t(language, 'periodCurrent') },
@@ -75,18 +88,22 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
   ];
 
   const handleExplainWithAi = async () => {
+    if (aiInFlightRef.current) return;
+
     if (stats.totalTransactions === 0) {
       setAiError(t(language, 'noMonthlyRecords'));
       return;
     }
 
+    aiInFlightRef.current = true;
+    const requestId = ++aiRequestIdRef.current;
     setIsLoadingAi(true);
     setAiError(null);
 
     const localFallback = StatisticsEngine.generateLocalTrendExplanation(stats, currencyCode);
 
     try {
-      const res = await apiFetch(
+      const data = await apiFetchJson<AiTrendExplanationResult>(
         '/api/gemini/explain-trends',
         {
           method: 'POST',
@@ -99,17 +116,17 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
         30000
       );
 
-      if (!res.ok) {
-        throw new Error('Using verified local calculation');
-      }
-
-      const data = await res.json();
+      if (requestId !== aiRequestIdRef.current) return;
       setAiExplanation(data);
-    } catch {
-      // Fallback cleanly to verified local synthesis without breaking UI
+    } catch (error) {
+      if (requestId !== aiRequestIdRef.current) return;
       setAiExplanation(localFallback);
+      setAiError(getAiErrorMessage(language, error));
     } finally {
-      setIsLoadingAi(false);
+      if (requestId === aiRequestIdRef.current) {
+        aiInFlightRef.current = false;
+        setIsLoadingAi(false);
+      }
     }
   };
 
