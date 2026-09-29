@@ -57,12 +57,12 @@ export const AiInsightsScreen: React.FC<AiInsightsScreenProps> = ({
 
       {/* Hero Action Banner */}
       <div className="bg-gradient-to-r from-indigo-50 to-indigo-100/70 dark:from-indigo-950/80 dark:to-[#131B2E] border border-indigo-200 dark:border-indigo-800/60 rounded-3xl p-5 shadow-xs transition-colors">
-        <div className="flex items-center space-x-3.5 rtl:space-x-reverse mb-4">
+        <div className="flex items-start gap-3.5 mb-4">
           <div className="w-11 h-11 rounded-2xl bg-indigo-600/15 dark:bg-indigo-600/30 text-indigo-700 dark:text-indigo-400 flex items-center justify-center shrink-0">
             <Sparkles className="w-6 h-6" />
           </div>
-          <div>
-            <h3 className="font-bold text-slate-900 dark:text-white text-base">
+          <div className="min-w-0">
+            <h3 className="font-bold text-slate-900 dark:text-white text-base leading-tight [overflow-wrap:anywhere]">
               {t(language, 'aiInsightsHeroTitle')}
             </h3>
             <p className="text-xs text-indigo-900/75 dark:text-indigo-200/70">
@@ -112,7 +112,7 @@ export const AiInsightsScreen: React.FC<AiInsightsScreenProps> = ({
             {t(language, 'noticeTitle')}
           </h4>
           <p className="text-xs text-slate-600 dark:text-slate-300 max-w-md mx-auto leading-relaxed">{error}</p>
-          <div className="flex items-center justify-center space-x-3 rtl:space-x-reverse pt-2">
+          <div className="flex flex-col min-[360px]:flex-row items-stretch min-[360px]:items-center justify-center gap-2 min-[360px]:gap-3 pt-2">
             <button
               onClick={onAddExpenseClick}
               className="min-h-[44px] inline-flex items-center space-x-1.5 rtl:space-x-reverse bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
@@ -156,8 +156,8 @@ export const AiInsightsScreen: React.FC<AiInsightsScreenProps> = ({
 
           {/* Section 1: Overview Card */}
           <div className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 rounded-3xl p-5 shadow-xs space-y-2.5 transition-colors">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="min-w-0 font-bold text-slate-900 dark:text-white text-sm sm:text-base">
                 {t(language, 'overviewCardTitle')}
               </h3>
               <span
@@ -308,14 +308,14 @@ const InsightRow: React.FC<{ item: InsightCardItem; language: Language }> = ({ i
 
   return (
     <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/80 dark:border-slate-800/60 space-y-1.5 transition-colors">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2 rtl:space-x-reverse min-w-0">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="flex items-center space-x-2 rtl:space-x-reverse min-w-0 flex-1">
           {catInfo && <span className="text-base shrink-0" aria-hidden="true">{catInfo.iconEmoji}</span>}
           <h4 className="font-bold text-sm text-slate-900 dark:text-white truncate">
             {item.title}
           </h4>
         </div>
-        <span className={`inline-flex items-center space-x-1 rtl:space-x-reverse text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 mx-2 ${badge.bg}`}>
+        <span className={`inline-flex items-center space-x-1 rtl:space-x-reverse text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${badge.bg}`}>
           <BadgeIcon className="w-3 h-3" />
           <span>{badge.label}</span>
         </span>
@@ -326,7 +326,7 @@ const InsightRow: React.FC<{ item: InsightCardItem; language: Language }> = ({ i
       </p>
 
       {item.numbers && (
-        <div className="pt-0.5 font-bold tabular-nums text-xs text-emerald-600 dark:text-emerald-400">
+        <div dir="ltr" className="pt-0.5 min-w-0 font-bold tabular-nums text-xs text-emerald-600 dark:text-emerald-400 [overflow-wrap:anywhere]">
           {item.numbers}
         </div>
       )}
