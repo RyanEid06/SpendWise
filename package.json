@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "lint": "tsc --noEmit",
     "android:sync": "cap sync android",
-    "test:reliability": "tsx --test tests/reliability.test.ts"
+    "test:reliability": "tsx --test tests/reliability.test.ts",
+    "test:currency": "tsx --test tests/currency.test.ts"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",
