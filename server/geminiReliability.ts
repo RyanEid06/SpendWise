@@ -224,6 +224,64 @@ export async function executeGeminiJson<T>(
   throw createAiFailure('AI_REQUEST_FAILED');
 }
 
+export interface GeminiJsonModelFallbackOptions<T>
+  extends Omit<GeminiJsonExecutionOptions<T>, 'request'> {
+  models: string[];
+  request: (
+    model: string,
+    timeoutMs: number,
+    attempt: number
+  ) => Promise<{ text?: string | null }>;
+  logModelFallback?: (details: {
+    endpoint: string;
+    requestId: string;
+    fromModel: string;
+    toModel: string;
+    code: AiFailureCode;
+  }) => void;
+}
+
+export async function executeGeminiJsonWithModelFallback<T>(
+  options: GeminiJsonModelFallbackOptions<T>
+): Promise<T> {
+  const models = [...new Set(options.models.map((model) => model.trim()).filter(Boolean))];
+  if (models.length === 0) throw createAiFailure('AI_NOT_CONFIGURED');
+
+  for (let index = 0; index < models.length; index += 1) {
+    const model = models[index];
+    try {
+      return await executeGeminiJson({
+        endpoint: options.endpoint,
+        requestId: options.requestId,
+        timeoutMs: options.timeoutMs,
+        retryDelayMs: options.retryDelayMs,
+        validate: options.validate,
+        logFailure: options.logFailure,
+        request: (timeoutMs, attempt) => options.request(model, timeoutMs, attempt),
+      });
+    } catch (error) {
+      const nextModel = models[index + 1];
+      if (
+        !(error instanceof AiReliabilityError) ||
+        error.code !== 'AI_TEMPORARILY_UNAVAILABLE' ||
+        !nextModel
+      ) {
+        throw error;
+      }
+
+      options.logModelFallback?.({
+        endpoint: options.endpoint,
+        requestId: options.requestId,
+        fromModel: model,
+        toModel: nextModel,
+        code: error.code,
+      });
+    }
+  }
+
+  throw createAiFailure('AI_REQUEST_FAILED');
+}
+
 export function cleanupRateBuckets<T extends { resetAt: number }>(
   buckets: Map<string, T>,
   now: number,
