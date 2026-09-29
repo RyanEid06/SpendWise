@@ -1,7 +1,5 @@
 # SpendWise AI backend
 
-WP11 centralizes Gemini reliability without changing the existing AI feature set.
-
 SpendWise uses a small Express backend so the Gemini API key never ships inside the APK.
 
 ## Request flow
@@ -14,12 +12,12 @@ The app sends bounded structured financial data. The server builds the Gemini pr
 
 Set these on the deployed backend:
 
-- `GEMINI_API_KEY` â€” Gemini Developer API key. Server-only.
-- `SPENDWISE_API_TOKEN` â€” long random access token required by production AI endpoints.
-- `ALLOWED_ORIGINS` â€” comma-separated exact origins. Include `https://localhost` for the Capacitor Android app.
-- `GEMINI_MODEL` â€” optional. Defaults to `gemini-3.8-flash`.
-- `GEMINI_FALLBACK_MODELS` â€” optional comma-separated list. Defaults to `gemini-3.7-flash,gemini-3.5-flash-lite`. The legacy singular `GEMINI_FALLBACK_MODEL` is also accepted.
-- `GEMINI_TIMEOUT_MS` â€” optional provider timeout in milliseconds. Defaults to `22000` and is clamped to 5-40 seconds.
+- `GEMINI_API_KEY` — Gemini Developer API key. Server-only.
+- `SPENDWISE_API_TOKEN` — long random access token required by production AI endpoints.
+- `ALLOWED_ORIGINS` — comma-separated exact origins. Include `https://localhost` for the Capacitor Android app.
+- `GEMINI_MODEL` — optional. Defaults to `gemini-3.8-flash`.
+- `GEMINI_FALLBACK_MODELS` — optional comma-separated list. Defaults to `gemini-3.7-flash,gemini-3.5-flash-lite`. The legacy singular `GEMINI_FALLBACK_MODEL` is also accepted.
+- `GEMINI_TIMEOUT_MS` — optional provider timeout in milliseconds. Defaults to `22000` and is clamped to 5-40 seconds.
 - `NODE_ENV=production`
 
 Do not use a `VITE_` prefix for the Gemini key.

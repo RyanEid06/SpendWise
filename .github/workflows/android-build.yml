@@ -5,21 +5,7 @@ on:
   push:
     branches:
       - main
-      - fix/spendwise-hardening
-      - wp1/release-updates
-      - wp2/native-backup-export
-      - wp3/gemini-backend
-      - wp4/android-financial-ux
-      - wp5/final-release-gate
-      - wp9/final-integration
-      - wp10/native-camera-photo-ux
-      - wp11/gemini-backend-reliability
-      - wp12a/financial-responsive-lbp-ui
-      - wp12b/theme-brand-fx-polish
-      - wp13/local-data-foundation
-      - wp14/media-lifecycle-full-backup
-      - wp15/core-ux-simplification
-      - wp16/navigation-accessibility-freeze
+      - 'maintenance/**'
     tags:
       - 'v*'
 
@@ -71,10 +57,10 @@ jobs:
       - name: Run media and Backup v2 tests
         run: npm run test:media-backup
 
-      - name: Run WP15 core UX architecture tests
+      - name: Run core UX regression tests
         run: npm run test:core-ux
 
-      - name: Run WP16 final freeze tests
+      - name: Run final product freeze regression tests
         run: npm run test:final-freeze
 
       - name: Sync Capacitor Android
