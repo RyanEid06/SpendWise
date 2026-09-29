@@ -8,7 +8,6 @@ import {
   AlertTriangle,
   Brain,
   Info,
-  Plus,
   CheckCircle,
   AlertCircle,
 } from 'lucide-react';
@@ -28,7 +27,6 @@ interface AiInsightsScreenProps {
   onPreviousMonth: () => void;
   onNextMonth: () => void;
   onAnalyzeClick: () => void;
-  onAddExpenseClick: () => void;
 }
 
 export const AiInsightsScreen: React.FC<AiInsightsScreenProps> = ({
@@ -41,7 +39,6 @@ export const AiInsightsScreen: React.FC<AiInsightsScreenProps> = ({
   onPreviousMonth,
   onNextMonth,
   onAnalyzeClick,
-  onAddExpenseClick,
 }) => {
   const monthName = getLocalizedMonthName(currentMonthYear, language);
 
@@ -113,13 +110,6 @@ export const AiInsightsScreen: React.FC<AiInsightsScreenProps> = ({
           </h4>
           <p className="text-xs text-slate-600 dark:text-slate-300 max-w-md mx-auto leading-relaxed">{error}</p>
           <div className="flex flex-col min-[360px]:flex-row items-stretch min-[360px]:items-center justify-center gap-2 min-[360px]:gap-3 pt-2">
-            <button
-              onClick={onAddExpenseClick}
-              className="min-h-[44px] inline-flex items-center space-x-1.5 rtl:space-x-reverse bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
-            >
-              <Plus className="w-4 h-4" />
-              <span>{t(language, 'addExpenseBtn')}</span>
-            </button>
             <button
               onClick={onAnalyzeClick}
               className="min-h-[44px] inline-flex items-center space-x-1 rtl:space-x-reverse border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-white font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer active:scale-95"
