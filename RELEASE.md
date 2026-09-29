@@ -62,11 +62,13 @@ Paste the clipboard contents into `SPENDWISE_KEYSTORE_BASE64`.
 
 ## Normal CI
 
-Branch pushes run typecheck/Vite build, Capacitor sync, and `assembleDebug`. Signing secrets are not needed.
+Pushes to `main` and maintenance branches run the full regression suite, Capacitor sync, `assembleDebug`, APK artifact upload, and the deployed Gemini backend smoke test. Signing secrets are not needed for this debug verification.
+
+The debug APK is for internal testing/distribution only. For a permanent update path that can reliably replace an installed production build without clearing app data, use the signed tag workflow below.
 
 ## Publishing a permanent update
 
-Only publish a version tag after the branch is merged and debug CI is green:
+Only publish a version tag from `main` after the merged commit's debug CI is green:
 
 ```powershell
 git tag v1.2.0
