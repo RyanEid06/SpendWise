@@ -15,6 +15,7 @@ on:
       - wp10/native-camera-photo-ux
       - wp11/gemini-backend-reliability
       - wp12a/financial-responsive-lbp-ui
+      - wp12b/theme-brand-fx-polish
     tags:
       - 'v*'
 
