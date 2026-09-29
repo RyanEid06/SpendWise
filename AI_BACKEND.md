@@ -1,5 +1,7 @@
 # SpendWise AI backend
 
+WP11 centralizes Gemini reliability without changing the existing AI feature set.
+
 SpendWise uses a small Express backend so the Gemini API key never ships inside the APK.
 
 ## Request flow
