@@ -263,7 +263,8 @@ export async function executeGeminiJsonWithModelFallback<T>(
       const nextModel = models[index + 1];
       if (
         !(error instanceof AiReliabilityError) ||
-        error.code !== 'AI_TEMPORARILY_UNAVAILABLE' ||
+        (error.code !== 'AI_TEMPORARILY_UNAVAILABLE' &&
+          error.code !== 'AI_RATE_LIMITED') ||
         !nextModel
       ) {
         throw error;
