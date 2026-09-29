@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AlertCircle, Camera, CheckCircle2, ImagePlus, Loader2, X } from 'lucide-react';
 import { Language, ReceiptScanResult } from '../types';
-import { apiFetch } from '../utils/api';
+import { apiFetchJson } from '../utils/api';
+import { getAiErrorMessage, SpendWiseApiError } from '../utils/apiErrors';
 import { AttachmentDraft, AttachmentStorage } from '../utils/attachmentStorage';
 import { photoAcquisitionErrorText, ta } from '../utils/attachmentTranslations';
 import { DEFAULT_CATEGORIES } from '../utils/categories';
@@ -255,7 +256,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
       const imageBase64 = await blobToDataUrl(preparedDraft.blob);
       if (requestId !== requestIdRef.current) return;
 
-      const response = await apiFetch(
+      const responseData = await apiFetchJson<unknown>(
         '/api/gemini/scan-receipt',
         {
           method: 'POST',
@@ -269,18 +270,13 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
         45000
       );
 
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(typeof data.error === 'string' ? data.error : 'RECEIPT_SCAN_FAILED');
-      }
-
-      const parsed = parseReceiptScanResult(await response.json(), currencyCode);
-      if (!parsed) throw new Error('RECEIPT_SCAN_INVALID_RESPONSE');
+      const parsed = parseReceiptScanResult(responseData, currencyCode);
+      if (!parsed) throw new SpendWiseApiError('invalid_response');
       if (requestId !== requestIdRef.current) return;
       setResult(parsed);
-    } catch {
+    } catch (error) {
       if (requestId !== requestIdRef.current) return;
-      setError(t(language, 'receiptScanError'));
+      setError(getAiErrorMessage(language, error));
     } finally {
       if (requestId === requestIdRef.current) {
         analysisInFlightRef.current = false;
