@@ -14,6 +14,7 @@ interface ExpenseItemCardProps {
   language: Language;
   onClick: () => void;
   onDeleteClick: (e: React.MouseEvent) => void;
+  editable?: boolean;
 }
 
 export const ExpenseItemCard: React.FC<ExpenseItemCardProps> = ({
@@ -22,6 +23,7 @@ export const ExpenseItemCard: React.FC<ExpenseItemCardProps> = ({
   language,
   onClick,
   onDeleteClick,
+  editable = true,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const catInfo = getCategoryInfo(expense.category);
@@ -164,7 +166,7 @@ export const ExpenseItemCard: React.FC<ExpenseItemCardProps> = ({
             </div>
           )}
 
-          {attachmentCount > 0 && (
+          {attachmentCount > 0 && editable && (
             <button
               type="button"
               onClick={(event) => {
@@ -191,17 +193,19 @@ export const ExpenseItemCard: React.FC<ExpenseItemCardProps> = ({
 
           {/* Action Buttons Row */}
           <div className="flex items-center gap-2 pt-1 border-t border-slate-200/60 dark:border-slate-800/60">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onClick();
-              }}
-              className="flex-1 min-h-[42px] px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer active:scale-98"
-            >
-              <Edit2 className="w-3.5 h-3.5" />
-              <span>{t(language, 'editExpenseBtnLabel')}</span>
-            </button>
+            {editable && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClick();
+                }}
+                className="flex-1 min-h-[42px] px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer active:scale-98"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+                <span>{t(language, 'editExpenseBtnLabel')}</span>
+              </button>
+            )}
 
             <button
               type="button"
