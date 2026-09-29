@@ -1,3 +1,5 @@
+import { SpendWiseApiError, apiErrorFromResponse, normalizeApiException } from './apiErrors';
+
 const rawBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() || '';
 const baseUrl = rawBaseUrl.replace(/\/$/, '');
 const apiAccessToken =
@@ -46,4 +48,29 @@ export async function apiFetch(
     },
     timeoutMs
   );
+}
+
+
+export async function apiFetchJson<T>(
+  path: string,
+  init: RequestInit = {},
+  timeoutMs = 15000
+): Promise<T> {
+  try {
+    const response = await apiFetch(path, init, timeoutMs);
+    if (!response.ok) {
+      throw await apiErrorFromResponse(response);
+    }
+
+    try {
+      return (await response.json()) as T;
+    } catch {
+      throw new SpendWiseApiError('invalid_response', {
+        status: response.status,
+        code: 'AI_INVALID_RESPONSE',
+      });
+    }
+  } catch (error) {
+    throw normalizeApiException(error);
+  }
 }
