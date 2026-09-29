@@ -28,11 +28,9 @@ import { SettingsScreen } from './screens/SettingsScreen';
 import { LockScreen } from './screens/LockScreen';
 import { AddEditExpenseModal } from './components/AddEditExpenseModal';
 import { SetBudgetModal } from './components/SetBudgetModal';
-import { AttachmentEditPayload, AttachmentStorage } from './utils/attachmentStorage';
+import { AttachmentEditPayload } from './utils/attachmentStorage';
 
 export const App: React.FC = () => {
-  StorageManager.init();
-
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [currentMY, setCurrentMY] = useState(currentMonthYear());
 
@@ -281,26 +279,16 @@ export const App: React.FC = () => {
     note: string | null,
     attachmentChanges: AttachmentEditPayload
   ) => {
-    const created = StorageManager.addExpense({
-      amount,
-      description,
-      category,
-      date,
-      note,
-    });
-
-    try {
-      await AttachmentStorage.applyExpenseAttachmentChanges(
-        created.id,
-        attachmentChanges.newAttachments,
-        []
-      );
-    } catch (error) {
-      await StorageManager.deleteExpense(created.id);
-      setExpenses(StorageManager.getExpenses());
-      throw error;
-    }
-
+    await StorageManager.addExpense(
+      {
+        amount,
+        description,
+        category,
+        date,
+        note,
+      },
+      attachmentChanges
+    );
     setExpenses(StorageManager.getExpenses());
   };
 
@@ -316,29 +304,17 @@ export const App: React.FC = () => {
     const existing = expenses.find((e) => e.id === id);
     if (!existing) return;
 
-    StorageManager.updateExpense({
-      ...existing,
-      amount,
-      description,
-      category,
-      date,
-      note,
-    });
-
-    try {
-      await AttachmentStorage.applyExpenseAttachmentChanges(
-        id,
-        attachmentChanges.newAttachments,
-        attachmentChanges.removedAttachmentIds
-      );
-    } catch (error) {
-      // Attachment writes are transactional. If they fail, restore the
-      // previous financial record so Save remains one logical operation.
-      StorageManager.updateExpense(existing);
-      setExpenses(StorageManager.getExpenses());
-      throw error;
-    }
-
+    await StorageManager.updateExpense(
+      {
+        ...existing,
+        amount,
+        description,
+        category,
+        date,
+        note,
+      },
+      attachmentChanges
+    );
     setExpenses(StorageManager.getExpenses());
   };
 
@@ -347,13 +323,13 @@ export const App: React.FC = () => {
     setExpenses(StorageManager.getExpenses());
   };
 
-  const handleSetStartingMoney = (amount: number) => {
+  const handleSetStartingMoney = async (amount: number) => {
     const key = getMonthKey(currentMY);
-    StorageManager.setBudget(key, amount);
+    await StorageManager.setBudget(key, amount);
     setBudgets(StorageManager.getBudgets());
   };
 
-  const handleCurrencyChange = (code: string, targetUnitsPerSourceUnit?: number) => {
+  const handleCurrencyChange = async (code: string, targetUnitsPerSourceUnit?: number) => {
     const storedExpenses = StorageManager.getExpenses();
     const storedBudgets = StorageManager.getBudgets();
     const hasFinancialData = storedExpenses.length > 0 || storedBudgets.length > 0;
@@ -364,9 +340,9 @@ export const App: React.FC = () => {
       if (targetUnitsPerSourceUnit === undefined) {
         throw new Error('A conversion rate is required for an existing financial ledger.');
       }
-      StorageManager.convertCurrency(code, targetUnitsPerSourceUnit);
+      await StorageManager.convertCurrency(code, targetUnitsPerSourceUnit);
     } else {
-      StorageManager.setCurrencyCode(code);
+      await StorageManager.setCurrencyCode(code);
       StorageManager.clearAnalysisCache();
     }
 

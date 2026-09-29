@@ -16,6 +16,7 @@ on:
       - wp11/gemini-backend-reliability
       - wp12a/financial-responsive-lbp-ui
       - wp12b/theme-brand-fx-polish
+      - wp13/local-data-foundation
     tags:
       - 'v*'
 
@@ -60,6 +61,9 @@ jobs:
 
       - name: Run currency defaults tests
         run: npm run test:currency
+
+      - name: Run persistence migration tests
+        run: npm run test:persistence
 
       - name: Sync Capacitor Android
         run: npm run android:sync

@@ -34,7 +34,7 @@ interface SettingsScreenProps {
   lockTimeoutSeconds: number;
   onAppLockToggle: (enabled: boolean) => void;
   onLockTimeoutChange: (seconds: number) => void;
-  onCurrencyChange: (code: string, targetUnitsPerSourceUnit?: number) => void;
+  onCurrencyChange: (code: string, targetUnitsPerSourceUnit?: number) => void | Promise<void>;
   onThemeChange: (mode: ThemeMode) => void;
   onLanguageChange: (lang: Language) => void;
   onClearAllData: () => void | Promise<void>;
@@ -482,8 +482,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
                   setErrorMessage(null);
                   if (!hasFinancialData) {
-                    onCurrencyChange(c.code);
-                    setStatusMessage(t(currentLanguage, 'currencyChangeSaved', { currency: c.code }));
+                    void (async () => {
+                      try {
+                        await onCurrencyChange(c.code);
+                        setStatusMessage(t(currentLanguage, 'currencyChangeSaved', { currency: c.code }));
+                      } catch {
+                        setErrorMessage(t(currentLanguage, 'currencyConversionFailed'));
+                      }
+                    })();
                     return;
                   }
 
@@ -646,9 +652,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           previewAmount={currencyPreviewAmount}
           initialRate={getSuggestedConversionRate(currentCurrencyCode, pendingCurrencyCode)}
           language={currentLanguage}
-          onConfirm={(targetUnitsPerSourceUnit) => {
+          onConfirm={async (targetUnitsPerSourceUnit) => {
             const targetCode = pendingCurrencyCode;
-            onCurrencyChange(targetCode, targetUnitsPerSourceUnit);
+            await onCurrencyChange(targetCode, targetUnitsPerSourceUnit);
             setPendingCurrencyCode(null);
             setErrorMessage(null);
             setStatusMessage(t(currentLanguage, 'currencyChangeSaved', { currency: targetCode }));
