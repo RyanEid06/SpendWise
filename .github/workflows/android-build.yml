@@ -81,9 +81,18 @@ jobs:
           '
 
           BODY='{"summary":{"totalMonthsRecorded":0,"historicalMonthlyAverage":0,"currentMonthKey":"2026-09","currentMonthTotal":0,"previousMonthTotal":null,"categoryBaselines":[],"currentMonthExpenses":[],"recurringCandidates":[]},"currencyCode":"USD","language":"en"}'
-          RESPONSE="$(curl --silent --show-error --fail-with-body --retry 1 --retry-all-errors --connect-timeout 15 --max-time 90             -H "Content-Type: application/json"             -H "X-SpendWise-Token: ${VITE_API_ACCESS_TOKEN}"             --data "$BODY"             "${VITE_API_BASE_URL%/}/api/gemini/analyze")"
-          RESPONSE="$RESPONSE" node -e '
-            const r = JSON.parse(process.env.RESPONSE || "{}");
+          RESPONSE_FILE="$(mktemp)"
+          HTTP_STATUS="$(curl --silent --show-error --retry 1 --retry-all-errors --connect-timeout 15 --max-time 90             -o "$RESPONSE_FILE" -w "%{http_code}"             -H "Content-Type: application/json"             -H "X-SpendWise-Token: ${VITE_API_ACCESS_TOKEN}"             --data "$BODY"             "${VITE_API_BASE_URL%/}/api/gemini/analyze")"
+          RESPONSE="$(cat "$RESPONSE_FILE")"
+          rm -f "$RESPONSE_FILE"
+          HTTP_STATUS="$HTTP_STATUS" RESPONSE="$RESPONSE" node -e '
+            const status = Number(process.env.HTTP_STATUS || 0);
+            let r = {};
+            try { r = JSON.parse(process.env.RESPONSE || "{}"); } catch {}
+            if (status < 200 || status >= 300) {
+              console.error("Gemini smoke failed:", status, r);
+              process.exit(1);
+            }
             if (r.isAiGenerated !== true || typeof r.spendingOverview !== "string") {
               console.error("Gemini smoke response was not valid.");
               process.exit(1);
