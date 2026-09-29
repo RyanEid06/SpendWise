@@ -17,7 +17,7 @@ export const CategoryBreakdownSection: React.FC<CategoryBreakdownSectionProps> =
 }) => {
   return (
     <div className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 rounded-3xl p-5 shadow-xs transition-colors">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <h3 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base">
           {t(language, 'categoryBreakdownTitle')}
         </h3>
@@ -68,7 +68,7 @@ export const CategoryBreakdownSection: React.FC<CategoryBreakdownSectionProps> =
           <div className="space-y-3 pt-1">
             {categoryBreakdown.map((item) => (
               <div key={item.categoryName} className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs sm:text-sm">
+                <div className="flex items-start justify-between gap-2 text-xs sm:text-sm">
                   <div className="flex items-center space-x-2 rtl:space-x-reverse min-w-0">
                     <span className="text-base shrink-0" aria-hidden="true">{item.iconEmoji}</span>
                     <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">
@@ -82,7 +82,7 @@ export const CategoryBreakdownSection: React.FC<CategoryBreakdownSectionProps> =
                     </span>
                   </div>
 
-                  <span className="font-bold tabular-nums text-slate-900 dark:text-white shrink-0 mx-2">
+                  <span dir="ltr" className="min-w-0 max-w-[48%] font-bold tabular-nums text-slate-900 dark:text-white text-right rtl:text-left [overflow-wrap:anywhere] leading-tight">
                     {formatCurrency(item.amount, currencyCode)}
                   </span>
                 </div>
