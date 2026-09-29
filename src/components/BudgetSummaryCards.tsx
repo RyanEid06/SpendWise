@@ -37,7 +37,7 @@ export const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
       {!isBudgetSet && (
         <div
           onClick={onSetBudgetClick}
-          className="bg-amber-50 dark:bg-gradient-to-r dark:from-[#452206] dark:to-[#301602] border border-amber-300 dark:border-[#78350F]/70 rounded-3xl p-4 flex items-center justify-between cursor-pointer hover:border-amber-400 dark:hover:border-amber-600/60 transition-all shadow-xs group"
+          className="bg-amber-50 dark:bg-gradient-to-r dark:from-[#452206] dark:to-[#301602] border border-amber-300 dark:border-[#78350F]/70 rounded-3xl p-4 flex flex-col min-[380px]:flex-row min-[380px]:items-center justify-between gap-3 cursor-pointer hover:border-amber-400 dark:hover:border-amber-600/60 transition-all shadow-xs group"
           role="button"
           tabIndex={0}
           aria-label={t(language, 'setBudgetPromptTitle')}
@@ -66,7 +66,7 @@ export const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
               e.stopPropagation();
               onSetBudgetClick();
             }}
-            className="min-h-[44px] px-4 flex items-center space-x-1.5 rtl:space-x-reverse bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs rounded-full transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
+            className="w-full min-[380px]:w-auto min-h-[44px] px-4 flex items-center justify-center space-x-1.5 rtl:space-x-reverse bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs rounded-full transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
             aria-label={t(language, 'setBudgetBtn')}
           >
             <Plus className="w-3.5 h-3.5" />
@@ -85,7 +85,7 @@ export const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
             : 'bg-white dark:bg-[#111928] border-slate-200/90 dark:border-slate-800/80 text-slate-900 dark:text-white'
         }`}
       >
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             {isOverBudget ? t(language, 'budgetExceeded') : t(language, 'moneyRemaining')}
           </span>
@@ -106,7 +106,7 @@ export const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
           )}
         </div>
 
-        <div className="mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight tabular-nums text-slate-900 dark:text-white">
+        <div dir="ltr" className="mt-2 min-w-0 text-[clamp(1.75rem,8vw,2.25rem)] leading-tight font-extrabold tracking-tight tabular-nums text-slate-900 dark:text-white [overflow-wrap:anywhere]">
           {isBudgetSet ? formatCurrency(remainingMoney, currencyCode) : '—'}
         </div>
 
@@ -128,7 +128,7 @@ export const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
               />
             </div>
             <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 font-medium">
-              <span className="tabular-nums font-semibold">
+              <span className="tabular-nums font-semibold [overflow-wrap:anywhere]">
                 {t(language, 'spentOfBudget', {
                   spent: formatCurrency(totalSpent, currencyCode),
                   budget: formatCurrency(startingMoney, currencyCode),
@@ -160,7 +160,7 @@ export const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
             )}
           </div>
           <div className="text-xs space-y-0.5 flex-1">
-            <div className="font-bold flex items-center justify-between">
+            <div className="font-bold flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
               <span>
                 {isOverBudget
                   ? t(language, 'alertBudgetExceeded')
@@ -192,7 +192,7 @@ export const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
       )}
 
       {/* 4. Two Column Grid: Starting Money & Total Spent */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 min-[390px]:grid-cols-2 gap-3">
         {/* Starting Money Card */}
         <div
           onClick={onSetBudgetClick}
@@ -220,7 +220,7 @@ export const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
               <Edit2 className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors" />
             </div>
           </div>
-          <div className="mt-2 font-extrabold text-lg tabular-nums text-slate-900 dark:text-white">
+          <div dir="ltr" className="mt-2 min-w-0 font-extrabold text-lg tabular-nums text-slate-900 dark:text-white [overflow-wrap:anywhere] leading-tight">
             {isBudgetSet ? formatCurrency(startingMoney, currencyCode) : t(language, 'notSet')}
           </div>
         </div>
@@ -235,7 +235,7 @@ export const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
               {t(language, 'totalSpent')}
             </span>
           </div>
-          <div className="mt-2 font-extrabold text-lg tabular-nums text-slate-900 dark:text-white">
+          <div dir="ltr" className="mt-2 min-w-0 font-extrabold text-lg tabular-nums text-slate-900 dark:text-white [overflow-wrap:anywhere] leading-tight">
             {formatCurrency(totalSpent, currencyCode)}
           </div>
         </div>
