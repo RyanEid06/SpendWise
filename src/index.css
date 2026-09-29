@@ -74,3 +74,69 @@
   animation: pulseSubtle 1.8s ease-in-out infinite;
 }
 
+
+/*
+ * SpendWise dark surfaces.
+ * The app background is intentionally darkest, cards are one tonal step higher,
+ * and nested controls are slightly lower. This keeps hierarchy visible without
+ * the washed-out gray appearance that WP12B is replacing.
+ */
+:root {
+  --sw-dark-background: #05080c;
+  --sw-dark-surface: #0c1117;
+  --sw-dark-surface-low: #080c11;
+  --sw-dark-surface-high: #111820;
+  --sw-dark-border: #202a33;
+}
+
+html.dark body {
+  background-color: var(--sw-dark-background);
+}
+
+html.dark [class~="dark:bg-[#111928]"] {
+  background-color: var(--sw-dark-surface) !important;
+}
+
+html.dark [class~="dark:bg-[#111928]/80"] {
+  background-color: rgb(12 17 23 / 0.8) !important;
+}
+
+html.dark [class~="dark:bg-[#111928]/95"] {
+  background-color: rgb(12 17 23 / 0.95) !important;
+}
+
+html.dark [class~="dark:bg-[#0B0F19]"] {
+  background-color: var(--sw-dark-surface-low) !important;
+}
+
+html.dark [class~="dark:bg-[#0B0F19]/60"] {
+  background-color: rgb(8 12 17 / 0.6) !important;
+}
+
+html.dark [class~="dark:bg-[#0B0F19]/80"] {
+  background-color: rgb(8 12 17 / 0.8) !important;
+}
+
+html.dark [class~="dark:bg-[#0B0F19]/95"] {
+  background-color: rgb(5 8 12 / 0.95) !important;
+}
+
+html.dark [class~="dark:bg-slate-900/80"] {
+  background-color: rgb(17 24 32 / 0.8) !important;
+}
+
+html.dark [class~="dark:border-slate-800"] {
+  border-color: var(--sw-dark-border) !important;
+}
+
+html.dark [class~="dark:border-slate-800/80"] {
+  border-color: rgb(32 42 51 / 0.8) !important;
+}
+
+html.dark [class~="dark:border-slate-800/60"] {
+  border-color: rgb(32 42 51 / 0.6) !important;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: rgb(71 85 105 / 0.35);
+}
