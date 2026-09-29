@@ -20,7 +20,7 @@ export const TopExpensesSection: React.FC<TopExpensesSectionProps> = ({
 }) => {
   return (
     <div className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 rounded-3xl p-5 shadow-xs transition-colors">
-      <div className="flex items-center justify-between mb-3.5">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3.5">
         <h3 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base">
           {t(language, 'topExpensesTitle')}
         </h3>
@@ -60,7 +60,7 @@ export const TopExpensesSection: React.FC<TopExpensesSectionProps> = ({
                     onExpenseClick(expense);
                   }
                 }}
-                className="min-h-[56px] flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/70 dark:border-slate-800/60 hover:border-slate-300 dark:hover:border-slate-700 transition-all cursor-pointer active:scale-[0.99] group"
+                className="min-h-[56px] flex items-center justify-between gap-2 p-3 rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/70 dark:border-slate-800/60 hover:border-slate-300 dark:hover:border-slate-700 transition-all cursor-pointer active:scale-[0.99] group"
               >
                 <div className="flex items-center space-x-3 rtl:space-x-reverse min-w-0">
                   <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center font-extrabold text-xs shrink-0">
@@ -77,7 +77,7 @@ export const TopExpensesSection: React.FC<TopExpensesSectionProps> = ({
                   </div>
                 </div>
 
-                <div className="font-extrabold text-sm sm:text-base tabular-nums text-slate-900 dark:text-white shrink-0 mx-2">
+                <div dir="ltr" className="min-w-0 max-w-[45%] font-extrabold text-sm sm:text-base tabular-nums text-slate-900 dark:text-white text-right rtl:text-left [overflow-wrap:anywhere] leading-tight">
                   {formatCurrency(expense.amount, currencyCode)}
                 </div>
               </div>
