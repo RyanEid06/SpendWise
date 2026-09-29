@@ -13,6 +13,7 @@ on:
       - wp5/final-release-gate
       - wp9/final-integration
       - wp10/native-camera-photo-ux
+      - wp11/gemini-backend-reliability
     tags:
       - 'v*'
 
@@ -51,6 +52,9 @@ jobs:
 
       - name: Verify web app
         run: npm run verify
+
+      - name: Run AI reliability tests
+        run: npm run test:reliability
 
       - name: Sync Capacitor Android
         run: npm run android:sync
