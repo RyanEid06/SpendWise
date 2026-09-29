@@ -1,8 +1,9 @@
 import { Capacitor } from '@capacitor/core';
 import { Directory, Filesystem } from '@capacitor/filesystem';
 import { ExpenseAttachment, ExpenseAttachmentKind } from '../types';
+import { analyzeMediaIntegrity, MediaBinaryInventoryItem, MediaIntegrityReport, planSafeMediaRepair } from './mediaIntegrity';
+import { LocalDataStore } from './localDataStore';
 
-const ATTACHMENT_METADATA_KEY = 'spendwise_expense_attachments_v1';
 const ATTACHMENT_DIR = 'expense-attachments';
 const MEDIA_DB_NAME = 'spendwise_media_v1';
 const MEDIA_DB_VERSION = 1;
@@ -28,6 +29,12 @@ export interface AttachmentEditPayload {
   removedAttachmentIds: string[];
 }
 
+export interface PreparedAttachmentChanges {
+  nextAttachments: ExpenseAttachment[];
+  stagedAttachments: ExpenseAttachment[];
+  removedAttachments: ExpenseAttachment[];
+}
+
 let maintenanceScheduled = false;
 
 function isNative(): boolean {
@@ -43,55 +50,6 @@ function generateAttachmentId(): string {
 
 function getStorageKey(id: string): string {
   return ATTACHMENT_DIR + '/' + id + '.jpg';
-}
-
-function isAttachment(value: unknown): value is ExpenseAttachment {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
-  const item = value as ExpenseAttachment;
-  return (
-    typeof item.id === 'string' &&
-    item.id.length > 0 &&
-    Number.isInteger(item.expenseId) &&
-    item.expenseId > 0 &&
-    typeof item.storageKey === 'string' &&
-    item.storageKey.length > 0 &&
-    typeof item.mimeType === 'string' &&
-    item.mimeType.startsWith('image/') &&
-    Number.isFinite(item.createdAt) &&
-    item.createdAt > 0 &&
-    ['purchase', 'receipt', 'proof'].includes(item.kind) &&
-    Number.isFinite(item.byteSize) &&
-    item.byteSize > 0 &&
-    Number.isFinite(item.width) &&
-    item.width > 0 &&
-    Number.isFinite(item.height) &&
-    item.height > 0
-  );
-}
-
-function readMetadata(): ExpenseAttachment[] {
-  if (typeof localStorage === 'undefined') return [];
-  try {
-    const raw = localStorage.getItem(ATTACHMENT_METADATA_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isAttachment);
-  } catch {
-    return [];
-  }
-}
-
-function writeMetadata(items: ExpenseAttachment[]): void {
-  if (typeof localStorage === 'undefined') {
-    if (items.length > 0) throw new Error('ATTACHMENT_STORAGE_UNAVAILABLE');
-    return;
-  }
-  if (items.length === 0) {
-    localStorage.removeItem(ATTACHMENT_METADATA_KEY);
-  } else {
-    localStorage.setItem(ATTACHMENT_METADATA_KEY, JSON.stringify(items));
-  }
 }
 
 function openMediaDb(): Promise<IDBDatabase> {
@@ -134,11 +92,8 @@ async function idbGet(key: string): Promise<Blob> {
       const tx = db.transaction(MEDIA_STORE_NAME, 'readonly');
       const request = tx.objectStore(MEDIA_STORE_NAME).get(key);
       request.onsuccess = () => {
-        if (request.result instanceof Blob) {
-          resolve(request.result);
-        } else {
-          reject(new Error('ATTACHMENT_MISSING'));
-        }
+        if (request.result instanceof Blob) resolve(request.result);
+        else reject(new Error('ATTACHMENT_MISSING'));
       };
       request.onerror = () => reject(request.error || new Error('ATTACHMENT_READ_FAILED'));
     });
@@ -156,6 +111,34 @@ async function idbDelete(key: string): Promise<void> {
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error || new Error('ATTACHMENT_DELETE_FAILED'));
       tx.onabort = () => reject(tx.error || new Error('ATTACHMENT_DELETE_FAILED'));
+    });
+  } finally {
+    db.close();
+  }
+}
+
+async function idbEntries(): Promise<MediaBinaryInventoryItem[]> {
+  const db = await openMediaDb();
+  try {
+    return await new Promise<MediaBinaryInventoryItem[]>((resolve, reject) => {
+      const tx = db.transaction(MEDIA_STORE_NAME, 'readonly');
+      const store = tx.objectStore(MEDIA_STORE_NAME);
+      const request = store.openCursor();
+      const results: MediaBinaryInventoryItem[] = [];
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor) {
+          resolve(results);
+          return;
+        }
+        const value = cursor.value;
+        results.push({
+          storageKey: String(cursor.key),
+          byteSize: value instanceof Blob ? value.size : 0,
+        });
+        cursor.continue();
+      };
+      request.onerror = () => reject(request.error || new Error('ATTACHMENT_READ_FAILED'));
     });
   } finally {
     db.close();
@@ -205,16 +188,12 @@ async function saveBinary(storageKey: string, blob: Blob): Promise<void> {
 async function deleteBinary(storageKey: string): Promise<void> {
   if (isNative()) {
     try {
-      await Filesystem.deleteFile({
-        path: storageKey,
-        directory: Directory.Data,
-      });
+      await Filesystem.deleteFile({ path: storageKey, directory: Directory.Data });
     } catch {
       // Missing files are already effectively deleted.
     }
     return;
   }
-
   try {
     await idbDelete(storageKey);
   } catch {
@@ -224,18 +203,11 @@ async function deleteBinary(storageKey: string): Promise<void> {
 
 async function readBinaryUrl(item: ExpenseAttachment): Promise<string> {
   if (isNative()) {
-    const result = await Filesystem.readFile({
-      path: item.storageKey,
-      directory: Directory.Data,
-    });
-    if (result.data instanceof Blob) {
-      return URL.createObjectURL(result.data);
-    }
+    const result = await Filesystem.readFile({ path: item.storageKey, directory: Directory.Data });
+    if (result.data instanceof Blob) return URL.createObjectURL(result.data);
     return 'data:' + item.mimeType + ';base64,' + result.data;
   }
-
-  const blob = await idbGet(item.storageKey);
-  return URL.createObjectURL(blob);
+  return URL.createObjectURL(await idbGet(item.storageKey));
 }
 
 function loadImageElement(file: File): Promise<HTMLImageElement> {
@@ -257,13 +229,7 @@ function loadImageElement(file: File): Promise<HTMLImageElement> {
 function canvasToJpeg(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
   return new Promise((resolve, reject) => {
     canvas.toBlob(
-      (blob) => {
-        if (!blob || blob.size <= 0) {
-          reject(new Error('ATTACHMENT_PROCESSING_FAILED'));
-          return;
-        }
-        resolve(blob);
-      },
+      (blob) => blob && blob.size > 0 ? resolve(blob) : reject(new Error('ATTACHMENT_PROCESSING_FAILED')),
       'image/jpeg',
       quality
     );
@@ -274,57 +240,41 @@ async function renderImage(image: HTMLImageElement, maxDimension: number, qualit
   const sourceWidth = image.naturalWidth;
   const sourceHeight = image.naturalHeight;
   if (!sourceWidth || !sourceHeight) throw new Error('ATTACHMENT_UNSUPPORTED');
-
   const scale = Math.min(1, maxDimension / Math.max(sourceWidth, sourceHeight));
   const width = Math.max(1, Math.round(sourceWidth * scale));
   const height = Math.max(1, Math.round(sourceHeight * scale));
-
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
   const context = canvas.getContext('2d');
   if (!context) throw new Error('ATTACHMENT_PROCESSING_FAILED');
-
   context.drawImage(image, 0, 0, width, height);
-  const blob = await canvasToJpeg(canvas, quality);
-  return { blob, width, height };
+  return { blob: await canvasToJpeg(canvas, quality), width, height };
 }
 
 export class AttachmentStorage {
   static getAllAttachments(): ExpenseAttachment[] {
-    return readMetadata();
+    return LocalDataStore.getAttachments();
   }
 
   static getAttachmentsForExpense(expenseId: number): ExpenseAttachment[] {
-    return readMetadata()
+    return LocalDataStore.getAttachments()
       .filter((item) => item.expenseId === expenseId)
       .sort((a, b) => a.createdAt - b.createdAt);
   }
 
   static hasAttachments(expenseId: number): boolean {
-    return readMetadata().some((item) => item.expenseId === expenseId);
+    return LocalDataStore.getAttachments().some((item) => item.expenseId === expenseId);
   }
 
-  static async prepareImageDraft(
-    file: File,
-    kind: ExpenseAttachmentKind
-  ): Promise<AttachmentDraft> {
-    if (!file.type.startsWith('image/')) {
-      throw new Error('ATTACHMENT_UNSUPPORTED');
-    }
-    if (file.size <= 0 || file.size > MAX_INPUT_IMAGE_BYTES) {
-      throw new Error('ATTACHMENT_TOO_LARGE');
-    }
+  static async prepareImageDraft(file: File, kind: ExpenseAttachmentKind): Promise<AttachmentDraft> {
+    if (!file.type.startsWith('image/')) throw new Error('ATTACHMENT_UNSUPPORTED');
+    if (file.size <= 0 || file.size > MAX_INPUT_IMAGE_BYTES) throw new Error('ATTACHMENT_TOO_LARGE');
 
     const image = await loadImageElement(file);
     let rendered = await renderImage(image, MAX_IMAGE_DIMENSION, 0.86);
-
-    if (rendered.blob.size > MAX_STORED_IMAGE_BYTES) {
-      rendered = await renderImage(image, 1600, 0.78);
-    }
-    if (rendered.blob.size > MAX_STORED_IMAGE_BYTES) {
-      throw new Error('ATTACHMENT_TOO_LARGE');
-    }
+    if (rendered.blob.size > MAX_STORED_IMAGE_BYTES) rendered = await renderImage(image, 1600, 0.78);
+    if (rendered.blob.size > MAX_STORED_IMAGE_BYTES) throw new Error('ATTACHMENT_TOO_LARGE');
 
     return {
       blob: rendered.blob,
@@ -337,42 +287,26 @@ export class AttachmentStorage {
     };
   }
 
-  static async readAttachmentUrl(item: ExpenseAttachment): Promise<string> {
-    return readBinaryUrl(item);
-  }
-
-  static revokePreviewUrl(url: string | null | undefined): void {
-    if (url && url.startsWith('blob:')) {
-      URL.revokeObjectURL(url);
-    }
-  }
-
-  static async applyExpenseAttachmentChanges(
+  static async prepareExpenseAttachmentChanges(
     expenseId: number,
     drafts: AttachmentDraft[],
     removedAttachmentIds: string[]
-  ): Promise<ExpenseAttachment[]> {
-    const current = readMetadata();
-    const currentForExpense = current.filter((item) => item.expenseId === expenseId);
+  ): Promise<PreparedAttachmentChanges> {
+    const currentForExpense = this.getAttachmentsForExpense(expenseId);
     const removable = new Set(
-      currentForExpense
-        .filter((item) => removedAttachmentIds.includes(item.id))
-        .map((item) => item.id)
+      currentForExpense.filter((item) => removedAttachmentIds.includes(item.id)).map((item) => item.id)
     );
     const survivors = currentForExpense.filter((item) => !removable.has(item.id));
+    if (survivors.length + drafts.length > MAX_ATTACHMENTS_PER_EXPENSE) throw new Error('ATTACHMENT_LIMIT');
 
-    if (survivors.length + drafts.length > MAX_ATTACHMENTS_PER_EXPENSE) {
-      throw new Error('ATTACHMENT_LIMIT');
-    }
-
-    const staged: ExpenseAttachment[] = [];
+    const stagedAttachments: ExpenseAttachment[] = [];
     try {
       for (let index = 0; index < drafts.length; index++) {
         const draft = drafts[index];
         const id = generateAttachmentId();
         const storageKey = getStorageKey(id);
         await saveBinary(storageKey, draft.blob);
-        staged.push({
+        stagedAttachments.push({
           id,
           expenseId,
           storageKey,
@@ -385,42 +319,107 @@ export class AttachmentStorage {
           height: draft.height,
         });
       }
-
-      const next = current
-        .filter((item) => !removable.has(item.id))
-        .concat(staged);
-      writeMetadata(next);
     } catch (error) {
-      await Promise.allSettled(staged.map((item) => deleteBinary(item.storageKey)));
+      await this.deleteDetachedFiles(stagedAttachments);
       throw error;
     }
 
-    const removed = currentForExpense.filter((item) => removable.has(item.id));
-    await Promise.allSettled(removed.map((item) => deleteBinary(item.storageKey)));
-    return this.getAttachmentsForExpense(expenseId);
+    return {
+      nextAttachments: survivors.concat(stagedAttachments),
+      stagedAttachments,
+      removedAttachments: currentForExpense.filter((item) => removable.has(item.id)),
+    };
   }
 
-  static detachReferencesForExpense(expenseId: number): ExpenseAttachment[] {
-    const current = readMetadata();
-    const detached = current.filter((item) => item.expenseId === expenseId);
-    if (detached.length === 0) return [];
-    writeMetadata(current.filter((item) => item.expenseId !== expenseId));
-    return detached;
+  static async readAttachmentUrl(item: ExpenseAttachment): Promise<string> {
+    return readBinaryUrl(item);
   }
 
-  static detachAllReferences(): ExpenseAttachment[] {
-    const current = readMetadata();
-    if (current.length === 0) return [];
-    writeMetadata([]);
-    return current;
+  static async readAttachmentBlob(item: ExpenseAttachment): Promise<Blob> {
+    if (isNative()) {
+      const result = await Filesystem.readFile({ path: item.storageKey, directory: Directory.Data });
+      if (result.data instanceof Blob) return result.data;
+      const binary = atob(String(result.data));
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
+      return new Blob([bytes], { type: item.mimeType });
+    }
+    return idbGet(item.storageKey);
   }
 
-  static restoreReferences(items: ExpenseAttachment[]): void {
-    if (items.length === 0) return;
-    const current = readMetadata();
-    const byId = new Map(current.map((item) => [item.id, item]));
-    items.forEach((item) => byId.set(item.id, item));
-    writeMetadata(Array.from(byId.values()));
+  static async stageBackupMedia(
+    source: Pick<ExpenseAttachment, 'mimeType' | 'createdAt' | 'originalFilename' | 'kind' | 'width' | 'height'>,
+    targetExpenseId: number,
+    blob: Blob
+  ): Promise<ExpenseAttachment> {
+    if (source.mimeType !== 'image/jpeg' || blob.size <= 0 || blob.size > MAX_STORED_IMAGE_BYTES) {
+      throw new Error('BACKUP_MEDIA_INVALID');
+    }
+    const id = generateAttachmentId();
+    const storageKey = getStorageKey(id);
+    await saveBinary(storageKey, blob);
+    return {
+      id,
+      expenseId: targetExpenseId,
+      storageKey,
+      mimeType: 'image/jpeg',
+      createdAt: source.createdAt,
+      originalFilename: source.originalFilename ?? null,
+      kind: source.kind,
+      byteSize: blob.size,
+      width: source.width,
+      height: source.height,
+    };
+  }
+
+  static async listBinaryInventory(): Promise<MediaBinaryInventoryItem[]> {
+    if (isNative()) {
+      try {
+        const listing = await Filesystem.readdir({ path: ATTACHMENT_DIR, directory: Directory.Data });
+        return listing.files
+          .filter((file) => file.type === 'file')
+          .map((file) => ({
+            storageKey: ATTACHMENT_DIR + '/' + file.name,
+            byteSize: Number(file.size || 0),
+          }));
+      } catch {
+        return [];
+      }
+    }
+    try {
+      return await idbEntries();
+    } catch {
+      return [];
+    }
+  }
+
+  static async auditIntegrity(): Promise<MediaIntegrityReport> {
+    return analyzeMediaIntegrity(
+      LocalDataStore.getExpenses(),
+      LocalDataStore.getAttachments(),
+      await this.listBinaryInventory()
+    );
+  }
+
+  static async repairIntegrity(): Promise<{ report: MediaIntegrityReport; removedMetadata: number; deletedFiles: number }> {
+    const report = await this.auditIntegrity();
+    const plan = planSafeMediaRepair(report);
+    const before = LocalDataStore.snapshot();
+    const next = {
+      ...before,
+      attachments: before.attachments.filter((item) => !plan.removeAttachmentIds.includes(item.id)),
+    };
+    if (plan.removeAttachmentIds.length > 0) await LocalDataStore.replaceState(next);
+    await Promise.allSettled(plan.deleteStorageKeys.map((storageKey) => deleteBinary(storageKey)));
+    return {
+      report: await this.auditIntegrity(),
+      removedMetadata: plan.removeAttachmentIds.length,
+      deletedFiles: plan.deleteStorageKeys.length,
+    };
+  }
+
+  static revokePreviewUrl(url: string | null | undefined): void {
+    if (url?.startsWith('blob:')) URL.revokeObjectURL(url);
   }
 
   static async deleteDetachedFiles(items: ExpenseAttachment[]): Promise<void> {
@@ -430,20 +429,14 @@ export class AttachmentStorage {
   static scheduleMaintenance(): void {
     if (maintenanceScheduled || typeof window === 'undefined') return;
     maintenanceScheduled = true;
-    window.setTimeout(() => {
-      void this.repairOrphans();
-    }, 0);
+    window.setTimeout(() => void this.repairOrphans(), 0);
   }
 
   static async repairOrphans(): Promise<void> {
-    const referenced = new Set(readMetadata().map((item) => item.storageKey));
-
+    const referenced = new Set(LocalDataStore.getAttachments().map((item) => item.storageKey));
     if (isNative()) {
       try {
-        const listing = await Filesystem.readdir({
-          path: ATTACHMENT_DIR,
-          directory: Directory.Data,
-        });
+        const listing = await Filesystem.readdir({ path: ATTACHMENT_DIR, directory: Directory.Data });
         const stalePaths = listing.files
           .map((file) => ATTACHMENT_DIR + '/' + file.name)
           .filter((path) => !referenced.has(path));
@@ -453,10 +446,8 @@ export class AttachmentStorage {
       }
       return;
     }
-
     try {
-      const keys = await idbKeys();
-      const staleKeys = keys.filter((key) => !referenced.has(key));
+      const staleKeys = (await idbKeys()).filter((key) => !referenced.has(key));
       await Promise.allSettled(staleKeys.map((key) => deleteBinary(key)));
     } catch {
       // Browser storage can be unavailable in restricted development contexts.

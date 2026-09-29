@@ -10,7 +10,7 @@ interface SetBudgetModalProps {
   currentStartingAmount: number;
   currencyCode: string;
   language: Language;
-  onSave: (amount: number) => void;
+  onSave: (amount: number) => void | Promise<void>;
   onClose: () => void;
 }
 
@@ -32,14 +32,18 @@ export const SetBudgetModal: React.FC<SetBudgetModalProps> = ({
   );
   const [error, setError] = useState<string | null>(null);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const amount = parseFloat(amountText);
     if (isNaN(amount) || amount <= 0) {
       setError(t(language, 'budgetError'));
       return;
     }
-    onSave(amount);
-    onClose();
+    try {
+      await onSave(amount);
+      onClose();
+    } catch {
+      setError('Unable to save this budget. Please try again.');
+    }
   };
 
   return (

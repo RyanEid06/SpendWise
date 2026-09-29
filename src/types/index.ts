@@ -157,6 +157,15 @@ export interface ImportSummary {
   wasReplaced: boolean;
 }
 
+export interface MediaStorageSummary {
+  photoCount: number;
+  totalBytes: number;
+  purchaseCount: number;
+  receiptCount: number;
+  proofCount: number;
+  integrityIssueCount: number;
+}
+
 export interface CategoryBaseline {
   category: string;
   historicalMonthlyAverage: number;
@@ -189,6 +198,7 @@ export interface HistoricalSpendingSummary {
 }
 
 export type Screen = 'home' | 'history' | 'insights' | 'statistics' | 'settings';
+export type PrimaryScreen = Exclude<Screen, 'settings'>;
 
 export type TimePeriod = 'CURRENT_MONTH' | 'LAST_3_MONTHS' | 'LAST_6_MONTHS' | 'LAST_12_MONTHS' | 'ALL_TIME';
 

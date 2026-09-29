@@ -16,6 +16,10 @@ on:
       - wp11/gemini-backend-reliability
       - wp12a/financial-responsive-lbp-ui
       - wp12b/theme-brand-fx-polish
+      - wp13/local-data-foundation
+      - wp14/media-lifecycle-full-backup
+      - wp15/core-ux-simplification
+      - wp16/navigation-accessibility-freeze
     tags:
       - 'v*'
 
@@ -60,6 +64,18 @@ jobs:
 
       - name: Run currency defaults tests
         run: npm run test:currency
+
+      - name: Run persistence migration tests
+        run: npm run test:persistence
+
+      - name: Run media and Backup v2 tests
+        run: npm run test:media-backup
+
+      - name: Run WP15 core UX architecture tests
+        run: npm run test:core-ux
+
+      - name: Run WP16 final freeze tests
+        run: npm run test:final-freeze
 
       - name: Sync Capacitor Android
         run: npm run android:sync

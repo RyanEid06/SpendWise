@@ -140,3 +140,58 @@ html.dark [class~="dark:border-slate-800/60"] {
 html.dark ::-webkit-scrollbar-thumb {
   background: rgb(71 85 105 / 0.35);
 }
+
+
+/* WP16 accessibility baseline */
+:focus-visible {
+  outline: 3px solid #059669;
+  outline-offset: 3px;
+}
+
+html.dark :focus-visible {
+  outline-color: #34d399;
+}
+
+button,
+[role="button"],
+[role="tab"] {
+  min-height: 48px !important;
+  min-width: 48px !important;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]),
+select,
+textarea {
+  min-height: 48px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.sw-skip-link {
+  position: fixed;
+  inset-inline-start: 0.75rem;
+  top: 0.5rem;
+  z-index: 100;
+  transform: translateY(-180%);
+  border-radius: 0.75rem;
+  background: #047857;
+  color: white;
+  padding: 0.65rem 0.85rem;
+  font-weight: 800;
+  font-size: 0.75rem;
+}
+
+.sw-skip-link:focus-visible {
+  transform: translateY(0);
+}

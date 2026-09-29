@@ -5,7 +5,7 @@ import { apiFetchJson } from './utils/api';
 import { getAiErrorMessage } from './utils/apiErrors';
 import { t } from './utils/translations';
 import { Plus } from 'lucide-react';
-import { Expense, MonthlyBudget, Screen, ThemeMode, CategorySpend, AiAnalysisResult, Language } from './types';
+import { Expense, MonthlyBudget, Screen, PrimaryScreen, ThemeMode, CategorySpend, AiAnalysisResult, Language } from './types';
 import {
   currentMonthYear,
   getDisplayName,
@@ -28,12 +28,13 @@ import { SettingsScreen } from './screens/SettingsScreen';
 import { LockScreen } from './screens/LockScreen';
 import { AddEditExpenseModal } from './components/AddEditExpenseModal';
 import { SetBudgetModal } from './components/SetBudgetModal';
-import { AttachmentEditPayload, AttachmentStorage } from './utils/attachmentStorage';
+import { ExpenseDetailModal } from './components/ExpenseDetailModal';
+import { AppTopBar } from './components/AppTopBar';
+import { AttachmentEditPayload } from './utils/attachmentStorage';
 
 export const App: React.FC = () => {
-  StorageManager.init();
-
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
+  const [settingsReturnScreen, setSettingsReturnScreen] = useState<PrimaryScreen>('home');
   const [currentMY, setCurrentMY] = useState(currentMonthYear());
 
   // Data states
@@ -53,7 +54,24 @@ export const App: React.FC = () => {
   // Modal dialog states
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [viewingExpense, setViewingExpense] = useState<Expense | null>(null);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
+
+  const selectPrimaryScreen = useCallback((screen: PrimaryScreen) => {
+    setSettingsReturnScreen(screen);
+    setCurrentScreen(screen);
+  }, []);
+
+  const openSettings = useCallback(() => {
+    if (currentScreen !== 'settings') {
+      setSettingsReturnScreen(currentScreen as PrimaryScreen);
+      setCurrentScreen('settings');
+    }
+  }, [currentScreen]);
+
+  const closeSettings = useCallback(() => {
+    setCurrentScreen(settingsReturnScreen);
+  }, [settingsReturnScreen]);
 
   // AI Insights states
   const [aiResult, setAiResult] = useState<AiAnalysisResult | null>(() =>
@@ -136,6 +154,7 @@ export const App: React.FC = () => {
         window.dispatchEvent(new Event('spendwise-native-back'));
         setShowAddModal(false);
         setEditingExpense(null);
+        setViewingExpense(null);
         setShowBudgetModal(false);
         setIsLocked(true);
       }
@@ -204,8 +223,14 @@ export const App: React.FC = () => {
         return;
       }
 
+      if (currentScreen === 'settings') {
+        setCurrentScreen(settingsReturnScreen);
+        return;
+      }
+
       if (currentScreen !== 'home') {
         setCurrentScreen('home');
+        setSettingsReturnScreen('home');
         return;
       }
 
@@ -222,7 +247,7 @@ export const App: React.FC = () => {
       disposed = true;
       if (removeBackListener) void removeBackListener();
     };
-  }, [currentScreen, showAddModal, editingExpense, showBudgetModal]);
+  }, [currentScreen, showAddModal, editingExpense, showBudgetModal, settingsReturnScreen]);
 
   // Filter expenses for current month
   const monthlyExpenses = useMemo(() => {
@@ -281,26 +306,16 @@ export const App: React.FC = () => {
     note: string | null,
     attachmentChanges: AttachmentEditPayload
   ) => {
-    const created = StorageManager.addExpense({
-      amount,
-      description,
-      category,
-      date,
-      note,
-    });
-
-    try {
-      await AttachmentStorage.applyExpenseAttachmentChanges(
-        created.id,
-        attachmentChanges.newAttachments,
-        []
-      );
-    } catch (error) {
-      await StorageManager.deleteExpense(created.id);
-      setExpenses(StorageManager.getExpenses());
-      throw error;
-    }
-
+    await StorageManager.addExpense(
+      {
+        amount,
+        description,
+        category,
+        date,
+        note,
+      },
+      attachmentChanges
+    );
     setExpenses(StorageManager.getExpenses());
   };
 
@@ -316,44 +331,33 @@ export const App: React.FC = () => {
     const existing = expenses.find((e) => e.id === id);
     if (!existing) return;
 
-    StorageManager.updateExpense({
-      ...existing,
-      amount,
-      description,
-      category,
-      date,
-      note,
-    });
-
-    try {
-      await AttachmentStorage.applyExpenseAttachmentChanges(
-        id,
-        attachmentChanges.newAttachments,
-        attachmentChanges.removedAttachmentIds
-      );
-    } catch (error) {
-      // Attachment writes are transactional. If they fail, restore the
-      // previous financial record so Save remains one logical operation.
-      StorageManager.updateExpense(existing);
-      setExpenses(StorageManager.getExpenses());
-      throw error;
-    }
-
+    await StorageManager.updateExpense(
+      {
+        ...existing,
+        amount,
+        description,
+        category,
+        date,
+        note,
+      },
+      attachmentChanges
+    );
     setExpenses(StorageManager.getExpenses());
   };
 
   const handleDeleteExpense = async (expense: Expense) => {
     await StorageManager.deleteExpense(expense.id);
     setExpenses(StorageManager.getExpenses());
+    if (viewingExpense?.id === expense.id) setViewingExpense(null);
   };
 
-  const handleSetStartingMoney = (amount: number) => {
+  const handleSetStartingMoney = async (amount: number) => {
     const key = getMonthKey(currentMY);
-    StorageManager.setBudget(key, amount);
+    await StorageManager.setBudget(key, amount);
     setBudgets(StorageManager.getBudgets());
   };
 
-  const handleCurrencyChange = (code: string, targetUnitsPerSourceUnit?: number) => {
+  const handleCurrencyChange = async (code: string, targetUnitsPerSourceUnit?: number) => {
     const storedExpenses = StorageManager.getExpenses();
     const storedBudgets = StorageManager.getBudgets();
     const hasFinancialData = storedExpenses.length > 0 || storedBudgets.length > 0;
@@ -364,9 +368,9 @@ export const App: React.FC = () => {
       if (targetUnitsPerSourceUnit === undefined) {
         throw new Error('A conversion rate is required for an existing financial ledger.');
       }
-      StorageManager.convertCurrency(code, targetUnitsPerSourceUnit);
+      await StorageManager.convertCurrency(code, targetUnitsPerSourceUnit);
     } else {
-      StorageManager.setCurrencyCode(code);
+      await StorageManager.setCurrencyCode(code);
       StorageManager.clearAnalysisCache();
     }
 
@@ -410,9 +414,11 @@ export const App: React.FC = () => {
     setExpenses([]);
     setBudgets([]);
     setAiResult(null);
+    setViewingExpense(null);
   };
 
   const handleBackupRestored = () => {
+    setViewingExpense(null);
     setExpenses(StorageManager.getExpenses());
     setBudgets(StorageManager.getBudgets());
     setCurrencyCodeState(StorageManager.getCurrencyCode());
@@ -487,28 +493,32 @@ export const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-[#05080C] text-slate-900 dark:text-slate-100 flex flex-col font-sans antialiased transition-colors duration-200">
-      {/* Android Top Status Bar & App Header */}
-      <header className="sticky top-0 z-40 bg-slate-100/95 dark:bg-[#05080C]/95 backdrop-blur-md px-4 pb-2 transition-colors border-b border-slate-200/50 dark:border-[#202A33]/70" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)' }}>
-        <div className="max-w-md mx-auto space-y-1.5">
-          {/* App Branding (Clean, language switcher moved to Settings) */}
-          <div className="flex items-center justify-between pt-0.5">
-            <div className="flex items-center space-x-2 rtl:space-x-reverse">
-              <img
-                src="/app-icon.jpg"
-                alt=""
-                aria-hidden="true"
-                className="w-7 h-7 rounded-lg object-cover shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10"
-              />
-              <h1 className="font-extrabold text-sm sm:text-base tracking-tight text-slate-900 dark:text-white">
-                SpendWise
-              </h1>
-            </div>
-          </div>
-        </div>
-      </header>
+      <a
+        href="#main-content"
+        className="sw-skip-link"
+      >
+        {language === 'ar' ? 'الانتقال إلى المحتوى' : language === 'fr' ? 'Aller au contenu' : 'Skip to content'}
+      </a>
+
+      <AppTopBar
+        currentScreen={currentScreen}
+        language={language}
+        onOpenSettings={openSettings}
+        onCloseSettings={closeSettings}
+      />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-md w-full mx-auto px-4 pt-1" style={{ paddingBottom: 'calc(9rem + env(safe-area-inset-bottom, 0px))' }}>
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="flex-1 max-w-md sm:max-w-lg w-full mx-auto px-4 pt-1"
+        style={{
+          paddingBottom:
+            currentScreen === 'settings'
+              ? 'calc(2rem + env(safe-area-inset-bottom, 0px))'
+              : 'calc(9rem + env(safe-area-inset-bottom, 0px))',
+        }}
+      >
         {currentScreen === 'home' && (
           <DashboardScreen
             currentMonthYear={currentMY}
@@ -536,7 +546,7 @@ export const App: React.FC = () => {
             language={language}
             onPreviousMonth={() => setCurrentMY((prev) => previousMonth(prev))}
             onNextMonth={() => setCurrentMY((prev) => nextMonth(prev))}
-            onExpenseClick={(expense) => setEditingExpense(expense)}
+            onExpenseClick={(expense) => setViewingExpense(expense)}
             onDeleteExpense={handleDeleteExpense}
             onAddExpenseClick={() => {
               setEditingExpense(null);
@@ -566,10 +576,7 @@ export const App: React.FC = () => {
             currentMonthYear={currentMY}
             currencyCode={currencyCode}
             language={language}
-            onNavigateToExpense={(expense) => {
-              setEditingExpense(expense);
-              setShowAddModal(true);
-            }}
+            onNavigateToExpense={(expense) => setViewingExpense(expense)}
           />
         )}
 
@@ -607,8 +614,14 @@ export const App: React.FC = () => {
         </button>
       )}
 
-      {/* Bottom Navigation */}
-      <Navigation currentScreen={currentScreen} language={language} onSelectScreen={setCurrentScreen} />
+      {/* Settings is intentionally secondary; the four primary destinations own bottom navigation. */}
+      {currentScreen !== 'settings' && (
+        <Navigation
+          currentScreen={currentScreen}
+          language={language}
+          onSelectScreen={selectPrimaryScreen}
+        />
+      )}
 
       {/* Add / Edit Expense Modal Dialog */}
       {(showAddModal || editingExpense !== null) && (
@@ -646,6 +659,15 @@ export const App: React.FC = () => {
             setShowAddModal(false);
             setEditingExpense(null);
           }}
+        />
+      )}
+
+      {viewingExpense && (
+        <ExpenseDetailModal
+          expense={viewingExpense}
+          currencyCode={currencyCode}
+          language={language}
+          onClose={() => setViewingExpense(null)}
         />
       )}
 

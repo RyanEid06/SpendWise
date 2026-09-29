@@ -593,6 +593,13 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                 onClick={() => exp && onNavigateToExpense && onNavigateToExpense(exp)}
                 role={exp ? 'button' : undefined}
                 tabIndex={exp ? 0 : undefined}
+                onKeyDown={(event) => {
+                  if (!exp || !onNavigateToExpense) return;
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onNavigateToExpense(exp);
+                  }
+                }}
                 className={`min-h-[52px] p-3 rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/70 dark:border-slate-800/60 flex items-start justify-between gap-3 transition-all ${
                   exp ? 'cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 active:scale-[0.99]' : 'opacity-60'
                 }`}
