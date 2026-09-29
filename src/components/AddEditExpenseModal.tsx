@@ -186,8 +186,8 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
     >
       <div className="bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden my-6 max-h-[90vh] flex flex-col transition-colors">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200/80 dark:border-slate-800">
-          <h2 id="modal-title" className="text-lg font-bold text-slate-900 dark:text-white">
+        <div className="flex items-start justify-between gap-2 px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-slate-800">
+          <h2 id="modal-title" className="min-w-0 text-lg font-bold text-slate-900 dark:text-white leading-tight [overflow-wrap:anywhere]">
             {initialExpense ? t(language, 'modalEditTitle') : t(language, 'modalAddTitle')}
           </h2>
           <button
