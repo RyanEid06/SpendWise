@@ -11,7 +11,7 @@ import {
 } from '../src/utils/historyView';
 import { selectPrimaryInsights } from '../src/utils/insightSelection';
 import { StatisticsEngine } from '../src/utils/statisticsEngine';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 const historySource = readFileSync('src/screens/HistoryScreen.tsx', 'utf8');
 const cardSource = readFileSync('src/components/ExpenseItemCard.tsx', 'utf8');
@@ -19,6 +19,10 @@ const detailSource = readFileSync('src/components/ExpenseDetailModal.tsx', 'utf8
 const navSource = readFileSync('src/components/Navigation.tsx', 'utf8');
 const topBarSource = readFileSync('src/components/AppTopBar.tsx', 'utf8');
 const manifestSource = readFileSync('android/app/src/main/AndroidManifest.xml', 'utf8');
+const budgetSource = readFileSync('src/components/BudgetSummaryCards.tsx', 'utf8');
+const translationsSource = readFileSync('src/utils/translations.ts', 'utf8');
+const adaptiveLauncherSource = readFileSync('android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml', 'utf8');
+const adaptiveRoundLauncherSource = readFileSync('android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml', 'utf8');
 
 const expense = (id: number, amount: number, date: number, category = 'Food', description = 'Item'): Expense => ({
   id,
@@ -129,8 +133,30 @@ test('WP17 keeps exactly four primary destinations', () => {
   assert.doesNotMatch(navSource, /screen: 'settings'/);
 });
 
-test('header and Android launcher both use SpendWise artwork rather than the Capacitor placeholder', () => {
-  assert.match(topBarSource, /src="\/app-icon\.jpg"/);
-  assert.match(manifestSource, /android:icon="@drawable\/spendwise_app_icon"/);
-  assert.match(manifestSource, /android:roundIcon="@drawable\/spendwise_app_icon"/);
+test('WP19 restores the original normal, round, and adaptive launcher system', () => {
+  assert.match(topBarSource, /src="\/spendwise-original-icon\.png"/);
+  assert.match(manifestSource, /android:icon="@mipmap\/ic_launcher"/);
+  assert.match(manifestSource, /android:roundIcon="@mipmap\/ic_launcher_round"/);
+  assert.doesNotMatch(manifestSource, /spendwise_app_icon/);
+  assert.equal(existsSync('public/spendwise-original-icon.png'), true);
+  assert.equal(existsSync('android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png'), true);
+  assert.equal(existsSync('android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png'), true);
+  assert.match(adaptiveLauncherSource, /@color\/ic_launcher_background/);
+  assert.match(adaptiveLauncherSource, /@mipmap\/ic_launcher_foreground/);
+  assert.match(adaptiveRoundLauncherSource, /@mipmap\/ic_launcher_foreground/);
+});
+
+test('WP19 keeps budget state communication while removing the redundant alert card', () => {
+  assert.doesNotMatch(budgetSource, /Spending Alerts Card|AlertCircle|CheckCircle2/);
+  assert.match(budgetSource, /isApproachingLimit/);
+  assert.match(budgetSource, /approachingLimitBadge/);
+  assert.match(budgetSource, /grid grid-cols-2 gap-2/);
+  assert.doesNotMatch(budgetSource, /grid-cols-1 min-\[390px\]:grid-cols-2/);
+});
+
+test('WP19 uses Monthly Budget copy in English, French, and Arabic', () => {
+  assert.match(translationsSource, /startingMoney: 'Monthly Budget'/);
+  assert.match(translationsSource, /startingMoney: 'Budget mensuel'/);
+  assert.match(translationsSource, /startingMoney: 'الميزانية الشهرية'/);
+  assert.doesNotMatch(translationsSource, /Starting Budget|Budget de départ/);
 });

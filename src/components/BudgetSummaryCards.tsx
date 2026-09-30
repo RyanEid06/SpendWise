@@ -1,5 +1,5 @@
 import React from 'react';
-import { Wallet, AlertTriangle, AlertCircle, CheckCircle2, ArrowUp, ArrowDown, Edit2, Plus } from 'lucide-react';
+import { Wallet, AlertTriangle, ArrowUp, ArrowDown, Edit2, Plus } from 'lucide-react';
 import { formatCurrency } from '../utils/currency';
 import { Language } from '../types';
 import { t } from '../utils/translations';
@@ -30,6 +30,7 @@ export const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
   const isOverBudget = isBudgetSet && remainingMoney < 0;
   const percentUsed = Math.max(0, Math.round(progress * 100));
   const percentLeft = Math.max(0, Math.round((1 - Math.min(1, progress)) * 100));
+  const isApproachingLimit = isBudgetSet && !isOverBudget && percentUsed >= 80;
 
   return (
     <div className="space-y-3">
@@ -82,6 +83,8 @@ export const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
             ? 'bg-white dark:bg-[#111928] border-slate-200/90 dark:border-slate-800/80 text-slate-900 dark:text-white'
             : isOverBudget
             ? 'bg-rose-50 dark:bg-[#2A1115] border-rose-200 dark:border-rose-900/60 text-slate-900 dark:text-white'
+            : isApproachingLimit
+            ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900/60 text-slate-900 dark:text-white'
             : 'bg-white dark:bg-[#111928] border-slate-200/90 dark:border-slate-800/80 text-slate-900 dark:text-white'
         }`}
       >
@@ -95,6 +98,10 @@ export const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
               <AlertTriangle className="w-3.5 h-3.5" />
               <span>{t(language, 'overBudgetBadge')}</span>
             </div>
+          ) : isApproachingLimit ? (
+            <span className="bg-amber-100 dark:bg-amber-950/80 border border-amber-300 dark:border-amber-800/60 text-amber-900 dark:text-amber-300 text-[11px] font-bold px-2.5 py-1 rounded-full">
+              {t(language, 'approachingLimitBadge', { percent: percentUsed })}
+            </span>
           ) : isBudgetSet ? (
             <span className="bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-400 text-xs font-bold px-2.5 py-1 rounded-full">
               {t(language, 'percentLeftBadge', { percent: percentLeft })}
@@ -122,7 +129,7 @@ export const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
             >
               <div
                 className={`h-full rounded-full transition-all duration-500 ease-out ${
-                  isOverBudget ? 'bg-rose-500' : percentUsed > 80 ? 'bg-amber-500' : 'bg-emerald-500'
+                  isOverBudget ? 'bg-rose-500' : isApproachingLimit ? 'bg-amber-500' : 'bg-emerald-500'
                 }`}
                 style={{ width: `${Math.min(100, Math.max(0, progress * 100))}%` }}
               />
@@ -139,64 +146,12 @@ export const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
         )}
       </div>
 
-      {/* 3. Spending Alerts Card */}
-      {isBudgetSet && (
-        <div
-          className={`rounded-2xl p-3.5 border transition-all flex items-start space-x-3 rtl:space-x-reverse ${
-            isOverBudget
-              ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900/60 text-rose-900 dark:text-rose-200'
-              : percentUsed >= 80
-              ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900/60 text-amber-900 dark:text-amber-200'
-              : 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/40 text-emerald-900 dark:text-emerald-200'
-          }`}
-        >
-          <div className="shrink-0 mt-0.5">
-            {isOverBudget ? (
-              <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-            ) : percentUsed >= 80 ? (
-              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-            ) : (
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            )}
-          </div>
-          <div className="text-xs space-y-0.5 flex-1">
-            <div className="font-bold flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-              <span>
-                {isOverBudget
-                  ? t(language, 'alertBudgetExceeded')
-                  : percentUsed >= 80
-                  ? t(language, 'alertApproachingLimit')
-                  : t(language, 'alertOnTrack')}
-              </span>
-              <span className="text-[11px] font-semibold opacity-85">
-                {t(language, 'percentUsed', { percent: percentUsed })}
-              </span>
-            </div>
-            <p className="text-[11px] opacity-90 leading-relaxed">
-              {isOverBudget
-                ? t(language, 'msgOverBudget', {
-                    amount: formatCurrency(Math.abs(remainingMoney), currencyCode),
-                  })
-                : percentUsed >= 80
-                ? t(language, 'msgApproachingLimit', {
-                    percent: percentUsed,
-                    amount: formatCurrency(remainingMoney, currencyCode),
-                    month: monthName,
-                  })
-                : t(language, 'msgOnTrack', {
-                    amount: formatCurrency(remainingMoney, currencyCode),
-                  })}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* 4. Two Column Grid: Starting Money & Total Spent */}
-      <div className="grid grid-cols-1 min-[390px]:grid-cols-2 gap-3">
-        {/* Starting Money Card */}
+      {/* 3. Two Column Grid: Monthly Budget & Total Spent */}
+      <div className="grid grid-cols-2 gap-2 min-[390px]:gap-3">
+        {/* Monthly Budget Card */}
         <div
           onClick={onSetBudgetClick}
-          className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 rounded-3xl p-4 shadow-xs cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 transition-all group active:scale-[0.98]"
+          className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 rounded-3xl p-3 min-[390px]:p-4 shadow-xs cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 transition-all group active:scale-[0.98]"
           role="button"
           tabIndex={0}
           aria-label={t(language, 'startingMoney')}
@@ -207,38 +162,39 @@ export const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
             }
           }}
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 rtl:space-x-reverse">
-              <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-400 flex items-center justify-center">
-                <ArrowUp className="w-3.5 h-3.5" />
+          <div className="flex items-start justify-between gap-1.5">
+            <div className="flex items-center gap-1.5 min-w-0 rtl:flex-row-reverse">
+              <div className="w-5 h-5 min-[390px]:w-6 min-[390px]:h-6 rounded-full bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                <ArrowUp className="w-3 h-3 min-[390px]:w-3.5 min-[390px]:h-3.5" />
               </div>
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+              <span className="text-[11px] min-[390px]:text-xs leading-tight font-semibold text-slate-500 dark:text-slate-400 min-w-0">
                 {t(language, 'startingMoney')}
               </span>
             </div>
-            <div className="min-w-[28px] min-h-[28px] flex items-center justify-center">
+            <div className="w-7 h-7 flex items-center justify-center shrink-0" aria-hidden="true">
               <Edit2 className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors" />
             </div>
           </div>
-          <div dir="ltr" className="mt-2 min-w-0 font-extrabold text-lg tabular-nums text-slate-900 dark:text-white [overflow-wrap:anywhere] leading-tight">
+          <div dir="ltr" className="mt-2 min-w-0 font-extrabold text-[clamp(0.95rem,4.4vw,1.125rem)] tabular-nums text-slate-900 dark:text-white [overflow-wrap:anywhere] leading-tight">
             {isBudgetSet ? formatCurrency(startingMoney, currencyCode) : t(language, 'notSet')}
           </div>
         </div>
 
         {/* Total Spent Card */}
-        <div className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 rounded-3xl p-4 shadow-xs">
-          <div className="flex items-center space-x-2 rtl:space-x-reverse">
-            <div className="w-6 h-6 rounded-full bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-400 flex items-center justify-center">
-              <ArrowDown className="w-3.5 h-3.5" />
+        <div className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 rounded-3xl p-3 min-[390px]:p-4 shadow-xs">
+          <div className="flex items-center gap-1.5 min-w-0 rtl:flex-row-reverse">
+            <div className="w-5 h-5 min-[390px]:w-6 min-[390px]:h-6 rounded-full bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-400 flex items-center justify-center shrink-0">
+              <ArrowDown className="w-3 h-3 min-[390px]:w-3.5 min-[390px]:h-3.5" />
             </div>
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+            <span className="text-[11px] min-[390px]:text-xs leading-tight font-semibold text-slate-500 dark:text-slate-400 min-w-0">
               {t(language, 'totalSpent')}
             </span>
           </div>
-          <div dir="ltr" className="mt-2 min-w-0 font-extrabold text-lg tabular-nums text-slate-900 dark:text-white [overflow-wrap:anywhere] leading-tight">
+          <div dir="ltr" className="mt-2 min-w-0 font-extrabold text-[clamp(0.95rem,4.4vw,1.125rem)] tabular-nums text-slate-900 dark:text-white [overflow-wrap:anywhere] leading-tight">
             {formatCurrency(totalSpent, currencyCode)}
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
