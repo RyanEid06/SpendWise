@@ -1,6 +1,6 @@
 # SpendWise UX Refinement Roadmap — v1.3.1 + v1.4.0
 
-Status: **Approved for implementation**  
+Status: **Approved for implementation**
 Baseline: SpendWise v1.3.0 on `main`
 
 This roadmap is the explicitly approved post-freeze UX work for SpendWise. It preserves the frozen product principles: local-first/private-by-default data, four primary destinations, Settings as a secondary destination, compact mobile-first design, and English/French/Arabic RTL support.
