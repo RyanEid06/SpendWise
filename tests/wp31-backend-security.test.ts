@@ -11,6 +11,7 @@ import type { AddressInfo } from 'node:net';
 process.env.NODE_ENV = 'test';
 process.env.SPENDWISE_INSTALLATION_STORE_PATH = ':memory:';
 process.env.SPENDWISE_API_TOKEN = 'wp31-legacy-compat-test-token';
+process.env.SPENDWISE_LEGACY_AUTH_UNTIL = '2099-01-01T00:00:00Z';
 
 const {
   ACCESS_TOKEN_TTL_MS,
@@ -378,6 +379,21 @@ test('rate-limit primitive enforces per-install, IP, and registration-style quot
     ).allowed,
     false
   );
+});
+
+test('legacy compatibility is unusable without an explicit valid sunset', () => {
+  const withoutSunset = parseServerConfig({
+    SPENDWISE_API_TOKEN: 'legacy-token',
+  });
+  assert.equal(withoutSunset.legacyApiToken, null);
+  assert.equal(withoutSunset.legacyCompatibilityUntilMs, null);
+
+  const withSunset = parseServerConfig({
+    SPENDWISE_API_TOKEN: 'legacy-token',
+    SPENDWISE_LEGACY_AUTH_UNTIL: '2099-01-01T00:00:00Z',
+  });
+  assert.equal(withSunset.legacyApiToken, 'legacy-token');
+  assert.ok((withSunset.legacyCompatibilityUntilMs ?? 0) > 0);
 });
 
 test('production quota and request-size defaults are bounded', () => {
