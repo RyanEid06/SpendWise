@@ -143,7 +143,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
             role="tab"
             aria-selected={viewMode === mode}
             onClick={() => switchMode(mode)}
-            className={`min-h-[44px] rounded-xl px-2 text-xs font-bold transition-colors ${
+            className={`min-h-[48px] rounded-xl px-2 text-xs font-bold transition-colors ${
               viewMode === mode
                 ? 'bg-white dark:bg-[#111928] text-slate-900 dark:text-white shadow-xs'
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
