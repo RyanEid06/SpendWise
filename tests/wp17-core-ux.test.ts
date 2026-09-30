@@ -11,6 +11,14 @@ import {
 } from '../src/utils/historyView';
 import { selectPrimaryInsights } from '../src/utils/insightSelection';
 import { StatisticsEngine } from '../src/utils/statisticsEngine';
+import { readFileSync } from 'node:fs';
+
+const historySource = readFileSync('src/screens/HistoryScreen.tsx', 'utf8');
+const cardSource = readFileSync('src/components/ExpenseItemCard.tsx', 'utf8');
+const detailSource = readFileSync('src/components/ExpenseDetailModal.tsx', 'utf8');
+const navSource = readFileSync('src/components/Navigation.tsx', 'utf8');
+const topBarSource = readFileSync('src/components/AppTopBar.tsx', 'utf8');
+const manifestSource = readFileSync('android/app/src/main/AndroidManifest.xml', 'utf8');
 
 const expense = (id: number, amount: number, date: number, category = 'Food', description = 'Item'): Expense => ({
   id,
@@ -94,4 +102,35 @@ test('category trend is stable when comparable completed history is insufficient
   );
   assert.equal(overview.categoryTrends[0]?.trendDirection, 'STABLE');
   assert.equal(overview.categoryTrends[0]?.trendPercent, 0);
+});
+
+
+test('History exposes All, Day, and Category controls while keeping All as initial mode', () => {
+  assert.match(historySource, /useState<HistoryViewMode>\('ALL'\)/);
+  assert.match(historySource, /\['ALL',[\s\S]*\['DAY',[\s\S]*\['CATEGORY'/);
+});
+
+test('History metadata is positive-only and attachment counts are derived once per ledger change', () => {
+  assert.match(historySource, /AttachmentStorage\.getAllAttachments\(\)/);
+  assert.match(cardSource, /attachmentCount > 0/);
+  assert.match(cardSource, /Boolean\(expense\.note\?\.trim\(\)\)/);
+  assert.doesNotMatch(cardSource, /No photos|No note/);
+});
+
+test('History deletion remains confirmation-protected and detail remains read-only', () => {
+  assert.match(historySource, /<ConfirmationModal/);
+  assert.match(historySource, /onRequestDelete=\{\(\) => setExpenseToDelete\(expense\)\}/);
+  assert.doesNotMatch(detailSource, /onEdit|Edit2|Trash2|onDelete/);
+});
+
+test('WP17 keeps exactly four primary destinations', () => {
+  const entries = navSource.match(/\{ screen: '(home|history|insights|statistics)'/g) || [];
+  assert.equal(entries.length, 4);
+  assert.doesNotMatch(navSource, /screen: 'settings'/);
+});
+
+test('header and Android launcher both use SpendWise artwork rather than the Capacitor placeholder', () => {
+  assert.match(topBarSource, /src="\/app-icon\.jpg"/);
+  assert.match(manifestSource, /android:icon="@drawable\/spendwise_app_icon"/);
+  assert.match(manifestSource, /android:roundIcon="@drawable\/spendwise_app_icon"/);
 });
