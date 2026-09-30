@@ -80,7 +80,10 @@ export function requireInstallationAccess(
     res.setHeader('Deprecation', 'true');
     res.setHeader('X-SpendWise-Legacy-Auth', 'deprecated');
     if (serverConfig.legacyCompatibilityUntil) {
-      res.setHeader('Sunset', serverConfig.legacyCompatibilityUntil);
+      res.setHeader(
+        'Sunset',
+        new Date(serverConfig.legacyCompatibilityUntilMs!).toUTCString()
+      );
     }
     return next();
   }
