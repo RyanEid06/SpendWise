@@ -344,6 +344,7 @@ test('DB/media failures and partial staging preserve old state and clean staged 
   let current = structuredClone(old) as FinancialState;
   const cleaned: string[] = [];
   let stageCount = 0;
+  let replaceCalls = 0;
   await assert.rejects(
     () =>
       restoreBackupV3WithAdapters(backup, 'correct horse battery staple', true, {
@@ -351,7 +352,8 @@ test('DB/media failures and partial staging preserve old state and clean staged 
         getSettings: () => settings,
         replaceState: async (next) => {
           current = structuredClone(next) as FinancialState;
-          throw new Error('SIMULATED_DB_FAILURE');
+          replaceCalls++;
+          if (replaceCalls === 1) throw new Error('SIMULATED_DB_FAILURE');
         },
         setSettings: async () => {},
         stageMedia: async (source, targetExpenseId, blob) => ({
