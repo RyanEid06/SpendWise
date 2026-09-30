@@ -99,6 +99,12 @@ function secureRandomBytes(length: number): Uint8Array {
   return bytes;
 }
 
+function cryptoBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
+}
+
 function encodeBase64(bytes: Uint8Array): string {
   let binary = '';
   const chunkSize = 0x8000;
@@ -270,12 +276,12 @@ async function decryptParsedEnvelope(
       plaintextBuffer = await cryptoObject().subtle.decrypt(
         {
           name: 'AES-GCM',
-          iv: nonce,
-          additionalData: parsed.headerBytes,
+          iv: cryptoBuffer(nonce),
+          additionalData: cryptoBuffer(parsed.headerBytes),
           tagLength: AES_GCM_TAG_BITS,
         },
         derived.key,
-        parsed.ciphertext
+        cryptoBuffer(parsed.ciphertext)
       );
     } catch {
       throw new Error('BACKUP_WRONG_PASSPHRASE_OR_TAMPER');
@@ -380,12 +386,12 @@ export async function createBackupV3Envelope(options: {
       await cryptoObject().subtle.encrypt(
         {
           name: 'AES-GCM',
-          iv: nonce,
-          additionalData: headerBytes,
+          iv: cryptoBuffer(nonce),
+          additionalData: cryptoBuffer(headerBytes),
           tagLength: AES_GCM_TAG_BITS,
         },
         derived.key,
-        plaintext
+        cryptoBuffer(plaintext)
       )
     );
     const output = new Uint8Array(PREFIX_BYTES + headerBytes.byteLength + encrypted.byteLength);
