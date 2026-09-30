@@ -78,6 +78,9 @@ jobs:
       - name: Run WP18 first-run privacy security tests
         run: npm run test:wp18
 
+      - name: Run WP23 Settings regression tests
+        run: npm run test:wp23
+
       - name: Sync Capacitor Android
         run: npm run android:sync
 
