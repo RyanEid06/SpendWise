@@ -291,6 +291,48 @@ test('wrong passphrase, AAD/header tamper, ciphertext tamper, tag tamper, trunca
   );
 });
 
+
+test('wrong passphrase and tampered ciphertext fail before any restore mutation or media staging', async () => {
+  const backup = await secureBackup(
+    stateWith({ attachments: [attachment('a1', 1, 128)] }),
+    true,
+    'mutation guard passphrase'
+  );
+  const old = stateWith({ expenses: [expense(9, 'Existing', 99)], attachments: [] });
+  let replaceCalls = 0;
+  let stageCalls = 0;
+  const harness = restoreHarness(old);
+  const guardedAdapters: BackupV2RestoreAdapters = {
+    ...harness.adapters,
+    replaceState: async (next) => {
+      replaceCalls++;
+      await harness.adapters.replaceState(next);
+    },
+    stageMedia: async (source, targetExpenseId, blob) => {
+      stageCalls++;
+      return harness.adapters.stageMedia(source, targetExpenseId, blob);
+    },
+  };
+
+  await assert.rejects(
+    () => restoreBackupV3WithAdapters(backup, 'wrong passphrase', true, guardedAdapters),
+    /BACKUP_WRONG_PASSPHRASE_OR_TAMPER/
+  );
+  assert.equal(replaceCalls, 0);
+  assert.equal(stageCalls, 0);
+  assert.deepEqual(harness.current(), old);
+
+  const tampered = new Uint8Array(await backup.arrayBuffer());
+  tampered[tampered.length - 1] ^= 0x01;
+  await assert.rejects(
+    () => restoreBackupV3WithAdapters(new Blob([tampered]), 'mutation guard passphrase', true, guardedAdapters),
+    /BACKUP_WRONG_PASSPHRASE_OR_TAMPER/
+  );
+  assert.equal(replaceCalls, 0);
+  assert.equal(stageCalls, 0);
+  assert.deepEqual(harness.current(), old);
+});
+
 test('Backup v3 supports data-only, 1 photo, 8 photos, large valid media and attachment mapping', async () => {
   const one = stateWith({ attachments: [attachment('a1', 1, 256)] });
   const oneBackup = await secureBackup(one, true);
