@@ -184,6 +184,21 @@ test('WP29 SQLCipher configuration and staged migration preserve the plaintext s
   assert.ok(activeIndex >= 0 && plaintextDeleteIndex > activeIndex);
 });
 
+test('WP29 retires plaintext legacy financial snapshots only after the encrypted database migration marker is complete', () => {
+  const localStore = source('src/utils/localDataStore.ts');
+  assert.match(localStore, /clearLegacyFinancialSnapshot/);
+  assert.match(localStore, /LEGACY_FINANCIAL_KEYS\.EXPENSES/);
+  assert.match(localStore, /LEGACY_FINANCIAL_KEYS\.BUDGETS/);
+  assert.match(localStore, /LEGACY_FINANCIAL_KEYS\.ATTACHMENTS/);
+  assert.match(localStore, /LEGACY_FINANCIAL_KEYS\.WEB_TXN/);
+
+  const markerIndex = localStore.lastIndexOf(
+    "this.setMeta(connection, LEGACY_MIGRATION_KEY, 'complete')"
+  );
+  const cleanupIndex = localStore.lastIndexOf('clearLegacyFinancialSnapshot(storage)');
+  assert.ok(markerIndex >= 0 && cleanupIndex > markerIndex);
+});
+
 test('WP29 DB failures do not silently manufacture replacement keys for existing encrypted data', () => {
   const db = source('src/data/NativeEncryptedDatabaseService.ts');
   assert.match(
