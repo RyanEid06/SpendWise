@@ -10,7 +10,6 @@ import {
 } from './server/geminiReliability';
 import path from 'path';
 import fs from 'fs';
-import { APP_VERSION_NAME } from './src/utils/appVersion';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -667,7 +666,7 @@ function getGeminiClient(): GoogleGenAI | null {
     apiKey,
     httpOptions: {
       headers: {
-        'User-Agent': `SpendWise/${APP_VERSION_NAME}`,
+        'User-Agent': 'SpendWise',
       },
     },
   });
