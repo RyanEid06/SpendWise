@@ -96,6 +96,25 @@ function isLegacyNativeStorageKey(storageKey: string): boolean {
   );
 }
 
+function readMigrationRecord(): MediaMigrationRecord | null {
+  const raw = localStorage.getItem(MEDIA_MIGRATION_KEY);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as MediaMigrationRecord;
+    if (
+      parsed.version !== 1 ||
+      !['staging', 'metadata_committed', 'complete'].includes(parsed.phase) ||
+      !Number.isInteger(parsed.attachmentCount) ||
+      parsed.attachmentCount < 0
+    ) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 function writeMigrationRecord(
   phase: MediaMigrationPhase,
   attachmentCount: number
@@ -492,6 +511,7 @@ export class AttachmentStorage {
     if (!isNativeAndroid()) return;
 
     const before = LocalDataStore.snapshot();
+    const migration = readMigrationRecord();
     const hasEncryptedMetadata = before.attachments.some((item) =>
       isSecureMediaStorageKey(item.storageKey)
     );
@@ -500,6 +520,26 @@ export class AttachmentStorage {
       !secureKeyService.hasWrappedSecret(MEDIA_KEY_PURPOSE)
     ) {
       throw new Error('MEDIA_KEY_MISSING');
+    }
+
+    const allMetadataEncrypted = before.attachments.every((item) =>
+      isSecureMediaStorageKey(item.storageKey)
+    );
+    if (
+      migration?.phase === 'complete' &&
+      allMetadataEncrypted &&
+      secureKeyService.hasWrappedSecret(MEDIA_KEY_PURPOSE)
+    ) {
+      // Normal startup is O(1) in media count. The completed migration already
+      // verified every file; validate one representative against the session
+      // key, then only enforce that no legacy plaintext was reintroduced.
+      if (before.attachments.length > 0) {
+        await withMediaKey((key) =>
+          verifyEncryptedAttachment(before.attachments[0], key)
+        );
+      }
+      await deleteLegacyPlaintextFilesStrict();
+      return;
     }
 
     await ensureMediaKey();
