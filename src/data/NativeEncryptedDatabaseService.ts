@@ -553,7 +553,74 @@ export class NativeEncryptedDatabaseService {
 
     if (action === 'restart-migration') {
       if (!sourceExists) throw new Error('PLAINTEXT_DATABASE_SOURCE_MISSING');
-      await deleteDatabase(sqlite, ENCRYPTED_DATABASE_NAME, destinationEncrypted);
+
+      // Validate the recovery source before destroying any staged destination.
+      // A crash must never turn a previously recoverable encrypted copy into
+      // collateral damage if the old source has since become unreadable.
+      const source = await openConnection(
+        sqlite,
+        PLAINTEXT_DATABASE_NAME,
+        false,
+        'no-encryption'
+      );
+      await assertSpendWiseDatabaseIntegrity(source);
+      const sourceVersion = await readDatabaseUserVersion(source);
+      if (sourceVersion !== SPENDWISE_DATABASE_SCHEMA_VERSION) {
+        throw new Error('PLAINTEXT_DATABASE_SCHEMA_UNSUPPORTED');
+      }
+      const sourceSnapshot = await readSnapshot(source);
+      const sourceCounts = snapshotCounts(sourceSnapshot);
+
+      let reusableDestination: SQLiteDBConnection | null = null;
+      if (
+        destinationEncrypted &&
+        journal &&
+        (journal.phase === 'copied' || journal.phase === 'verified')
+      ) {
+        try {
+          let candidate = await openConnection(
+            sqlite,
+            ENCRYPTED_DATABASE_NAME,
+            true,
+            'secret'
+          );
+          await assertSpendWiseDatabaseIntegrity(candidate);
+          const candidateSnapshot = await readSnapshot(candidate);
+          await assertSnapshotMatches(sourceSnapshot, candidateSnapshot);
+          const candidateCounts = await countRows(candidate);
+          if (!countsEqual(candidateCounts, sourceCounts)) {
+            throw new Error('DATABASE_MIGRATION_COUNT_MISMATCH');
+          }
+
+          await closeConnection(sqlite, ENCRYPTED_DATABASE_NAME);
+          candidate = await openConnection(
+            sqlite,
+            ENCRYPTED_DATABASE_NAME,
+            true,
+            'secret'
+          );
+          await assertSpendWiseDatabaseIntegrity(candidate);
+          const reopenedSnapshot = await readSnapshot(candidate);
+          await assertSnapshotMatches(sourceSnapshot, reopenedSnapshot);
+          reusableDestination = candidate;
+        } catch {
+          await closeConnection(sqlite, ENCRYPTED_DATABASE_NAME);
+          reusableDestination = null;
+        }
+      }
+
+      if (reusableDestination) {
+        // Journal writes happen only after validation. If localStorage itself
+        // fails here, both source and verified destination remain recoverable.
+        writeMigration(storage, 'active', sourceVersion, sourceCounts);
+        return reusableDestination;
+      }
+
+      await deleteDatabase(
+        sqlite,
+        ENCRYPTED_DATABASE_NAME,
+        destinationEncrypted
+      );
       destinationExists = false;
       destinationEncrypted = false;
       return this.migrateFromPlaintext(sqlite, storage);
