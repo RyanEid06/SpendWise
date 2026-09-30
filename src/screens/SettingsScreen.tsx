@@ -40,7 +40,9 @@ import { APP_VERSION_CODE, APP_VERSION_NAME } from '../utils/appVersion';
 import { exportBlobFile, exportTextFile } from '../utils/fileExport';
 import { MediaLibraryScreen } from './MediaLibraryScreen';
 import { BackupV2ImportModal } from '../components/BackupV2ImportModal';
+import { BackupPassphraseModal } from '../components/BackupPassphraseModal';
 import type { BackupV2Preview } from '../utils/backupV2';
+import type { BackupV3Preview } from '../utils/backupV3';
 import { LegalDocumentScreen } from './LegalDocumentScreen';
 import type { LegalDocumentKind } from '../utils/legalDocuments';
 import type {
@@ -112,6 +114,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [isBackupBusy, setIsBackupBusy] = useState(false);
   const [pendingImportBackup, setPendingImportBackup] = useState<SpendWiseBackup | null>(null);
   const [pendingV2Backup, setPendingV2Backup] = useState<{ file: File; preview: BackupV2Preview } | null>(null);
+  const [pendingV3ExportMode, setPendingV3ExportMode] = useState<'data' | 'full' | null>(null);
+  const [pendingV3File, setPendingV3File] = useState<File | null>(null);
+  const [pendingV3Backup, setPendingV3Backup] = useState<{ file: File; preview: BackupV3Preview; passphrase: string } | null>(null);
+  const [v3PassphraseError, setV3PassphraseError] = useState<string | null>(null);
   const [pendingCurrencyCode, setPendingCurrencyCode] = useState<string | null>(null);
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -184,6 +190,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   }, [showMediaLibrary, totalExpensesCount]);
 
   const handleExportJson = async () => {
+    if (!(await requireFresh('plaintext-export'))) return;
     try {
       const backup = backupService.createLegacy();
       const dateStamp = new Date().toISOString().split('T')[0];
@@ -200,17 +207,18 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     }
   };
 
-  const handleExportV2 = async (includeMedia: boolean) => {
+  const handleExportV3 = async (includeMedia: boolean, passphrase: string) => {
     if (isBackupBusy) return;
     setIsBackupBusy(true);
     try {
-      const blob = await backupService.createV2(includeMedia);
+      const blob = await backupService.createV3(includeMedia, passphrase);
       const dateStamp = new Date().toISOString().split('T')[0];
       await exportBlobFile({
-        fileName: 'spendwise_backup_v2_' + (includeMedia ? 'full' : 'data') + '_' + dateStamp + '.zip',
+        fileName: 'spendwise_backup_v3_' + (includeMedia ? 'full' : 'data') + '_' + dateStamp + '.swb3',
         blob,
         shareTitle: includeMedia ? copy.fullBackup : copy.dataOnly,
       });
+      setPendingV3ExportMode(null);
       setStatusMessage(includeMedia ? copy.fullBackup : copy.dataOnly);
       setErrorMessage(null);
     } catch {
@@ -248,10 +256,20 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           if (file.size > 5 * 1024 * 1024) throw new Error('BACKUP_FILE_TOO_LARGE');
           const parsed = backupService.validateLegacy(JSON.parse(await file.text()));
           setPendingV2Backup(null);
+          setPendingV3File(null);
+          setPendingV3Backup(null);
           setPendingImportBackup(parsed);
+        } else if (await backupService.isV3(file)) {
+          setPendingImportBackup(null);
+          setPendingV2Backup(null);
+          setPendingV3Backup(null);
+          setV3PassphraseError(null);
+          setPendingV3File(file);
         } else {
           const preview = await backupService.previewV2(file);
           setPendingImportBackup(null);
+          setPendingV3File(null);
+          setPendingV3Backup(null);
           setPendingV2Backup({ file, preview });
         }
         setErrorMessage(null);
@@ -259,6 +277,53 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         setErrorMessage(copy.invalidBackup);
       }
     })();
+  };
+
+  const handleUnlockV3Import = async (passphrase: string) => {
+    if (!pendingV3File || isBackupBusy) return;
+    setIsBackupBusy(true);
+    setV3PassphraseError(null);
+    try {
+      const preview = await backupService.previewV3(pendingV3File, passphrase);
+      setPendingV3Backup({ file: pendingV3File, preview, passphrase });
+      setPendingV3File(null);
+      setErrorMessage(null);
+    } catch {
+      setV3PassphraseError(copy.backupPassphraseFailed);
+    } finally {
+      setIsBackupBusy(false);
+    }
+  };
+
+  const handleConfirmV3Import = async (replaceExisting: boolean) => {
+    if (!pendingV3Backup || isBackupBusy) return;
+    if (replaceExisting && !(await requireFresh('replace-restore'))) return;
+    setIsBackupBusy(true);
+    try {
+      const summary = await backupService.restoreV3(
+        pendingV3Backup.file,
+        pendingV3Backup.passphrase,
+        replaceExisting
+      );
+      setPendingV3Backup(null);
+      onBackupRestored();
+      await refreshMediaSummary();
+      setStatusMessage(
+        copy.imported + ': ' + summary.expensesImported + ' ' + copy.expenses + ', ' +
+        summary.photosImported + ' ' + copy.photos
+      );
+      setErrorMessage(summary.warnings.length ? copy.backupWarning : null);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'BACKUP_CURRENCY_MISMATCH') {
+        setErrorMessage(copy.currencyMismatch);
+      } else if (error instanceof Error && error.message === 'BACKUP_WRONG_PASSPHRASE_OR_TAMPER') {
+        setErrorMessage(copy.backupPassphraseFailed);
+      } else {
+        setErrorMessage(copy.backupRestoreFailed);
+      }
+    } finally {
+      setIsBackupBusy(false);
+    }
   };
 
   const handleConfirmImport = async (replaceExisting: boolean) => {
@@ -330,6 +395,19 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         setPendingCurrencyCode(null);
         return;
       }
+      if (pendingV3ExportMode) {
+        setPendingV3ExportMode(null);
+        return;
+      }
+      if (pendingV3File) {
+        setPendingV3File(null);
+        setV3PassphraseError(null);
+        return;
+      }
+      if (pendingV3Backup) {
+        setPendingV3Backup(null);
+        return;
+      }
       if (pendingV2Backup) {
         setPendingV2Backup(null);
         return;
@@ -360,6 +438,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     pendingCurrencyCode,
     pendingImportBackup,
     pendingV2Backup,
+    pendingV3Backup,
+    pendingV3ExportMode,
+    pendingV3File,
     legalKind,
     settingsPage,
     showClearModal,
@@ -435,6 +516,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     showSetupReplayModal ||
     pendingImportBackup !== null ||
     pendingV2Backup !== null ||
+    pendingV3Backup !== null ||
+    pendingV3ExportMode !== null ||
+    pendingV3File !== null ||
     pendingCurrencyCode !== null;
 
   if (settingsPage === 'app-lock') {
@@ -651,7 +735,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           <button
             type="button"
             disabled={isBackupBusy}
-            onClick={() => void handleExportV2(false)}
+            onClick={() => setPendingV3ExportMode('data')}
             className="w-full min-h-[56px] px-3.5 py-3 rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200 dark:border-slate-800 flex items-center gap-3 text-left rtl:text-right disabled:opacity-50"
           >
             <Archive className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0" />
@@ -664,7 +748,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           <button
             type="button"
             disabled={isBackupBusy}
-            onClick={() => void handleExportV2(true)}
+            onClick={() => setPendingV3ExportMode('full')}
             className="w-full min-h-[56px] px-3.5 py-3 rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200 dark:border-slate-800 flex items-center gap-3 text-left rtl:text-right disabled:opacity-50"
           >
             <ImageIcon className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -697,11 +781,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               <span className="block text-[11px] text-slate-500 dark:text-slate-400">{t(currentLanguage, 'exportCsvSub')}</span>
             </span>
           </button>
+          <p className="px-1 text-[11px] leading-relaxed text-amber-700 dark:text-amber-400">
+            {copy.csvPlaintextWarning}
+          </p>
 
           <input
             ref={fileInputRef}
             type="file"
-            accept=".json,.zip,application/json,application/zip"
+            accept=".swb3,.json,.zip,application/octet-stream,application/json,application/zip"
             onChange={handleFileImport}
             className="hidden"
           />
@@ -717,6 +804,42 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             </span>
           </button>
         </section>
+
+        {pendingV3ExportMode && (
+          <BackupPassphraseModal
+            mode="create"
+            language={currentLanguage}
+            busy={isBackupBusy}
+            onSubmit={(passphrase) =>
+              void handleExportV3(pendingV3ExportMode === 'full', passphrase)
+            }
+            onClose={() => setPendingV3ExportMode(null)}
+          />
+        )}
+
+        {pendingV3File && (
+          <BackupPassphraseModal
+            mode="restore"
+            language={currentLanguage}
+            busy={isBackupBusy}
+            externalError={v3PassphraseError}
+            onSubmit={(passphrase) => void handleUnlockV3Import(passphrase)}
+            onClose={() => {
+              setPendingV3File(null);
+              setV3PassphraseError(null);
+            }}
+          />
+        )}
+
+        {pendingV3Backup && (
+          <BackupV2ImportModal
+            preview={pendingV3Backup.preview}
+            version={3}
+            language={currentLanguage}
+            onConfirm={(replaceExisting) => void handleConfirmV3Import(replaceExisting)}
+            onClose={() => setPendingV3Backup(null)}
+          />
+        )}
 
         {pendingImportBackup && (
           <ImportPreviewModal
