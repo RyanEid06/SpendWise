@@ -126,7 +126,7 @@ export async function decryptMediaBytes(
   const webCrypto = requireCrypto();
   const cryptoKey = await webCrypto.subtle.importKey(
     'raw',
-    key,
+    ownedArrayBuffer(key),
     { name: 'AES-GCM' },
     false,
     ['decrypt']
