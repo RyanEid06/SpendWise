@@ -236,11 +236,11 @@ test('WP26 shell is composition-only and orchestration moved behind focused seam
   assert.match(lifecycle, /handle\.remove\(\)/);
   assert.match(themeLanguage, /removeEventListener\('change', applyTheme\)/);
 
-  assert.match(ledger, /StorageManager\.addExpense[\s\S]*refreshExpenses/);
-  assert.match(ledger, /StorageManager\.updateExpense[\s\S]*refreshExpenses/);
-  assert.match(ledger, /StorageManager\.convertCurrency[\s\S]*refreshFromStorage/);
+  assert.match(ledger, /expenseService\.create[\s\S]*refreshExpenses/);
+  assert.match(ledger, /expenseService\.update[\s\S]*refreshExpenses/);
+  assert.match(ledger, /expenseService\.changeCurrency[\s\S]*refreshFromStorage/);
 
-  assert.match(deleteUndo, /onCommit: async \(entries\)[\s\S]*StorageManager\.deleteExpenses/);
+  assert.match(deleteUndo, /onCommit: async \(entries\)[\s\S]*expenseService\.permanentDelete/);
   const stageStart = deleteUndo.indexOf('const stageDelete');
   const stageEnd = deleteUndo.indexOf('useEffect', stageStart);
   const stageSource = deleteUndo.slice(stageStart, stageEnd);
