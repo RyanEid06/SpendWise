@@ -27,6 +27,7 @@ export type SecureKeyResult<T = undefined> =
 export interface SecureKeyService {
   getActiveKey(): ActiveKeyMetadata | null;
   hasProtectedSecrets(): boolean;
+  hasWrappedSecret(purpose: string): boolean;
   establish(authenticationRequired: boolean, reason: string): Promise<SecureKeyResult<ActiveKeyMetadata>>;
   verifyActiveKey(reason: string): Promise<SecureKeyResult<ActiveKeyMetadata>>;
   rotateAuthenticationPolicy(
@@ -74,6 +75,8 @@ function decodeBase64(value: string): Uint8Array {
 }
 
 export class AndroidSecureKeyService implements SecureKeyService {
+  private readonly sessionSecrets = new Map<string, Uint8Array>();
+
   constructor(
     private readonly adapter: AndroidSecurityAdapter = androidSecurityAdapter,
     private readonly stateStore: SecurityStateStore = securityStateStore
@@ -85,6 +88,13 @@ export class AndroidSecureKeyService implements SecureKeyService {
 
   hasProtectedSecrets(): boolean {
     return this.stateStore.hasWrappedSecrets();
+  }
+
+  hasWrappedSecret(purpose: string): boolean {
+    return Object.prototype.hasOwnProperty.call(
+      this.stateStore.getWrappedSecrets(),
+      purpose
+    );
   }
 
   private async createAndVerify(
@@ -191,6 +201,7 @@ export class AndroidSecureKeyService implements SecureKeyService {
     authenticationRequired: boolean,
     reason: string
   ): Promise<SecureKeyResult<ActiveKeyMetadata>> {
+    this.releaseSessionSecrets();
     const current = this.stateStore.getActiveKey();
     if (!current) return this.establish(authenticationRequired, reason);
     if (current.authenticationRequired === authenticationRequired) {
@@ -298,6 +309,18 @@ export class AndroidSecureKeyService implements SecureKeyService {
       return { ok: false, kind: 'missing', code: 'PROTECTED_SECRET_MISSING' };
     }
 
+    const useSessionCopy = async (source: Uint8Array): Promise<SecureKeyResult<T>> => {
+      const copy = source.slice();
+      try {
+        return { ok: true, value: await consumer(copy) };
+      } finally {
+        copy.fill(0);
+      }
+    };
+
+    const cached = this.sessionSecrets.get(purpose);
+    if (cached) return useSessionCopy(cached);
+
     try {
       const result = await this.adapter.unwrapSecret({
         wrapped,
@@ -311,19 +334,16 @@ export class AndroidSecureKeyService implements SecureKeyService {
 
       const secret = decodeBase64(result.secretBase64);
       result.secretBase64 = undefined;
-      try {
-        return { ok: true, value: await consumer(secret) };
-      } finally {
-        secret.fill(0);
-      }
+      this.sessionSecrets.set(purpose, secret);
+      return useSessionCopy(secret);
     } catch {
       return { ok: false, kind: 'error', code: 'SECRET_UNWRAP_FAILED' };
     }
   }
 
   releaseSessionSecrets(): void {
-    // WP28 intentionally keeps no decrypted key cache. Later encryption WPs must
-    // place any session cache behind this service and clear it from this hook.
+    for (const secret of this.sessionSecrets.values()) secret.fill(0);
+    this.sessionSecrets.clear();
   }
 }
 
