@@ -73,13 +73,15 @@ export function parseServerConfig(env: NodeJS.ProcessEnv = process.env): ServerC
     ? Math.max(5_000, Math.min(configuredGeminiTimeoutMs, 40_000))
     : 22_000;
 
-  const defaultOrigins = [
-    'https://localhost',
-    'http://localhost',
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'capacitor://localhost',
-  ];
+  const defaultOrigins = production
+    ? ['https://localhost']
+    : [
+        'https://localhost',
+        'http://localhost',
+        'http://localhost:5173',
+        'http://localhost:3000',
+        'capacitor://localhost',
+      ];
   const allowedOrigins = new Set(
     (env.ALLOWED_ORIGINS ? env.ALLOWED_ORIGINS.split(',') : defaultOrigins)
       .map((value) => value.trim())
