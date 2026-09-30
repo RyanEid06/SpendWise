@@ -8,7 +8,7 @@ import type {
   MonthlyBudgetBackupItem,
 } from '../types';
 import type { FinancialState } from './financialState';
-import { validateFinancialState } from './financialState';
+import { financialStatesEqual, validateFinancialState } from './financialState';
 import { formatDate } from './date';
 
 export const BACKUP_V2_FORMAT = 'spendwise-backup-v2';
@@ -680,6 +680,10 @@ export async function restoreBackupV2WithAdapters(
 
     mutationAttempted = true;
     await adapters.replaceState(nextState);
+    const committedState = validateFinancialState(adapters.getState());
+    if (!financialStatesEqual(committedState, nextState)) {
+      throw new Error('BACKUP_V2_COMMIT_VERIFICATION_FAILED');
+    }
 
     if (replaceExisting) {
       await adapters.setSettings({
@@ -688,6 +692,14 @@ export async function restoreBackupV2WithAdapters(
         language: manifest.settings.language,
       });
       settingsApplied = true;
+      const appliedSettings = adapters.getSettings();
+      if (
+        appliedSettings.currencyCode !== plan.currencyCode ||
+        appliedSettings.themeMode !== manifest.settings.themeMode ||
+        appliedSettings.language !== manifest.settings.language
+      ) {
+        throw new Error('BACKUP_V2_SETTINGS_VERIFICATION_FAILED');
+      }
     }
 
     const warnings: string[] = [];
