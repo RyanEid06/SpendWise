@@ -47,10 +47,10 @@ export const AppTopBar: React.FC<{
             )}
 
             <img
-              src="/app-icon.jpg"
+              src="/spendwise-original-icon.png"
               alt=""
               aria-hidden="true"
-              className="w-8 h-8 rounded-xl object-cover shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10 shrink-0"
+              className="w-8 h-8 rounded-lg object-contain shrink-0"
             />
 
             <div className="min-w-0">
