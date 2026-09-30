@@ -52,7 +52,7 @@ test('complex settings areas use dedicated internal sub-screens', () => {
 test('App Lock keeps PIN validation, toggle and timeout controls', () => {
   assert.match(settings, /StorageManager.hasLockPin()/);
   assert.match(settings, /StorageManager.setLockPin(newPin)/);
-  assert.match(settings, //^\\d{4,8}$/.test(newPin)/);
+  assert.ok(settings.includes("if (!/^\\d{4,8}$/.test(newPin)"));
   assert.match(settings, /onAppLockToggle(enabled)/);
   assert.match(settings, /onLockTimeoutChange(option.seconds)/);
   assert.match(settings, /pinRequiredToEnable/);
