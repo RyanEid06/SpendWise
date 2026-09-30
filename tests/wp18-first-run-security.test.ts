@@ -31,7 +31,8 @@ class MemoryStorage {
   snapshot() { return new Map(this.values); }
 }
 
-const appSource = readFileSync('src/App.tsx', 'utf8');
+const appSource = readFileSync('src/app/AppShell.tsx', 'utf8');
+const ledgerSource = readFileSync('src/app/hooks/useExpenseLedger.ts', 'utf8');
 const setupSource = readFileSync('src/screens/SetupWizardScreen.tsx', 'utf8');
 const settingsSource = readFileSync('src/screens/SettingsScreen.tsx', 'utf8');
 const imageSource = readFileSync('src/utils/imageAcquisition.ts', 'utf8');
@@ -182,7 +183,7 @@ test('replay currency changes preserve existing conversion safeguards', () => {
   assert.match(setupSource, /if \(hasFinancialData\) setPendingCurrencyCode\(currency\.code\)/);
   assert.match(setupSource, /<CurrencyConversionModal/);
   assert.match(setupSource, /await onCurrencyChange\(pendingCurrencyCode, rate\)/);
-  assert.match(appSource, /throw new Error\('A conversion rate is required for an existing financial ledger\.'\)/);
+  assert.match(ledgerSource, /throw new Error\('A conversion rate is required for an existing financial ledger\.'\)/);
 });
 
 
