@@ -125,7 +125,7 @@ export const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
               aria-valuenow={Math.min(100, percentUsed)}
               aria-valuemin={0}
               aria-valuemax={100}
-              aria-label="Monthly budget usage progress"
+              aria-label={`${t(language, 'startingMoney')}: ${t(language, 'percentUsed', { percent: percentUsed })}`}
             >
               <div
                 className={`h-full rounded-full transition-all duration-500 ease-out ${
