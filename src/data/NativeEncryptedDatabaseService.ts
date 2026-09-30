@@ -430,10 +430,22 @@ async function closeConnection(
 
 async function deleteDatabase(
   sqlite: SQLiteConnection,
-  database: string
+  database: string,
+  encrypted: boolean
 ): Promise<void> {
   await closeConnection(sqlite, database);
-  await sqlite.deleteDatabase(database);
+  const db = await sqlite.createConnection(
+    database,
+    encrypted,
+    encrypted ? 'secret' : 'no-encryption',
+    SPENDWISE_DATABASE_SCHEMA_VERSION,
+    false
+  );
+  try {
+    if ((await db.isExists()).result) await db.delete();
+  } finally {
+    await closeConnection(sqlite, database);
+  }
 }
 
 async function ensureSqlCipherSecret(
@@ -537,7 +549,7 @@ export class NativeEncryptedDatabaseService {
 
     if (action === 'restart-migration') {
       if (!sourceExists) throw new Error('PLAINTEXT_DATABASE_SOURCE_MISSING');
-      await deleteDatabase(sqlite, ENCRYPTED_DATABASE_NAME);
+      await deleteDatabase(sqlite, ENCRYPTED_DATABASE_NAME, destinationEncrypted);
       destinationExists = false;
       destinationEncrypted = false;
       return this.migrateFromPlaintext(sqlite, storage);
@@ -563,7 +575,7 @@ export class NativeEncryptedDatabaseService {
       const snapshot = await readSnapshot(destination);
       validateFinancialState(snapshot.state);
       try {
-        await deleteDatabase(sqlite, PLAINTEXT_DATABASE_NAME);
+        await deleteDatabase(sqlite, PLAINTEXT_DATABASE_NAME, false);
       } catch {
         throw new Error('PLAINTEXT_DATABASE_CLEANUP_FAILED');
       }
@@ -699,7 +711,7 @@ export class NativeEncryptedDatabaseService {
 
       await closeConnection(sqlite, PLAINTEXT_DATABASE_NAME);
       try {
-        await sqlite.deleteDatabase(PLAINTEXT_DATABASE_NAME);
+        await deleteDatabase(sqlite, PLAINTEXT_DATABASE_NAME, false);
       } catch {
         throw new Error('PLAINTEXT_DATABASE_CLEANUP_FAILED');
       }
