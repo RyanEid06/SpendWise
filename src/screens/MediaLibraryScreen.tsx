@@ -16,7 +16,7 @@ const copy = {
     empty: 'No SpendWise photos yet', emptySub: 'Photos attached to expenses will appear here.',
     purchase: 'Purchase', receipt: 'Receipt', proof: 'Proof', linked: 'Linked expense',
     created: 'Added', size: 'File size', dimensions: 'Dimensions', export: 'Share / export',
-    close: 'Close', unknown: 'Unknown expense', date: 'Date', shareTitle: text.shareTitle,
+    close: 'Close', unknown: 'Unknown expense', date: 'Date', shareTitle: 'SpendWise photo',
   },
   fr: {
     title: 'Médiathèque', sub: 'Photos conservées en privé par SpendWise', back: 'Retour',
@@ -109,7 +109,7 @@ export const MediaLibraryScreen: React.FC<{ language: Language; onClose: () => v
     await exportBlobFile({
       fileName: selected.originalFilename?.toLowerCase().endsWith('.jpg') ? selected.originalFilename : `spendwise-photo-${selected.id}.jpg`,
       blob,
-      shareTitle: 'SpendWise photo',
+      shareTitle: text.shareTitle,
     });
   };
 
