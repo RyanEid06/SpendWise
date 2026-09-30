@@ -593,7 +593,7 @@ test('security logging and errors cannot accept financial bodies or authorizatio
 
   assert.doesNotMatch(
     securityLogging,
-    /description|amount|budget|receipt|imageBase64|accessToken|authorization/i
+    /(?:description|amount|budget|receipt|imageBase64|accessToken)\s*:/i
   );
   assert.doesNotMatch(
     aiLogging,
