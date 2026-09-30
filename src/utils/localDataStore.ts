@@ -20,19 +20,29 @@ const LEGACY_MIGRATION_LOCAL_FLAG = 'spendwise_sqlite_migration_v1_complete';
 const LEDGER_CURRENCY_KEY = 'ledger_currency';
 
 function clearLegacyFinancialSnapshot(storage: KeyValueStore): void {
-  for (const key of [
+  const keys = [
     LEGACY_FINANCIAL_KEYS.EXPENSES,
     LEGACY_FINANCIAL_KEYS.BUDGETS,
     LEGACY_FINANCIAL_KEYS.ATTACHMENTS,
     LEGACY_FINANCIAL_KEYS.CURRENCY,
     LEGACY_FINANCIAL_KEYS.WEB_TXN,
-  ]) {
-    try {
-      storage.removeItem(key);
-    } catch {
-      // The encrypted database is already authoritative. A storage backend
-      // refusing cleanup must not corrupt or roll back verified SQLCipher data.
+  ];
+
+  try {
+    for (const key of keys) storage.removeItem(key);
+    for (const key of keys) {
+      if (storage.getItem(key) !== null) {
+        throw new Error('LEGACY_FINANCIAL_CLEANUP_INCOMPLETE');
+      }
     }
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === 'LEGACY_FINANCIAL_CLEANUP_INCOMPLETE'
+    ) {
+      throw error;
+    }
+    throw new Error('LEGACY_FINANCIAL_CLEANUP_FAILED');
   }
 }
 
@@ -76,6 +86,7 @@ export class LocalDataStoreImpl {
     await this.applySchemaMigrations();
     await this.migrateLegacyLocalStorage(storage);
     this.state = await this.loadNativeState();
+    await nativeEncryptedDatabaseService.finalizePlaintextSourceCleanup(storage);
     this.initialized = true;
   }
 
