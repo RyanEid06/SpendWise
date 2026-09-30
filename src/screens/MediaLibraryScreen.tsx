@@ -147,7 +147,7 @@ export const MediaLibraryScreen: React.FC<{ language: Language; onClose: () => v
               await AttachmentStorage.repairIntegrity();
               setMessage(text.repaired);
               await refresh();
-            }} className="min-h-[40px] px-3 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-950 font-bold flex items-center gap-1">
+            }} className="min-h-[48px] px-3 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-950 font-bold flex items-center gap-1">
               <RefreshCw className="w-3.5 h-3.5" />{text.repair}
             </button>
           )}
