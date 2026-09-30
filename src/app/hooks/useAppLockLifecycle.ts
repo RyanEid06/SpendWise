@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
-import { StorageManager } from '../../utils/storage';
+import { preferencesRepository } from '../../data/PreferencesRepository';
+import { legacyAppLockService } from '../../features/security/LegacyAppLockService';
 import { useAppLifecycle } from '../lifecycle/useAppLifecycle';
 
 export function shouldLockAfterTimeout(
@@ -21,13 +22,13 @@ export function useAppLockLifecycle({
   onLock,
 }: UseAppLockLifecycleOptions) {
   const [appLockEnabled, setAppLockEnabledState] = useState<boolean>(() =>
-    StorageManager.isAppLockEnabled()
+    preferencesRepository.isAppLockEnabled()
   );
   const [lockTimeoutSeconds, setLockTimeoutSecondsState] = useState<number>(() =>
-    StorageManager.getLockTimeoutSeconds()
+    preferencesRepository.getLockTimeoutSeconds()
   );
   const [isLocked, setIsLocked] = useState<boolean>(() =>
-    StorageManager.isAppLockEnabled() && StorageManager.hasLockPin()
+    preferencesRepository.isAppLockEnabled() && legacyAppLockService.hasPin()
   );
   const backgroundedAtRef = useRef(0);
 
@@ -46,15 +47,15 @@ export function useAppLockLifecycle({
   }, [lockTimeoutSeconds, onLock]);
 
   useAppLifecycle({
-    enabled: appLockEnabled && StorageManager.hasLockPin(),
+    enabled: appLockEnabled && legacyAppLockService.hasPin(),
     onBackground: handleBackground,
     onForeground: handleForeground,
   });
 
   const setAppLockEnabled = useCallback((enabled: boolean) => {
-    if (enabled && !StorageManager.hasLockPin()) return;
+    if (enabled && !legacyAppLockService.hasPin()) return;
 
-    StorageManager.setAppLockEnabled(enabled);
+    preferencesRepository.setAppLockEnabled(enabled);
     setAppLockEnabledState(enabled);
     if (!enabled) {
       backgroundedAtRef.current = 0;
@@ -63,7 +64,7 @@ export function useAppLockLifecycle({
   }, []);
 
   const setLockTimeoutSeconds = useCallback((seconds: number) => {
-    StorageManager.setLockTimeoutSeconds(seconds);
+    preferencesRepository.setLockTimeoutSeconds(seconds);
     setLockTimeoutSecondsState(seconds);
   }, []);
 
@@ -73,8 +74,8 @@ export function useAppLockLifecycle({
   }, []);
 
   const refreshAfterSetup = useCallback(() => {
-    setAppLockEnabledState(StorageManager.isAppLockEnabled());
-    setLockTimeoutSecondsState(StorageManager.getLockTimeoutSeconds());
+    setAppLockEnabledState(preferencesRepository.isAppLockEnabled());
+    setLockTimeoutSecondsState(preferencesRepository.getLockTimeoutSeconds());
     setIsLocked(false);
   }, []);
 
@@ -82,7 +83,7 @@ export function useAppLockLifecycle({
     appLockEnabled,
     lockTimeoutSeconds,
     isLocked,
-    storedPin: StorageManager.getLockPin(),
+    storedPin: legacyAppLockService.readPin(),
     setAppLockEnabled,
     setLockTimeoutSeconds,
     unlock,

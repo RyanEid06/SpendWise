@@ -1,6 +1,6 @@
 import { Dispatch, SetStateAction, useCallback, useEffect, useRef, useState } from 'react';
 import { Expense } from '../../types';
-import { StorageManager } from '../../utils/storage';
+import { expenseService } from '../../features/expenses/ExpenseService';
 import {
   ExpenseDeleteUndoController,
   restorePendingExpenses,
@@ -31,7 +31,7 @@ export function useExpenseDeleteUndo({
     controllerRef.current = new ExpenseDeleteUndoController({
       onBatchChange: (snapshot) => setPendingCount(snapshot?.count ?? 0),
       onCommit: async (entries) => {
-        await StorageManager.deleteExpenses(entries.map((entry) => entry.expense.id));
+        await expenseService.permanentDelete(entries.map((entry) => entry.expense.id));
       },
       onCommitError: (entries, error) => {
         console.error('Failed to commit staged expense deletion.', error);
@@ -50,7 +50,7 @@ export function useExpenseDeleteUndo({
     const entries = controllerRef.current?.undo() ?? [];
     if (entries.length === 0) return;
     setExpenses((current) => restorePendingExpenses(current, entries));
-    StorageManager.clearAnalysisCache();
+    expenseService.clearAnalysisCache();
     analysisInvalidatedRef.current();
     setCommitError(false);
   }, [setExpenses]);
@@ -64,7 +64,7 @@ export function useExpenseDeleteUndo({
     if (currentIndex < 0) return false;
     if (!controllerRef.current?.stage(expense, currentIndex)) return false;
 
-    StorageManager.clearAnalysisCache();
+    expenseService.clearAnalysisCache();
     analysisInvalidatedRef.current();
     setCommitError(false);
     setExpenses((current) => current.filter((item) => item.id !== expense.id));

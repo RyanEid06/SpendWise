@@ -25,7 +25,10 @@ const detail = read('src/components/ExpenseDetailModal.tsx');
 const statistics = read('src/screens/StatisticsScreen.tsx');
 const categoryHome = read('src/components/CategoryBreakdownSection.tsx');
 const categoryStatistics = read('src/components/CategoryStatisticsSection.tsx');
-const settings = read('src/screens/SettingsScreen.tsx');
+const settingsScreen = read('src/screens/SettingsScreen.tsx');
+const settingsOverview = read('src/features/settings/SettingsOverview.tsx');
+const settingsCopy = read('src/features/settings/settingsCopy.ts');
+const settings = [settingsScreen, settingsOverview, settingsCopy].join('\n');
 const workflow = read('.github/workflows/android-build.yml');
 const packageJson = JSON.parse(read('package.json')) as { version: string; scripts: Record<string, string> };
 const versionJson = JSON.parse(read('version.json')) as { versionName: string; versionCode: number };
@@ -92,7 +95,7 @@ test('WP24 keeps History delete swipe-first, accessible, staged, and non-duplica
   const stageDelete = deleteUndo.slice(stageDeleteStart, stageDeleteEnd);
   assert.match(stageDelete, /controllerRef\.current\?\.stage/);
   assert.doesNotMatch(stageDelete, /StorageManager\.deleteExpenses/);
-  assert.match(deleteUndo, /onCommit: async \(entries\) => \{[\s\S]*StorageManager\.deleteExpenses/);
+  assert.match(deleteUndo, /onCommit: async \(entries\) => \{[\s\S]*expenseService\.permanentDelete/);
 });
 
 test('WP24 staged deletion does not commit before the 5-second expiry and rapid deletes share one batch', () => {

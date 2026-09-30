@@ -96,6 +96,9 @@ jobs:
       - name: Run WP26 application shell regression tests
         run: npm run test:wp26
 
+      - name: Run WP27 service boundary regression tests
+        run: npm run test:wp27
+
       - name: Sync Capacitor Android
         run: npm run android:sync
 

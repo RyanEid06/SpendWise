@@ -131,7 +131,7 @@ test('dispose is conservative and never commits pending in-memory deletes', () =
 
 test('attachment destruction only occurs after persistence commit', () => {
   assert.match(storage, /LocalDataStore\.deleteExpenses[\s\S]*AttachmentStorage\.deleteDetachedFiles/);
-  assert.match(deleteUndo, /onCommit: async \(entries\)[\s\S]*StorageManager\.deleteExpenses/);
+  assert.match(deleteUndo, /onCommit: async \(entries\)[\s\S]*expenseService\.permanentDelete/);
   const stageDelete = deleteUndo.slice(deleteUndo.indexOf('const stageDelete'), deleteUndo.indexOf('useEffect', deleteUndo.indexOf('const stageDelete')));
   assert.doesNotMatch(stageDelete, /deleteExpenses|deleteDetachedFiles/);
 });

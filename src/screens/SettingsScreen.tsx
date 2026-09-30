@@ -27,7 +27,12 @@ import {
 } from 'lucide-react';
 import { Language, MediaStorageSummary, SpendWiseBackup, ThemeMode } from '../types';
 import { getSuggestedConversionRate, SUPPORTED_CURRENCIES } from '../utils/currency';
-import { StorageManager } from '../utils/storage';
+import { backupService } from '../features/backup/BackupService';
+import { expenseService } from '../features/expenses/ExpenseService';
+import { legacyAppLockService } from '../features/security/LegacyAppLockService';
+import { SettingsOverview, InlineSettingsSection } from '../features/settings/SettingsOverview';
+import { overviewCopy } from '../features/settings/settingsCopy';
+import { mediaService } from '../services/MediaService';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import { ImportPreviewModal } from '../components/ImportPreviewModal';
 import { CurrencyConversionModal } from '../components/CurrencyConversionModal';
@@ -59,229 +64,6 @@ interface SettingsScreenProps {
 }
 
 type SettingsPage = 'overview' | 'app-lock' | 'storage-media' | 'backup-restore';
-type InlineSection = 'appearance' | 'language' | 'currency' | null;
-
-const overviewCopy = {
-  en: {
-    appearance: 'Appearance',
-    language: 'Language',
-    currency: 'Currency',
-    appLock: 'App Lock',
-    storage: 'Storage & Media',
-    backup: 'Backup & Restore',
-    reviewSetup: 'Review setup',
-    reviewSetupSub: 'Review the setup steps without deleting your data.',
-    terms: 'Terms of Use',
-    privacy: 'Privacy Policy',
-    clearData: 'Clear App Data',
-    enabled: 'Enabled',
-    disabled: 'Disabled',
-    back: 'Back',
-    appLockSub: 'PIN and auto-lock',
-    storageSub: 'Media library, storage and integrity',
-    backupSub: 'Backup, restore and CSV export',
-    setupConfirmTitle: 'Run setup again?',
-    setupConfirmMessage: 'You can review the setup steps again. Your existing expenses and settings will not be deleted.',
-    continue: 'Continue',
-    cancel: 'Cancel',
-    version: 'Version',
-    build: 'Build',
-    photos: 'photos',
-    storagePageSub: 'Private SpendWise photo storage and integrity.',
-    backupPageSub: 'Create portable backups, restore data, or export CSV.',
-    appLockPageSub: 'Control PIN protection and automatic locking.',
-    mediaLibrary: 'Media Library',
-    mediaLibrarySub: 'Browse, inspect and export attached photos.',
-    photoStorage: 'Photo storage',
-    integrity: 'Integrity',
-    healthy: 'Healthy',
-    issues: 'issues',
-    dataOnly: 'Backup v2 · Data only',
-    dataOnlySub: 'Ledger and settings without photo binaries.',
-    fullBackup: 'Backup v2 · Data + photos',
-    fullBackupSub: 'Portable ZIP with ledger and private attachment photos.',
-    legacy: 'Legacy Backup v1 JSON',
-    imported: 'Backup v2 restored',
-    expenses: 'expenses',
-    exportFailed: 'Export failed.',
-    backupExportFailed: 'Backup export failed.',
-    csvExportFailed: 'CSV export failed.',
-    invalidBackup: 'Invalid or unsupported backup file.',
-    importFailed: 'Import failed.',
-    currencyMismatch: 'This backup uses a different currency. Merge is blocked to prevent amounts from being relabeled incorrectly.',
-    currencyMismatchReplace: 'This backup uses a different currency. Merge is blocked to prevent amounts from being relabeled incorrectly. Use Replace only if you intend to restore the backup currency and all backup data.',
-    backupRestoreFailed: 'Backup restore failed. Your current data was kept whenever rollback was possible.',
-    backupWarning: 'Backup restored, but some old media could not be cleaned up automatically.',
-    dismissMessage: 'Dismiss message',
-    dismissError: 'Dismiss error',
-  },
-  fr: {
-    appearance: 'Apparence',
-    language: 'Langue',
-    currency: 'Devise',
-    appLock: 'Verrouillage',
-    storage: 'Stockage et médias',
-    backup: 'Sauvegarde et restauration',
-    reviewSetup: 'Revoir la configuration',
-    reviewSetupSub: 'Revoyez les étapes sans supprimer vos données.',
-    terms: 'Conditions d’utilisation',
-    privacy: 'Politique de confidentialité',
-    clearData: 'Effacer les données de l’application',
-    enabled: 'Activé',
-    disabled: 'Désactivé',
-    back: 'Retour',
-    appLockSub: 'Code PIN et verrouillage automatique',
-    storageSub: 'Médiathèque, stockage et intégrité',
-    backupSub: 'Sauvegarde, restauration et export CSV',
-    setupConfirmTitle: 'Revoir la configuration ?',
-    setupConfirmMessage: 'Vous pouvez revoir les étapes de configuration. Vos dépenses et réglages existants ne seront pas supprimés.',
-    continue: 'Continuer',
-    cancel: 'Annuler',
-    version: 'Version',
-    build: 'Build',
-    photos: 'photos',
-    storagePageSub: 'Stockage privé des photos SpendWise et intégrité.',
-    backupPageSub: 'Créez des sauvegardes, restaurez des données ou exportez un CSV.',
-    appLockPageSub: 'Gérez le code PIN et le verrouillage automatique.',
-    mediaLibrary: 'Médiathèque',
-    mediaLibrarySub: 'Parcourir, vérifier et exporter les photos jointes.',
-    photoStorage: 'Stockage photos',
-    integrity: 'Intégrité',
-    healthy: 'Correcte',
-    issues: 'problèmes',
-    dataOnly: 'Backup v2 · Données seules',
-    dataOnlySub: 'Registre et réglages sans fichiers photo.',
-    fullBackup: 'Backup v2 · Données + photos',
-    fullBackupSub: 'ZIP portable avec registre et photos privées.',
-    legacy: 'Backup v1 JSON hérité',
-    imported: 'Backup v2 restauré',
-    expenses: 'dépenses',
-    exportFailed: 'Échec de l’export.',
-    backupExportFailed: 'Échec de l’export de la sauvegarde.',
-    csvExportFailed: 'Échec de l’export CSV.',
-    invalidBackup: 'Fichier de sauvegarde invalide ou non pris en charge.',
-    importFailed: 'Échec de l’import.',
-    currencyMismatch: 'Cette sauvegarde utilise une autre devise. La fusion est bloquée pour éviter de réétiqueter incorrectement les montants.',
-    currencyMismatchReplace: 'Cette sauvegarde utilise une autre devise. La fusion est bloquée pour éviter de réétiqueter incorrectement les montants. Utilisez Remplacer uniquement si vous voulez restaurer la devise et toutes les données de la sauvegarde.',
-    backupRestoreFailed: 'Échec de la restauration. Vos données actuelles ont été conservées chaque fois qu’un retour arrière était possible.',
-    backupWarning: 'La sauvegarde a été restaurée, mais certains anciens médias n’ont pas pu être nettoyés automatiquement.',
-    dismissMessage: 'Fermer le message',
-    dismissError: 'Fermer l’erreur',
-  },
-  ar: {
-    appearance: 'المظهر',
-    language: 'اللغة',
-    currency: 'العملة',
-    appLock: 'قفل التطبيق',
-    storage: 'التخزين والوسائط',
-    backup: 'النسخ الاحتياطي والاستعادة',
-    reviewSetup: 'مراجعة الإعداد',
-    reviewSetupSub: 'راجع خطوات الإعداد من دون حذف بياناتك.',
-    terms: 'شروط الاستخدام',
-    privacy: 'سياسة الخصوصية',
-    clearData: 'مسح بيانات التطبيق',
-    enabled: 'مفعّل',
-    disabled: 'معطّل',
-    back: 'رجوع',
-    appLockSub: 'رمز PIN والقفل التلقائي',
-    storageSub: 'مكتبة الوسائط والتخزين والسلامة',
-    backupSub: 'النسخ والاستعادة وتصدير CSV',
-    setupConfirmTitle: 'تشغيل الإعداد مرة أخرى؟',
-    setupConfirmMessage: 'يمكنك مراجعة خطوات الإعداد مرة أخرى. لن يتم حذف المصاريف أو الإعدادات الحالية.',
-    continue: 'متابعة',
-    cancel: 'إلغاء',
-    version: 'الإصدار',
-    build: 'البنية',
-    photos: 'صور',
-    storagePageSub: 'تخزين صور SpendWise الخاصة وفحص سلامتها.',
-    backupPageSub: 'أنشئ نسخاً احتياطية أو استعد البيانات أو صدّر CSV.',
-    appLockPageSub: 'تحكم برمز PIN والقفل التلقائي.',
-    mediaLibrary: 'مكتبة الوسائط',
-    mediaLibrarySub: 'استعراض الصور المرفقة وفحصها وتصديرها.',
-    photoStorage: 'مساحة الصور',
-    integrity: 'السلامة',
-    healthy: 'سليمة',
-    issues: 'مشكلات',
-    dataOnly: 'النسخة v2 · بيانات فقط',
-    dataOnlySub: 'السجل والإعدادات بدون ملفات الصور.',
-    fullBackup: 'النسخة v2 · بيانات + صور',
-    fullBackupSub: 'ملف ZIP محمول يتضمن السجل والصور الخاصة.',
-    legacy: 'نسخة v1 JSON القديمة',
-    imported: 'تمت استعادة النسخة v2',
-    expenses: 'مصاريف',
-    exportFailed: 'فشل التصدير.',
-    backupExportFailed: 'فشل تصدير النسخة الاحتياطية.',
-    csvExportFailed: 'فشل تصدير CSV.',
-    invalidBackup: 'ملف النسخة الاحتياطية غير صالح أو غير مدعوم.',
-    importFailed: 'فشل الاستيراد.',
-    currencyMismatch: 'تستخدم هذه النسخة الاحتياطية عملة مختلفة. تم منع الدمج لتجنب تغيير تسمية المبالغ بشكل غير صحيح.',
-    currencyMismatchReplace: 'تستخدم هذه النسخة الاحتياطية عملة مختلفة. تم منع الدمج لتجنب تغيير تسمية المبالغ بشكل غير صحيح. استخدم الاستبدال فقط إذا كنت تريد استعادة عملة النسخة وجميع بياناتها.',
-    backupRestoreFailed: 'فشلت الاستعادة. تم الاحتفاظ ببياناتك الحالية كلما كان التراجع ممكناً.',
-    backupWarning: 'تمت استعادة النسخة الاحتياطية، لكن تعذر تنظيف بعض الوسائط القديمة تلقائياً.',
-    dismissMessage: 'إغلاق الرسالة',
-    dismissError: 'إغلاق الخطأ',
-  },
-} as const;
-
-interface SettingsRowProps {
-  icon: React.ReactNode;
-  label: string;
-  value?: string;
-  hint?: string;
-  indicator: 'expand' | 'navigate' | 'none';
-  expanded?: boolean;
-  destructive?: boolean;
-  onClick: () => void;
-}
-
-const SettingsRow: React.FC<SettingsRowProps> = ({
-  icon,
-  label,
-  value,
-  hint,
-  indicator,
-  expanded = false,
-  destructive = false,
-  onClick,
-}) => (
-  <button
-    type="button"
-    onClick={onClick}
-    aria-expanded={indicator === 'expand' ? expanded : undefined}
-    className={
-      'w-full min-h-[56px] px-3.5 py-2.5 flex items-center gap-3 text-left rtl:text-right transition-colors ' +
-      (destructive
-        ? 'text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20'
-        : 'text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-900/40')
-    }
-  >
-    <span className={
-      'w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ' +
-      (destructive
-        ? 'bg-rose-100 dark:bg-rose-950/50'
-        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300')
-    }>
-      {icon}
-    </span>
-    <span className="min-w-0 flex-1">
-      <span className="block text-sm font-bold leading-5">{label}</span>
-      {hint && <span className="block text-[11px] leading-4 text-slate-500 dark:text-slate-400 mt-0.5">{hint}</span>}
-    </span>
-    {value && (
-      <span className="max-w-[42%] text-xs text-slate-500 dark:text-slate-400 text-right rtl:text-left break-words">
-        {value}
-      </span>
-    )}
-    {indicator === 'expand' && (
-      expanded
-        ? <ChevronUp className="w-4 h-4 shrink-0 text-slate-400" aria-hidden="true" />
-        : <ChevronDown className="w-4 h-4 shrink-0 text-slate-400" aria-hidden="true" />
-    )}
-    {indicator === 'navigate' && (
-      <ChevronRight className="w-4 h-4 shrink-0 text-slate-400 rtl:rotate-180" aria-hidden="true" />
-    )}
-  </button>
-);
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   currentCurrencyCode,
@@ -304,7 +86,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const copy = overviewCopy[currentLanguage];
 
   const [settingsPage, setSettingsPage] = useState<SettingsPage>('overview');
-  const [expandedSection, setExpandedSection] = useState<InlineSection>(null);
+  const [expandedSection, setExpandedSection] = useState<InlineSettingsSection>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showClearModal, setShowClearModal] = useState(false);
@@ -319,11 +101,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
 
-  const hasSavedPin = StorageManager.hasLockPin();
+  const hasSavedPin = legacyAppLockService.hasPin();
   const hasFinancialData = totalExpensesCount > 0 || totalBudgetsCount > 0;
   const currencyPreviewAmount =
-    StorageManager.getExpenses()[0]?.amount ??
-    StorageManager.getBudgets()[0]?.startingAmount ??
+    expenseService.listExpenses()[0]?.amount ??
+    expenseService.listBudgets()[0]?.startingAmount ??
     0;
 
   const timeoutOptions = [
@@ -331,12 +113,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     { seconds: 60, label: t(currentLanguage, 'timeout1Min') },
     { seconds: 300, label: t(currentLanguage, 'timeout5Mins') },
     { seconds: 900, label: t(currentLanguage, 'timeout15Mins') },
-  ];
-
-  const languages: { code: Language; name: string; direction: string }[] = [
-    { code: 'en', name: 'English', direction: 'LTR' },
-    { code: 'fr', name: 'Français', direction: 'LTR' },
-    { code: 'ar', name: 'العربية', direction: 'RTL' },
   ];
 
   const humanBytes = (bytes: number) => {
@@ -347,7 +123,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
   const refreshMediaSummary = async () => {
     try {
-      setMediaSummary(await StorageManager.getMediaStorageSummary());
+      setMediaSummary(await mediaService.getStorageSummary());
     } catch {
       setMediaSummary(null);
     }
@@ -359,7 +135,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
   const handleExportJson = async () => {
     try {
-      const backup = StorageManager.createBackupJson();
+      const backup = backupService.createLegacy();
       const dateStamp = new Date().toISOString().split('T')[0];
       await exportTextFile({
         fileName: 'spendwise_backup_' + dateStamp + '.json',
@@ -378,7 +154,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     if (isBackupBusy) return;
     setIsBackupBusy(true);
     try {
-      const blob = await StorageManager.createBackupV2(includeMedia);
+      const blob = await backupService.createV2(includeMedia);
       const dateStamp = new Date().toISOString().split('T')[0];
       await exportBlobFile({
         fileName: 'spendwise_backup_v2_' + (includeMedia ? 'full' : 'data') + '_' + dateStamp + '.zip',
@@ -399,7 +175,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       const dateStamp = new Date().toISOString().split('T')[0];
       await exportTextFile({
         fileName: 'spendwise_expenses_' + dateStamp + '.csv',
-        content: StorageManager.createCsvExport(),
+        content: backupService.createCsv(),
         mimeType: 'text/csv',
         shareTitle: t(currentLanguage, 'exportCsvBtn'),
       });
@@ -419,11 +195,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       try {
         if (file.name.toLowerCase().endsWith('.json') || file.type === 'application/json') {
           if (file.size > 5 * 1024 * 1024) throw new Error('BACKUP_FILE_TOO_LARGE');
-          const parsed = StorageManager.validateBackup(JSON.parse(await file.text()));
+          const parsed = backupService.validateLegacy(JSON.parse(await file.text()));
           setPendingV2Backup(null);
           setPendingImportBackup(parsed);
         } else {
-          const preview = await StorageManager.previewBackupV2(file);
+          const preview = await backupService.previewV2(file);
           setPendingImportBackup(null);
           setPendingV2Backup({ file, preview });
         }
@@ -437,7 +213,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const handleConfirmImport = async (replaceExisting: boolean) => {
     if (!pendingImportBackup) return;
     try {
-      const summary = await StorageManager.restoreBackup(pendingImportBackup, replaceExisting);
+      const summary = await backupService.restoreLegacy(pendingImportBackup, replaceExisting);
       setPendingImportBackup(null);
       onBackupRestored();
       setStatusMessage(
@@ -459,7 +235,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     if (!pendingV2Backup || isBackupBusy) return;
     setIsBackupBusy(true);
     try {
-      const summary = await StorageManager.restoreBackupV2(pendingV2Backup.file, replaceExisting);
+      const summary = await backupService.restoreV2(pendingV2Backup.file, replaceExisting);
       setPendingV2Backup(null);
       onBackupRestored();
       await refreshMediaSummary();
@@ -629,7 +405,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 checked={isAppLockEnabled}
                 onChange={(event) => {
                   const enabled = event.target.checked;
-                  if (enabled && !StorageManager.hasLockPin()) {
+                  if (enabled && !legacyAppLockService.hasPin()) {
                     setErrorMessage(t(currentLanguage, 'pinRequiredToEnable'));
                     return;
                   }
@@ -674,7 +450,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                   setErrorMessage(t(currentLanguage, 'pinMismatch'));
                   return;
                 }
-                StorageManager.setLockPin(newPin);
+                legacyAppLockService.savePin(newPin);
                 setNewPin('');
                 setConfirmPin('');
                 setErrorMessage(null);
@@ -868,13 +644,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     );
   }
 
-  const appearanceValue =
-    currentThemeMode === 'SYSTEM'
-      ? t(currentLanguage, 'themeSystem')
-      : currentThemeMode === 'LIGHT'
-        ? t(currentLanguage, 'themeLight')
-        : t(currentLanguage, 'themeDark');
-  const languageValue = languages.find((item) => item.code === currentLanguage)?.name ?? 'English';
   const storageValue =
     String(mediaSummary?.photoCount ?? 0) + ' ' + copy.photos + ' · ' + humanBytes(mediaSummary?.totalBytes ?? 0);
 
@@ -894,178 +663,27 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
       {notificationBlock}
 
-      <section
-        className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 rounded-3xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800/80"
-        data-settings-overview="compact"
-      >
-        <div>
-          <SettingsRow
-            icon={<Palette className="w-4 h-4" />}
-            label={copy.appearance}
-            value={appearanceValue}
-            indicator="expand"
-            expanded={expandedSection === 'appearance'}
-            onClick={() => setExpandedSection(expandedSection === 'appearance' ? null : 'appearance')}
-          />
-          {expandedSection === 'appearance' && (
-            <div className="px-3.5 pb-3 grid grid-cols-3 gap-2" data-inline-settings="appearance">
-              {(
-                [
-                  ['SYSTEM', t(currentLanguage, 'themeSystem')],
-                  ['LIGHT', t(currentLanguage, 'themeLight')],
-                  ['DARK', t(currentLanguage, 'themeDark')],
-                ] as const
-              ).map(([mode, label]) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => onThemeChange(mode)}
-                  className={
-                    'min-h-[48px] px-2 rounded-xl border text-xs font-bold ' +
-                    (currentThemeMode === mode
-                      ? 'border-indigo-500 bg-indigo-600 text-white'
-                      : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] text-slate-700 dark:text-slate-300')
-                  }
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div>
-          <SettingsRow
-            icon={<Globe className="w-4 h-4" />}
-            label={copy.language}
-            value={languageValue}
-            indicator="expand"
-            expanded={expandedSection === 'language'}
-            onClick={() => setExpandedSection(expandedSection === 'language' ? null : 'language')}
-          />
-          {expandedSection === 'language' && (
-            <div className="px-3.5 pb-3 grid grid-cols-1 gap-2" data-inline-settings="language">
-              {languages.map((language) => (
-                <button
-                  key={language.code}
-                  type="button"
-                  onClick={() => onLanguageChange(language.code)}
-                  className={
-                    'min-h-[48px] px-3 rounded-xl border text-sm font-bold flex items-center justify-between gap-3 text-left rtl:text-right ' +
-                    (currentLanguage === language.code
-                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300'
-                      : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19]')
-                  }
-                >
-                  <span>{language.name}</span>
-                  <span className="text-[10px] opacity-70">{language.direction}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div>
-          <SettingsRow
-            icon={<DollarSign className="w-4 h-4" />}
-            label={copy.currency}
-            value={currentCurrencyCode.toUpperCase()}
-            indicator="expand"
-            expanded={expandedSection === 'currency'}
-            onClick={() => setExpandedSection(expandedSection === 'currency' ? null : 'currency')}
-          />
-          {expandedSection === 'currency' && (
-            <div className="px-3.5 pb-3 space-y-1.5" data-inline-settings="currency">
-              {SUPPORTED_CURRENCIES.map((currency) => {
-                const selected = currency.code.toLowerCase() === currentCurrencyCode.toLowerCase();
-                return (
-                  <button
-                    key={currency.code}
-                    type="button"
-                    onClick={() => requestCurrencyChange(currency.code)}
-                    className={
-                      'w-full min-h-[48px] px-3 rounded-xl border flex items-center justify-between gap-3 text-left rtl:text-right text-xs ' +
-                      (selected
-                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold'
-                        : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19]')
-                    }
-                  >
-                    <span className="min-w-0 flex items-center gap-3">
-                      <span className="w-9 font-extrabold text-emerald-600 dark:text-emerald-400 shrink-0">{currency.symbol}</span>
-                      <span className="truncate">{currency.name}</span>
-                    </span>
-                    {selected && <Check className="w-4 h-4 shrink-0" />}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        <SettingsRow
-          icon={<Lock className="w-4 h-4" />}
-          label={copy.appLock}
-          value={isAppLockEnabled ? copy.enabled : copy.disabled}
-          hint={copy.appLockSub}
-          indicator="navigate"
-          onClick={() => setSettingsPage('app-lock')}
-        />
-
-        <SettingsRow
-          icon={<Images className="w-4 h-4" />}
-          label={copy.storage}
-          value={storageValue}
-          hint={copy.storageSub}
-          indicator="navigate"
-          onClick={() => setSettingsPage('storage-media')}
-        />
-
-        <SettingsRow
-          icon={<Database className="w-4 h-4" />}
-          label={copy.backup}
-          hint={copy.backupSub}
-          indicator="navigate"
-          onClick={() => setSettingsPage('backup-restore')}
-        />
-
-        <SettingsRow
-          icon={<RotateCcw className="w-4 h-4" />}
-          label={copy.reviewSetup}
-          hint={copy.reviewSetupSub}
-          indicator="navigate"
-          onClick={() => setShowSetupReplayModal(true)}
-        />
-
-        <SettingsRow
-          icon={<FileText className="w-4 h-4" />}
-          label={copy.terms}
-          indicator="navigate"
-          onClick={() => setLegalKind('terms')}
-        />
-
-        <SettingsRow
-          icon={<ShieldCheck className="w-4 h-4" />}
-          label={copy.privacy}
-          indicator="navigate"
-          onClick={() => setLegalKind('privacy')}
-        />
-      </section>
-
-      <div className="px-1 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400">
-        <span>{copy.version} <strong className="font-bold text-slate-700 dark:text-slate-300">{APP_VERSION_NAME}</strong></span>
-        <span>{copy.build} <strong className="font-bold text-slate-700 dark:text-slate-300">{APP_VERSION_CODE}</strong></span>
-      </div>
-
-      <section className="bg-white dark:bg-[#111928] border border-rose-200 dark:border-rose-900/50 rounded-3xl overflow-hidden">
-        <SettingsRow
-          icon={<Trash2 className="w-4 h-4" />}
-          label={copy.clearData}
-          hint={t(currentLanguage, 'dangerZoneSub', { count: totalExpensesCount })}
-          indicator="none"
-          destructive={true}
-          onClick={() => setShowClearModal(true)}
-        />
-      </section>
+      <SettingsOverview
+        currentCurrencyCode={currentCurrencyCode}
+        currentThemeMode={currentThemeMode}
+        currentLanguage={currentLanguage}
+        totalExpensesCount={totalExpensesCount}
+        isAppLockEnabled={isAppLockEnabled}
+        storageValue={storageValue}
+        copy={copy}
+        expandedSection={expandedSection}
+        onExpandedSectionChange={setExpandedSection}
+        onThemeChange={onThemeChange}
+        onLanguageChange={onLanguageChange}
+        onCurrencyRequest={requestCurrencyChange}
+        onOpenAppLock={() => setSettingsPage('app-lock')}
+        onOpenStorageMedia={() => setSettingsPage('storage-media')}
+        onOpenBackupRestore={() => setSettingsPage('backup-restore')}
+        onReviewSetup={() => setShowSetupReplayModal(true)}
+        onOpenTerms={() => setLegalKind('terms')}
+        onOpenPrivacy={() => setLegalKind('privacy')}
+        onClearData={() => setShowClearModal(true)}
+      />
 
       <ConfirmationModal
         isOpen={showSetupReplayModal}

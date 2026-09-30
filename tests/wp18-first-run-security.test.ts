@@ -42,7 +42,20 @@ const historySource = readFileSync('src/screens/HistoryScreen.tsx', 'utf8');
 const detailSource = readFileSync('src/components/ExpenseDetailModal.tsx', 'utf8');
 const insightSource = readFileSync('src/utils/insightSelection.ts', 'utf8');
 const statisticsSource = readFileSync('src/screens/StatisticsScreen.tsx', 'utf8');
-const serverSource = readFileSync('server.ts', 'utf8');
+const serverSource = [
+  readFileSync('server.ts', 'utf8'),
+  readFileSync('server/config.ts', 'utf8'),
+  readFileSync('server/middleware/rateLimit.ts', 'utf8'),
+  readFileSync('server/middleware/requestLimits.ts', 'utf8'),
+  readFileSync('server/validation/requests.ts', 'utf8'),
+  readFileSync('server/routes/smartCapture.ts', 'utf8'),
+  readFileSync('server/routes/receiptScan.ts', 'utf8'),
+].join('\n');
+const rateLimitSource = readFileSync('server/middleware/rateLimit.ts', 'utf8');
+const requestLimitsSource = readFileSync('server/middleware/requestLimits.ts', 'utf8');
+const validationSource = readFileSync('server/validation/requests.ts', 'utf8');
+const configSource = readFileSync('server/config.ts', 'utf8');
+const expenseServiceSource = readFileSync('src/features/expenses/ExpenseService.ts', 'utf8');
 
 test('fresh state is explicitly marked pending and shows first-run setup', () => {
   const storage = new MemoryStorage();
@@ -183,24 +196,24 @@ test('replay currency changes preserve existing conversion safeguards', () => {
   assert.match(setupSource, /if \(hasFinancialData\) setPendingCurrencyCode\(currency\.code\)/);
   assert.match(setupSource, /<CurrencyConversionModal/);
   assert.match(setupSource, /await onCurrencyChange\(pendingCurrencyCode, rate\)/);
-  assert.match(ledgerSource, /throw new Error\('A conversion rate is required for an existing financial ledger\.'\)/);
+  assert.match(expenseServiceSource, /throw new Error\('A conversion rate is required for an existing financial ledger\.'\)/);
 });
 
 
 test('backend AI rate limiting remains per-IP, bounded, and exposes Retry-After', () => {
-  assert.match(serverSource, /const key = req\.ip \|\| req\.socket\.remoteAddress/);
-  assert.match(serverSource, /RATE_BUCKET_MAX_ENTRIES = 2_000/);
-  assert.match(serverSource, /cleanupRateBuckets\(rateBuckets, now, RATE_BUCKET_MAX_ENTRIES\)/);
-  assert.match(serverSource, /'Retry-After'/);
-  assert.match(serverSource, /res\.status\(429\)/);
+  assert.match(rateLimitSource, /const key = req\.ip \|\| req\.socket\.remoteAddress/);
+  assert.match(configSource, /rateBucketMaxEntries: 2_000/);
+  assert.match(rateLimitSource, /cleanupRateBuckets\(rateBuckets, now, serverConfig\.rateBucketMaxEntries\)/);
+  assert.match(rateLimitSource, /'Retry-After'/);
+  assert.match(rateLimitSource, /res\.status\(429\)/);
 });
 
 test('backend request and AI image input bounds remain enforced', () => {
-  assert.match(serverSource, /express\.json\(\{ limit: '16mb' \}\)/);
-  assert.match(serverSource, /MAX_IMAGE_BASE64_LENGTH = 12_000_000/);
-  assert.match(serverSource, /imageBase64\.length > MAX_IMAGE_BASE64_LENGTH/);
-  assert.match(serverSource, /safeString\(/);
-  assert.match(serverSource, /safeInsightArray\(/);
+  assert.match(requestLimitsSource, /express\.json\(\{ limit: '16mb' \}\)/);
+  assert.match(configSource, /maxImageBase64Length: 12_000_000/);
+  assert.match(serverSource, /imageBase64\.length > serverConfig\.maxImageBase64Length/);
+  assert.match(validationSource, /safeString\(/);
+  assert.match(validationSource, /safeInsightArray\(/);
 });
 
 test('WP17 product shape remains frozen', () => {
