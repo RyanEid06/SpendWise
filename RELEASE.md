@@ -9,8 +9,8 @@ Keep the keystore and its passwords safe. If the key is lost, Android will not a
 
 ```json
 {
-  "versionName": "1.3.0",
-  "versionCode": 4
+  "versionName": "1.4.0",
+  "versionCode": 5
 }
 ```
 
@@ -18,7 +18,7 @@ For every future release:
 
 - increment `versionCode` by at least 1;
 - change `versionName` to the user-facing version;
-- create a matching tag such as `v1.3.0`.
+- create a matching tag such as `v1.4.0`.
 
 Android Gradle and the Settings screen both read this file.
 
@@ -71,8 +71,8 @@ The debug APK is for internal testing/distribution only. For a permanent update 
 Only publish a version tag from `main` after the merged commit's debug CI is green:
 
 ```powershell
-git tag v1.3.0
-git push origin v1.3.0
+git tag v1.4.0
+git push origin v1.4.0
 ```
 
 The tag must exactly match `version.json`. The release job will:
@@ -81,6 +81,6 @@ The tag must exactly match `version.json`. The release job will:
 2. restore the signing key from GitHub Secrets;
 3. build a signed release APK;
 4. upload the APK as an Actions artifact;
-5. publish `SpendWise-v1.3.0.apk` on GitHub Releases.
+5. publish `SpendWise-v1.4.0.apk` on GitHub Releases.
 
 All future release APKs signed with this same key and a higher `versionCode` can update the existing app in place without clearing its local data.
