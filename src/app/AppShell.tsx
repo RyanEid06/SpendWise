@@ -210,7 +210,7 @@ export const AppShell: React.FC = () => {
             onPreviousMonth={() => setCurrentMY((previous) => previousMonth(previous))}
             onNextMonth={() => setCurrentMY((previous) => nextMonth(previous))}
             onExpenseClick={overlays.openExpenseDetail}
-            onDeleteExpense={deleteUndo.stageDelete}
+            onDeleteExpense={(expense) => { deleteUndo.stageDelete(expense); }}
             onAddExpenseClick={overlays.openAddExpense}
           />
         )}
