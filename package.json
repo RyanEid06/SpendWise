@@ -28,6 +28,7 @@
     "test:wp27": "tsx --test tests/wp27-service-boundaries.test.ts",
     "test:wp28": "tsx --test tests/wp28-secure-auth-keystore.test.ts",
     "test:wp29": "tsx --test tests/wp29-encrypted-at-rest.test.ts",
+    "test:wp30": "tsx --test tests/wp30-secure-backup-v3.test.ts",
     "test:wp31": "tsx --test tests/wp31-backend-security.test.ts"
   },
   "dependencies": {
