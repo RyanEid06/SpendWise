@@ -28,6 +28,14 @@ import {
   restoreBackupV2WithAdapters,
   validateBackupV2Archive,
 } from './backupV2';
+import {
+  BackupV3Preview,
+  BackupV3RestoreSummary,
+  createBackupV3Envelope,
+  isBackupV3Envelope,
+  previewBackupV3Envelope,
+  restoreBackupV3WithAdapters,
+} from './backupV3';
 
 const STORAGE_KEYS = {
   CURRENCY: LEGACY_FINANCIAL_KEYS.CURRENCY,
@@ -432,8 +440,46 @@ export class StorageManager {
     return previewValidatedBackupV2(await validateBackupV2Archive(file));
   }
 
+  static async createBackupV3(includeMedia: boolean, passphrase: string): Promise<Blob> {
+    const payload = await this.createBackupV2(includeMedia);
+    return createBackupV3Envelope({ payload, passphrase, mediaIncluded: includeMedia });
+  }
+
+  static async isBackupV3(file: Blob): Promise<boolean> {
+    return isBackupV3Envelope(file);
+  }
+
+  static async previewBackupV3(file: Blob, passphrase: string): Promise<BackupV3Preview> {
+    return previewBackupV3Envelope(file, passphrase);
+  }
+
   static async restoreBackupV2(file: Blob, replaceExisting: boolean): Promise<BackupV2RestoreSummary> {
     const summary = await restoreBackupV2WithAdapters(file, replaceExisting, {
+      getState: () => LocalDataStore.snapshot(),
+      getSettings: () => ({
+        currencyCode: this.getCurrencyCode(),
+        themeMode: this.getThemeMode(),
+        language: this.getLanguage(),
+      }),
+      replaceState: (state) => LocalDataStore.replaceState(state),
+      setSettings: async (settings) => {
+        this.setThemeMode(settings.themeMode);
+        this.setLanguage(settings.language);
+      },
+      stageMedia: (source, targetExpenseId, blob) =>
+        AttachmentStorage.stageBackupMedia(source, targetExpenseId, blob),
+      deleteFiles: (items) => AttachmentStorage.deleteDetachedFiles(items),
+    });
+    this.clearAnalysisCache();
+    return summary;
+  }
+
+  static async restoreBackupV3(
+    file: Blob,
+    passphrase: string,
+    replaceExisting: boolean
+  ): Promise<BackupV3RestoreSummary> {
+    const summary = await restoreBackupV3WithAdapters(file, passphrase, replaceExisting, {
       getState: () => LocalDataStore.snapshot(),
       getSettings: () => ({
         currencyCode: this.getCurrencyCode(),
