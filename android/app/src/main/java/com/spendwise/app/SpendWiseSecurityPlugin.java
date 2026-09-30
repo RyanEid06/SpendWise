@@ -118,7 +118,6 @@ public class SpendWiseSecurityPlugin extends Plugin {
         } catch (Exception error) {
             return "error";
         }
-        return "error";
     }
 
     private boolean deviceCredentialAvailable() {
