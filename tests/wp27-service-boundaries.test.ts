@@ -130,7 +130,7 @@ test('Settings is decomposed while preserving approved overview ordering', () =>
   const copy = read('src/features/settings/settingsCopy.ts');
 
   assert.match(screen, /<SettingsOverview/);
-  assert.match(screen, /backupService\.createV2/);
+  assert.match(screen, /backupService\.createV3/);
   assert.match(screen, /backupService\.restoreV2/);
   assert.match(screen, /mediaService\.getStorageSummary/);
   assert.match(screen, /onSetWebPin\(newPin\)/);

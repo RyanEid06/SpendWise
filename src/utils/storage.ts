@@ -17,7 +17,7 @@ import {
 } from './currency';
 import { APP_VERSION_NAME } from './appVersion';
 import { AttachmentEditPayload, AttachmentStorage } from './attachmentStorage';
-import { LEGACY_FINANCIAL_KEYS } from './financialState';
+import { LEGACY_FINANCIAL_KEYS, MAX_SAFE_FINANCIAL_VALUE } from './financialState';
 import { LocalDataStore } from './localDataStore';
 import { SetupState } from './setupState';
 import {
@@ -28,6 +28,14 @@ import {
   restoreBackupV2WithAdapters,
   validateBackupV2Archive,
 } from './backupV2';
+import {
+  BackupV3Preview,
+  BackupV3RestoreSummary,
+  createBackupV3Envelope,
+  isBackupV3Envelope,
+  previewBackupV3Envelope,
+  restoreBackupV3WithAdapters,
+} from './backupV3';
 
 const STORAGE_KEYS = {
   CURRENCY: LEGACY_FINANCIAL_KEYS.CURRENCY,
@@ -348,7 +356,7 @@ export class StorageManager {
     for (const expense of backup.expenses) {
       if (
         !Number.isInteger(expense.id) || expense.id <= 0 || expenseIds.has(expense.id) ||
-        !Number.isFinite(expense.amount) || expense.amount <= 0 ||
+        !Number.isFinite(expense.amount) || expense.amount <= 0 || expense.amount > MAX_SAFE_FINANCIAL_VALUE ||
         typeof expense.description !== 'string' || !expense.description.trim() ||
         typeof expense.category !== 'string' || !expense.category.trim() ||
         !Number.isFinite(expense.date) || expense.date <= 0 ||
@@ -362,7 +370,7 @@ export class StorageManager {
     for (const budget of backup.monthlyBudgets) {
       if (
         !/^\d{4}-(0[1-9]|1[0-2])$/.test(budget.monthKey) || budgetMonths.has(budget.monthKey) ||
-        !Number.isFinite(budget.startingAmount) || budget.startingAmount <= 0 ||
+        !Number.isFinite(budget.startingAmount) || budget.startingAmount <= 0 || budget.startingAmount > MAX_SAFE_FINANCIAL_VALUE ||
         !Number.isFinite(budget.updatedAt) || budget.updatedAt <= 0
       ) throw new Error('Backup contains an invalid or duplicate monthly budget.');
       budgetMonths.add(budget.monthKey);
@@ -432,8 +440,46 @@ export class StorageManager {
     return previewValidatedBackupV2(await validateBackupV2Archive(file));
   }
 
+  static async createBackupV3(includeMedia: boolean, passphrase: string): Promise<Blob> {
+    const payload = await this.createBackupV2(includeMedia);
+    return createBackupV3Envelope({ payload, passphrase, mediaIncluded: includeMedia });
+  }
+
+  static async isBackupV3(file: Blob): Promise<boolean> {
+    return isBackupV3Envelope(file);
+  }
+
+  static async previewBackupV3(file: Blob, passphrase: string): Promise<BackupV3Preview> {
+    return previewBackupV3Envelope(file, passphrase);
+  }
+
   static async restoreBackupV2(file: Blob, replaceExisting: boolean): Promise<BackupV2RestoreSummary> {
     const summary = await restoreBackupV2WithAdapters(file, replaceExisting, {
+      getState: () => LocalDataStore.snapshot(),
+      getSettings: () => ({
+        currencyCode: this.getCurrencyCode(),
+        themeMode: this.getThemeMode(),
+        language: this.getLanguage(),
+      }),
+      replaceState: (state) => LocalDataStore.replaceState(state),
+      setSettings: async (settings) => {
+        this.setThemeMode(settings.themeMode);
+        this.setLanguage(settings.language);
+      },
+      stageMedia: (source, targetExpenseId, blob) =>
+        AttachmentStorage.stageBackupMedia(source, targetExpenseId, blob),
+      deleteFiles: (items) => AttachmentStorage.deleteDetachedFiles(items),
+    });
+    this.clearAnalysisCache();
+    return summary;
+  }
+
+  static async restoreBackupV3(
+    file: Blob,
+    passphrase: string,
+    replaceExisting: boolean
+  ): Promise<BackupV3RestoreSummary> {
+    const summary = await restoreBackupV3WithAdapters(file, passphrase, replaceExisting, {
       getState: () => LocalDataStore.snapshot(),
       getSettings: () => ({
         currencyCode: this.getCurrencyCode(),

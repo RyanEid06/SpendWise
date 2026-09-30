@@ -8,13 +8,16 @@ import type {
   MonthlyBudgetBackupItem,
 } from '../types';
 import type { FinancialState } from './financialState';
-import { validateFinancialState } from './financialState';
+import { financialStatesEqual, validateFinancialState } from './financialState';
 import { formatDate } from './date';
 
 export const BACKUP_V2_FORMAT = 'spendwise-backup-v2';
 export const BACKUP_V2_SCHEMA_VERSION = 2;
 export const BACKUP_V2_MANIFEST_PATH = 'manifest.json';
 export const MAX_BACKUP_V2_ARCHIVE_BYTES = 512 * 1024 * 1024;
+export const MAX_BACKUP_V2_ENTRIES = 10_000;
+export const MAX_BACKUP_V2_UNCOMPRESSED_BYTES = 512 * 1024 * 1024;
+const MAX_BACKUP_MANIFEST_BYTES = 8 * 1024 * 1024;
 const MAX_BACKUP_MEDIA_BYTES = 5 * 1024 * 1024;
 
 export interface BackupV2AttachmentRecord {
@@ -114,6 +117,116 @@ function safeMediaEntry(index: number, attachmentId: string): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function validateZipStructure(bytes: Uint8Array): void {
+  if (bytes.byteLength < 22) throw new Error('BACKUP_V2_ARCHIVE_CORRUPT');
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const minEocd = Math.max(0, bytes.byteLength - 65_557);
+  let eocd = -1;
+  for (let offset = bytes.byteLength - 22; offset >= minEocd; offset--) {
+    if (view.getUint32(offset, true) === 0x06054b50) {
+      eocd = offset;
+      break;
+    }
+  }
+  if (eocd < 0) throw new Error('BACKUP_V2_ARCHIVE_CORRUPT');
+
+  const diskNumber = view.getUint16(eocd + 4, true);
+  const centralDisk = view.getUint16(eocd + 6, true);
+  const entriesOnDisk = view.getUint16(eocd + 8, true);
+  const totalEntries = view.getUint16(eocd + 10, true);
+  const centralSize = view.getUint32(eocd + 12, true);
+  const centralOffset = view.getUint32(eocd + 16, true);
+  if (
+    diskNumber !== 0 ||
+    centralDisk !== 0 ||
+    entriesOnDisk !== totalEntries ||
+    totalEntries <= 0 ||
+    totalEntries > MAX_BACKUP_V2_ENTRIES ||
+    centralOffset === 0xffffffff ||
+    centralSize === 0xffffffff ||
+    centralOffset + centralSize > eocd
+  ) {
+    throw new Error('BACKUP_V2_ARCHIVE_LIMIT');
+  }
+
+  const decoder = new TextDecoder('utf-8', { fatal: true });
+  const paths = new Set<string>();
+  let offset = centralOffset;
+  let totalUncompressed = 0;
+  let manifestSeen = false;
+
+  for (let index = 0; index < totalEntries; index++) {
+    if (offset + 46 > eocd || view.getUint32(offset, true) !== 0x02014b50) {
+      throw new Error('BACKUP_V2_ARCHIVE_CORRUPT');
+    }
+    const flags = view.getUint16(offset + 8, true);
+    const compression = view.getUint16(offset + 10, true);
+    const compressedSize = view.getUint32(offset + 20, true);
+    const uncompressedSize = view.getUint32(offset + 24, true);
+    const fileNameLength = view.getUint16(offset + 28, true);
+    const extraLength = view.getUint16(offset + 30, true);
+    const commentLength = view.getUint16(offset + 32, true);
+    const localHeaderOffset = view.getUint32(offset + 42, true);
+    const nextOffset = offset + 46 + fileNameLength + extraLength + commentLength;
+    if (
+      nextOffset > eocd ||
+      fileNameLength <= 0 ||
+      compressedSize === 0xffffffff ||
+      uncompressedSize === 0xffffffff ||
+      localHeaderOffset === 0xffffffff ||
+      (flags & 0x0001) !== 0 ||
+      ![0, 8].includes(compression)
+    ) {
+      throw new Error('BACKUP_V2_ARCHIVE_LIMIT');
+    }
+
+    let path: string;
+    try {
+      path = decoder.decode(bytes.subarray(offset + 46, offset + 46 + fileNameLength));
+    } catch {
+      throw new Error('BACKUP_V2_PATH_INVALID');
+    }
+    if (
+      !path ||
+      path.includes('\\') ||
+      path.includes('\0') ||
+      path.startsWith('/') ||
+      /^[A-Za-z]:/.test(path) ||
+      path.split('/').some((part) => part === '..' || part === '.')
+    ) {
+      throw new Error('BACKUP_V2_PATH_INVALID');
+    }
+    if (paths.has(path)) throw new Error('BACKUP_V2_DUPLICATE_PATH');
+    paths.add(path);
+
+    const isDirectory = path.endsWith('/');
+    if (isDirectory) {
+      if (path !== 'media/' || uncompressedSize !== 0) throw new Error('BACKUP_V2_PATH_INVALID');
+    } else if (path === BACKUP_V2_MANIFEST_PATH) {
+      if (manifestSeen || uncompressedSize <= 0 || uncompressedSize > MAX_BACKUP_MANIFEST_BYTES) {
+        throw new Error('BACKUP_V2_MANIFEST_INVALID');
+      }
+      manifestSeen = true;
+    } else if (/^media\/[A-Za-z0-9._-]+\.jpg$/.test(path)) {
+      if (uncompressedSize <= 0 || uncompressedSize > MAX_BACKUP_MEDIA_BYTES) {
+        throw new Error('BACKUP_V2_MEDIA_SIZE_MISMATCH');
+      }
+    } else {
+      throw new Error('BACKUP_V2_PATH_INVALID');
+    }
+
+    totalUncompressed += uncompressedSize;
+    if (!Number.isSafeInteger(totalUncompressed) || totalUncompressed > MAX_BACKUP_V2_UNCOMPRESSED_BYTES) {
+      throw new Error('BACKUP_V2_ARCHIVE_LIMIT');
+    }
+    offset = nextOffset;
+  }
+
+  if (!manifestSeen || offset !== centralOffset + centralSize) {
+    throw new Error('BACKUP_V2_ARCHIVE_CORRUPT');
+  }
 }
 
 function toHex(bytes: Uint8Array): string {
@@ -377,9 +490,12 @@ export async function validateBackupV2Archive(input: Blob): Promise<ValidatedBac
     throw new Error('BACKUP_V2_ARCHIVE_SIZE_INVALID');
   }
 
+  const archiveBytes = new Uint8Array(await input.arrayBuffer());
+  validateZipStructure(archiveBytes);
+
   let zip: JSZip;
   try {
-    zip = await JSZip.loadAsync(input, { checkCRC32: true });
+    zip = await JSZip.loadAsync(archiveBytes, { checkCRC32: true });
   } catch {
     throw new Error('BACKUP_V2_ARCHIVE_CORRUPT');
   }
@@ -534,7 +650,7 @@ export async function restoreBackupV2WithAdapters(
   const plan = planBackupV2Restore(manifest, oldState, replaceExisting);
   const staged: ExpenseAttachment[] = [];
   let photosSkipped = 0;
-  let stateCommitted = false;
+  let mutationAttempted = false;
   let settingsApplied = false;
 
   try {
@@ -562,8 +678,12 @@ export async function restoreBackupV2WithAdapters(
       currencyCode: plan.currencyCode,
     });
 
+    mutationAttempted = true;
     await adapters.replaceState(nextState);
-    stateCommitted = true;
+    const committedState = validateFinancialState(adapters.getState());
+    if (!financialStatesEqual(committedState, nextState)) {
+      throw new Error('BACKUP_V2_COMMIT_VERIFICATION_FAILED');
+    }
 
     if (replaceExisting) {
       await adapters.setSettings({
@@ -572,6 +692,14 @@ export async function restoreBackupV2WithAdapters(
         language: manifest.settings.language,
       });
       settingsApplied = true;
+      const appliedSettings = adapters.getSettings();
+      if (
+        appliedSettings.currencyCode !== plan.currencyCode ||
+        appliedSettings.themeMode !== manifest.settings.themeMode ||
+        appliedSettings.language !== manifest.settings.language
+      ) {
+        throw new Error('BACKUP_V2_SETTINGS_VERIFICATION_FAILED');
+      }
     }
 
     const warnings: string[] = [];
@@ -595,8 +723,8 @@ export async function restoreBackupV2WithAdapters(
       warnings,
     };
   } catch (error) {
-    let rollbackSucceeded = !stateCommitted;
-    if (stateCommitted) {
+    let rollbackSucceeded = true;
+    if (mutationAttempted) {
       try {
         await adapters.replaceState(oldState);
         rollbackSucceeded = true;

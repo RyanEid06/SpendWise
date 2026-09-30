@@ -15,6 +15,8 @@ export interface KeyValueStore {
   removeItem(key: string): void;
 }
 
+export const MAX_SAFE_FINANCIAL_VALUE = Number.MAX_SAFE_INTEGER / 100;
+
 export interface FinancialState {
   expenses: Expense[];
   budgets: MonthlyBudget[];
@@ -61,6 +63,7 @@ export function validateFinancialState(input: FinancialState): FinancialState {
       expenseIds.has(value.id) ||
       !Number.isFinite(value.amount) ||
       value.amount <= 0 ||
+      value.amount > MAX_SAFE_FINANCIAL_VALUE ||
       typeof value.description !== 'string' ||
       !value.description.trim() ||
       typeof value.category !== 'string' ||
@@ -92,6 +95,7 @@ export function validateFinancialState(input: FinancialState): FinancialState {
       months.has(value.monthKey) ||
       !Number.isFinite(value.startingAmount) ||
       value.startingAmount <= 0 ||
+      value.startingAmount > MAX_SAFE_FINANCIAL_VALUE ||
       !Number.isFinite(value.updatedAt) ||
       value.updatedAt <= 0
     ) {

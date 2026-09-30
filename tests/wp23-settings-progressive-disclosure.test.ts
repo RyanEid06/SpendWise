@@ -72,7 +72,7 @@ test('App Lock keeps secure credential, toggle and timeout controls', () => {
 test('Storage and backup capabilities remain reachable without engine rewrites', () => {
   includesRequired('mediaService.getStorageSummary()');
   includesRequired('setShowMediaLibrary(true)');
-  includesRequired('backupService.createV2(includeMedia)');
+  includesRequired('backupService.createV3(includeMedia, passphrase)');
   includesRequired('backupService.createLegacy()');
   includesRequired('backupService.createCsv()');
   includesRequired('backupService.restoreLegacy(pendingImportBackup, replaceExisting)');

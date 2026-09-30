@@ -354,12 +354,17 @@ test('failed Backup v2 restore leaves old state intact and cleans staged media',
   const old = stateWith([]);
   let current = old;
   const cleaned: string[] = [];
+  let replaceCalls = 0;
   await assert.rejects(
     () =>
       restoreBackupV2WithAdapters(blob, true, {
         getState: () => current,
         getSettings: () => settings,
-        replaceState: async () => { throw new Error('SIMULATED_DB_FAILURE'); },
+        replaceState: async (next) => {
+          current = next;
+          replaceCalls++;
+          if (replaceCalls === 1) throw new Error('SIMULATED_DB_FAILURE');
+        },
         setSettings: async () => {},
         stageMedia: async (source, targetExpenseId, media) => ({
           id: 'staged',

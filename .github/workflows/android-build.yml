@@ -104,6 +104,9 @@ jobs:
       - name: Run WP29 encrypted-at-rest regression tests
         run: npm run test:wp29
 
+      - name: Run WP30 secure Backup v3 regression tests
+        run: npm run test:wp30
+
       - name: Run WP31 backend authentication and network hardening tests
         run: npm run test:wp31
 

@@ -5,9 +5,9 @@ import type { BackupV2Preview } from '../utils/backupV2';
 import { ViewportPortal } from './ViewportPortal';
 
 const labels = {
-  en: { title: 'Backup v2 restore', data: 'Data only', media: 'Data + photos', expenses: 'Expenses', budgets: 'Budgets', photos: 'Photos', size: 'Photo size', mode: 'Mode', merge: 'Merge', replace: 'Replace', cancel: 'Cancel', warning: 'Replace fully validates and stages the backup before changing your current ledger.' },
-  fr: { title: 'Restauration Backup v2', data: 'Données seules', media: 'Données + photos', expenses: 'Dépenses', budgets: 'Budgets', photos: 'Photos', size: 'Taille photos', mode: 'Mode', merge: 'Fusionner', replace: 'Remplacer', cancel: 'Annuler', warning: 'Le remplacement valide et prépare entièrement la sauvegarde avant de modifier le registre actuel.' },
-  ar: { title: 'استعادة النسخة v2', data: 'بيانات فقط', media: 'بيانات + صور', expenses: 'المصاريف', budgets: 'الميزانيات', photos: 'الصور', size: 'حجم الصور', mode: 'الوضع', merge: 'دمج', replace: 'استبدال', cancel: 'إلغاء', warning: 'يتم التحقق من النسخة وتجهيزها بالكامل قبل تغيير السجل الحالي.' },
+  en: { title: 'Backup restore', data: 'Data only', media: 'Data + photos', expenses: 'Expenses', budgets: 'Budgets', photos: 'Photos', size: 'Photo size', mode: 'Mode', merge: 'Merge', replace: 'Replace', cancel: 'Cancel', warning: 'Replace fully validates and stages the backup before changing your current ledger.' },
+  fr: { title: 'Restauration de sauvegarde', data: 'Données seules', media: 'Données + photos', expenses: 'Dépenses', budgets: 'Budgets', photos: 'Photos', size: 'Taille photos', mode: 'Mode', merge: 'Fusionner', replace: 'Remplacer', cancel: 'Annuler', warning: 'Le remplacement valide et prépare entièrement la sauvegarde avant de modifier le registre actuel.' },
+  ar: { title: 'استعادة النسخة الاحتياطية', data: 'بيانات فقط', media: 'بيانات + صور', expenses: 'المصاريف', budgets: 'الميزانيات', photos: 'الصور', size: 'حجم الصور', mode: 'الوضع', merge: 'دمج', replace: 'استبدال', cancel: 'إلغاء', warning: 'يتم التحقق من النسخة وتجهيزها بالكامل قبل تغيير السجل الحالي.' },
 } as const;
 
 function bytes(value: number) {
@@ -15,11 +15,12 @@ function bytes(value: number) {
 }
 
 export const BackupV2ImportModal: React.FC<{
-  preview: BackupV2Preview;
+  preview: BackupV2Preview | Omit<BackupV2Preview, 'schemaVersion'> & { schemaVersion: 3 };
+  version?: 2 | 3;
   language: Language;
   onConfirm: (replace: boolean) => void;
   onClose: () => void;
-}> = ({ preview, language, onConfirm, onClose }) => {
+}> = ({ preview, version = preview.schemaVersion, language, onConfirm, onClose }) => {
   const text = labels[language];
   const [replace, setReplace] = useState(false);
   return (
@@ -27,7 +28,7 @@ export const BackupV2ImportModal: React.FC<{
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs p-4 flex items-center justify-center" role="dialog" aria-modal="true">
       <div className="w-full max-w-md rounded-3xl bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div className="p-4 flex justify-between items-center border-b border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-2 font-bold"><ArchiveRestore className="w-5 h-5" />{text.title}</div>
+          <div className="flex items-center gap-2 font-bold"><ArchiveRestore className="w-5 h-5" />{text.title} v{version}</div>
           <button type="button" onClick={onClose} className="min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label={text.cancel}><X className="w-5 h-5" /></button>
         </div>
         <div className="p-5 space-y-4">
