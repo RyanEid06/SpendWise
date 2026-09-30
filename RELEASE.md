@@ -22,6 +22,15 @@ For every future release:
 
 Android Gradle and the Settings screen both read this file.
 
+## Current official release
+
+- Release: `v1.4.0`
+- Version code: `5`
+- Tagged commit: `c0d7522192af7e07cbb1f46c3a00145e8b94a988`
+- Official signed APK: `SpendWise-v1.4.0.apk`
+- Release pipeline: passed and published on 2026-09-30
+
+
 ## One-time signing key setup
 
 Generate the key once on a trusted machine with a JDK installed:
