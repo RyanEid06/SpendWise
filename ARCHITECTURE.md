@@ -1,7 +1,7 @@
 # SpendWise Target Architecture — WP25
 
-Status: authoritative responsibility/dependency model for WP26-WP34  
-Reviewed baseline: 0a60702eed64e6558e80330c9c2c15905d3e313e  
+Status: authoritative responsibility/dependency model for WP26-WP34
+Reviewed baseline: 0a60702eed64e6558e80330c9c2c15905d3e313e
 Product behavior: preserve the frozen v1.4 product shape unless a later hardening WP explicitly owns a security UX change.
 
 ## 1. Purpose
