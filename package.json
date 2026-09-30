@@ -24,7 +24,8 @@
     "test:wp22": "tsx --test tests/wp22-statistics-category-ranking.test.ts",
     "test:wp23": "tsx --test tests/wp23-settings-progressive-disclosure.test.ts",
     "test:wp24": "tsx --test tests/wp24-integration-hardening.test.ts",
-    "test:wp26": "tsx --test tests/wp26-app-shell-refactor.test.ts"
+    "test:wp26": "tsx --test tests/wp26-app-shell-refactor.test.ts",
+    "test:wp27": "tsx --test tests/wp27-service-boundaries.test.ts"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",
