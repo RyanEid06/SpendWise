@@ -192,7 +192,7 @@ function safeDetectedCurrency(value: unknown): string | null {
 function safeInsightArray(value: unknown) {
   if (!Array.isArray(value)) return [];
 
-  return value.slice(0, 8).flatMap((item) => {
+  return value.slice(0, 3).flatMap((item) => {
     const obj = asObject(item);
     if (!obj) return [];
 
@@ -216,6 +216,30 @@ function safeInsightArray(value: unknown) {
     ];
   });
 }
+
+function capSpendingInsightGroups(groups: {
+  biggestChanges: ReturnType<typeof safeInsightArray>;
+  unusualExpenses: ReturnType<typeof safeInsightArray>;
+  recurringSpending: ReturnType<typeof safeInsightArray>;
+  areasToReview: ReturnType<typeof safeInsightArray>;
+}) {
+  let remaining = 3;
+  const take = <T>(items: T[]) => {
+    const selected = items.slice(0, remaining);
+    remaining -= selected.length;
+    return selected;
+  };
+
+  // Review/action items first, then measured changes and recurring patterns.
+  // Unusual single purchases come last because unusual does not automatically mean harmful.
+  const areasToReview = take(groups.areasToReview);
+  const biggestChanges = take(groups.biggestChanges);
+  const recurringSpending = take(groups.recurringSpending);
+  const unusualExpenses = take(groups.unusualExpenses);
+
+  return { biggestChanges, unusualExpenses, recurringSpending, areasToReview };
+}
+
 
 function sanitizeExpense(value: unknown) {
   const obj = asObject(value);
@@ -581,6 +605,8 @@ function buildSpendingPrompt(
     '- Never invent amounts, percentages, counts, merchants, dates, or categories.',
     '- Distinguish unusual from bad. A large purchase can be reasonable.',
     '- Be concise, objective, constructive, and non-judgmental.',
+    '- Across biggestChanges, unusualExpenses, recurringSpending, and areasToReview, return at most 3 insight objects total. Prefer actionable repeated patterns over isolated noise.',
+    '- Do not manufacture a recommendation when the history is too sparse to support it.',
     '- Recognize English, French, Arabic, Lebanese Arabic, Arabizi (including digit substitutions such as 2/3/7), and mixed/code-switched descriptions.',
     `- Currency code: ${currencyCode}.`,
     `- ${outputLanguageInstruction(language)}`,
@@ -831,16 +857,20 @@ app.post('/api/gemini/analyze', async (req: Request, res: Response) => {
       validate: asObject,
     });
 
-    return res.json({
-      timestamp: Date.now(),
-      analyzedMonthKey: summary.currentMonthKey,
-      isAiGenerated: true,
-      spendingOverview: safeString(parsed.spendingOverview, 4000, 'Spending analysis complete.'),
-      historyContext: safeString(parsed.historyContext, 4000),
+    const cappedInsights = capSpendingInsightGroups({
       biggestChanges: safeInsightArray(parsed.biggestChanges),
       unusualExpenses: safeInsightArray(parsed.unusualExpenses),
       recurringSpending: safeInsightArray(parsed.recurringSpending),
       areasToReview: safeInsightArray(parsed.areasToReview),
+    });
+
+    return res.json({
+      timestamp: Date.now(),
+      analyzedMonthKey: summary.currentMonthKey,
+      isAiGenerated: true,
+      spendingOverview: safeString(parsed.spendingOverview, 1200, 'Spending analysis complete.'),
+      historyContext: safeString(parsed.historyContext, 600),
+      ...cappedInsights,
     });
   } catch (error) {
     return sendAiFailure(res, error);

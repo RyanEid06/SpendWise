@@ -60,10 +60,20 @@ export const TopExpensesSection: React.FC<TopExpensesSectionProps> = ({
                     onExpenseClick(expense);
                   }
                 }}
-                className="min-h-[56px] flex items-center justify-between gap-2 p-3 rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/70 dark:border-slate-800/60 hover:border-slate-300 dark:hover:border-slate-700 transition-all cursor-pointer active:scale-[0.99] group"
+                className={`min-h-[56px] flex items-center justify-between gap-2 p-3 rounded-2xl border hover:border-slate-300 dark:hover:border-slate-700 transition-all cursor-pointer active:scale-[0.99] group ${
+                  index === 0
+                    ? 'bg-amber-50/60 dark:bg-amber-950/15 border-amber-200/80 dark:border-amber-900/50'
+                    : index === 1
+                      ? 'bg-slate-50 dark:bg-[#0B0F19] border-slate-300/70 dark:border-slate-700/70'
+                      : 'bg-stone-50/70 dark:bg-[#0B0F19] border-stone-200/80 dark:border-stone-800/80'
+                }`}
               >
                 <div className="flex items-center space-x-3 rtl:space-x-reverse min-w-0">
-                  <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center font-extrabold text-xs shrink-0">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center font-extrabold text-xs shrink-0 ${
+                    index === 0
+                      ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300'
+                      : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                  }`}>
                     {index + 1}
                   </div>
                   <span className="text-xl shrink-0" aria-hidden="true">{catInfo.iconEmoji}</span>

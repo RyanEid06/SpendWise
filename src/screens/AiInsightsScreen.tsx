@@ -1,11 +1,8 @@
 import React from 'react';
 import {
   Sparkles,
-  TrendingUp,
-  RotateCw,
-  Search,
-  Repeat,
-  AlertTriangle,
+    RotateCw,
+      AlertTriangle,
   Brain,
   Info,
   CheckCircle,
@@ -16,6 +13,8 @@ import { MonthYear } from '../utils/date';
 import { MonthSelector } from '../components/MonthSelector';
 import { getCategoryInfo } from '../utils/categories';
 import { getLocalizedCategoryName, getLocalizedMonthName, t } from '../utils/translations';
+import { selectPrimaryInsights } from '../utils/insightSelection';
+import { wp17Copy } from '../utils/wp17Copy';
 
 interface AiInsightsScreenProps {
   currentMonthYear: MonthYear;
@@ -41,6 +40,7 @@ export const AiInsightsScreen: React.FC<AiInsightsScreenProps> = ({
   onAnalyzeClick,
 }) => {
   const monthName = getLocalizedMonthName(currentMonthYear, language);
+  const primaryInsights = analysisResult ? selectPrimaryInsights(analysisResult) : [];
 
   return (
     <div className="space-y-4 pb-28 animate-screen-enter">
@@ -172,52 +172,25 @@ export const AiInsightsScreen: React.FC<AiInsightsScreenProps> = ({
             )}
           </div>
 
-          {/* Section 2: Biggest Changes */}
-          {analysisResult.biggestChanges.length > 0 && (
+          {/* Concise primary actions: globally capped to 3 */}
+          {primaryInsights.length > 0 ? (
             <InsightGroupCard
-              title={t(language, 'biggestChangesTitle')}
-              icon={TrendingUp}
-              iconColor="text-indigo-600 dark:text-indigo-400"
-              iconBg="bg-indigo-100 dark:bg-indigo-950/80"
-              items={analysisResult.biggestChanges}
-              language={language}
-            />
-          )}
-
-          {/* Section 3: Unusual Expenses (Smart Flags) */}
-          {analysisResult.unusualExpenses.length > 0 && (
-            <InsightGroupCard
-              title={t(language, 'unusualExpensesTitle')}
-              icon={Search}
+              title={wp17Copy(language, 'primaryInsights')}
+              icon={AlertTriangle}
               iconColor="text-amber-600 dark:text-amber-400"
               iconBg="bg-amber-100 dark:bg-amber-950/80"
-              items={analysisResult.unusualExpenses}
+              items={primaryInsights.map(({ item }) => item)}
               language={language}
             />
-          )}
-
-          {/* Section 4: Recurring Spending */}
-          {analysisResult.recurringSpending.length > 0 && (
-            <InsightGroupCard
-              title={t(language, 'recurringSpendingTitle')}
-              icon={Repeat}
-              iconColor="text-purple-600 dark:text-purple-400"
-              iconBg="bg-purple-100 dark:bg-purple-950/80"
-              items={analysisResult.recurringSpending}
-              language={language}
-            />
-          )}
-
-          {/* Section 5: Potential Areas to Review */}
-          {analysisResult.areasToReview.length > 0 && (
-            <InsightGroupCard
-              title={t(language, 'areasToReviewTitle')}
-              icon={AlertTriangle}
-              iconColor="text-rose-600 dark:text-rose-400"
-              iconBg="bg-rose-100 dark:bg-rose-950/80"
-              items={analysisResult.areasToReview}
-              language={language}
-            />
+          ) : (
+            <div className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 rounded-3xl p-5 shadow-xs space-y-1.5">
+              <h3 className="font-bold text-slate-900 dark:text-white text-sm">
+                {wp17Copy(language, 'primaryInsights')}
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                {wp17Copy(language, 'noStrongPattern')}
+              </p>
+            </div>
           )}
         </div>
       )}
