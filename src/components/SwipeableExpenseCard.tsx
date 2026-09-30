@@ -31,6 +31,7 @@ export const SwipeableExpenseCard: React.FC<SwipeableExpenseCardProps> = ({
   const suppressClickUntilRef = useRef(0);
   const holdTimerRef = useRef<number | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const deleteRequestedRef = useRef(false);
   const isRtl = language === 'ar';
 
   const reducedMotion =
@@ -54,6 +55,12 @@ export const SwipeableExpenseCard: React.FC<SwipeableExpenseCardProps> = ({
     horizontalRef.current = false;
   };
 
+  const requestDeleteOnce = () => {
+    if (deleteRequestedRef.current) return;
+    deleteRequestedRef.current = true;
+    onRequestDelete();
+  };
+
   const armHoldAnimation = () => {
     clearHold();
     if (reducedMotion) return;
@@ -63,6 +70,7 @@ export const SwipeableExpenseCard: React.FC<SwipeableExpenseCardProps> = ({
   };
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (deleteRequestedRef.current) return;
     if (event.pointerType === 'mouse' && event.button !== 0) return;
     startRef.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
     horizontalRef.current = false;
@@ -78,6 +86,7 @@ export const SwipeableExpenseCard: React.FC<SwipeableExpenseCardProps> = ({
     const dy = event.clientY - start.y;
 
     if (!horizontalRef.current) {
+      if (Math.abs(dy) >= 8 && Math.abs(dy) > Math.abs(dx)) { reset(); return; }
       if (Math.abs(dx) < 8) return;
       if (Math.abs(dy) > Math.abs(dx) * 0.85) {
         reset();
@@ -101,7 +110,7 @@ export const SwipeableExpenseCard: React.FC<SwipeableExpenseCardProps> = ({
     const armed = horizontalRef.current && isSwipeDeleteArmed(offsetRef.current, width, isRtl);
     if (horizontalRef.current) suppressClickUntilRef.current = Date.now() + 500;
     reset();
-    if (armed) onRequestDelete();
+    if (armed) requestDeleteOnce();
   };
 
   const width = rootRef.current?.clientWidth || 320;
@@ -129,6 +138,10 @@ export const SwipeableExpenseCard: React.FC<SwipeableExpenseCardProps> = ({
         />
       </div>
 
+      <button type="button" onClick={(event) => { event.stopPropagation(); requestDeleteOnce(); }}
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:right-2 rtl:focus:right-auto rtl:focus:left-2 focus:z-20 focus:rounded-xl focus:bg-rose-600 focus:px-3 focus:py-2 focus:text-sm focus:font-bold focus:text-white"
+        aria-label={`${wp17Copy(language, 'deleteAction')}: ${expense.description}`}>{wp17Copy(language, 'deleteAction')}</button>
+
       <div
         style={{ transform: `translate3d(${offsetX}px,0,0)` }}
         className={`${dragging ? '' : reducedMotion ? '' : 'transition-transform duration-200 ease-out'}`}
@@ -145,8 +158,6 @@ export const SwipeableExpenseCard: React.FC<SwipeableExpenseCardProps> = ({
           language={language}
           attachmentCount={attachmentCount}
           onClick={onOpen}
-          onDeleteClick={onRequestDelete}
-          deleteLabel={wp17Copy(language, 'deleteAction')}
         />
       </div>
     </div>
