@@ -1,28 +1,14 @@
 import { Router } from 'express';
-import { serverConfig } from '../config';
 import {
   AuthServiceError,
-  FileInstallationRegistry,
   INSTALLATION_AUTH_ALGORITHM,
-  InstallationAuthService,
 } from '../security/installationAuth';
+import { installationAuthService } from '../security/runtime';
 import { safeString } from '../validation/requests';
 import {
   rateLimitChallenge,
   rateLimitRegistration,
 } from '../middleware/rateLimit';
-
-export const installationRegistry = new FileInstallationRegistry(
-  serverConfig.installationStorePath
-);
-export const installationAuthService = new InstallationAuthService(
-  installationRegistry,
-  {
-    challengeTtlMs: serverConfig.authChallengeTtlMs,
-    accessTokenTtlMs: serverConfig.accessTokenTtlMs,
-    deniedInstallationIds: serverConfig.deniedInstallationIds,
-  }
-);
 
 function sendAuthError(res: any, error: unknown) {
   if (error instanceof AuthServiceError) {
