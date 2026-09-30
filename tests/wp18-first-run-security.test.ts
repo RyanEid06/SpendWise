@@ -41,6 +41,7 @@ const historySource = readFileSync('src/screens/HistoryScreen.tsx', 'utf8');
 const detailSource = readFileSync('src/components/ExpenseDetailModal.tsx', 'utf8');
 const insightSource = readFileSync('src/utils/insightSelection.ts', 'utf8');
 const statisticsSource = readFileSync('src/screens/StatisticsScreen.tsx', 'utf8');
+const serverSource = readFileSync('server.ts', 'utf8');
 
 test('fresh state is explicitly marked pending and shows first-run setup', () => {
   const storage = new MemoryStorage();
@@ -69,6 +70,15 @@ test('existing pre-WP18 installation migrates without fake onboarding', () => {
   assert.equal(hasAcknowledgedCurrentLegal(storage), false);
 });
 
+test('older zero-expense install with only durable preferences migrates as existing', () => {
+  const storage = new MemoryStorage();
+  storage.setItem('spendwise_language', 'fr');
+  storage.setItem('spendwise_theme', 'DARK');
+  assert.equal(initializeSetupState(storage), 'migrated');
+  assert.equal(shouldShowFirstRun(storage), false);
+  assert.equal(getSetupVersion(storage), CURRENT_SETUP_VERSION);
+});
+
 test('setup migration is idempotent', () => {
   const storage = new MemoryStorage();
   storage.setItem(SETUP_KEYS.LEGACY_INITIALIZED, 'true');
@@ -90,18 +100,18 @@ test('setup state does not mutate financial ledger keys', () => {
   const storage = new MemoryStorage();
   storage.setItem('spendwise_expenses', '[{"id":1}]');
   storage.setItem('spendwise_budgets', '[{"monthKey":"2026-09"}]');
-  storage.setItem('spendwise_attachments_v1', '[{"id":"a"}]');
+  storage.setItem('spendwise_expense_attachments_v1', '[{"id":"a"}]');
   const before = {
     expenses: storage.getItem('spendwise_expenses'),
     budgets: storage.getItem('spendwise_budgets'),
-    attachments: storage.getItem('spendwise_attachments_v1'),
+    attachments: storage.getItem('spendwise_expense_attachments_v1'),
   };
   initializeSetupState(storage);
   completeInitialSetup(storage);
   assert.deepEqual({
     expenses: storage.getItem('spendwise_expenses'),
     budgets: storage.getItem('spendwise_budgets'),
-    attachments: storage.getItem('spendwise_attachments_v1'),
+    attachments: storage.getItem('spendwise_expense_attachments_v1'),
   }, before);
 });
 
@@ -175,11 +185,28 @@ test('replay currency changes preserve existing conversion safeguards', () => {
   assert.match(appSource, /throw new Error\('A conversion rate is required for an existing financial ledger\.'\)/);
 });
 
+
+test('backend AI rate limiting remains per-IP, bounded, and exposes Retry-After', () => {
+  assert.match(serverSource, /const key = req\.ip \|\| req\.socket\.remoteAddress/);
+  assert.match(serverSource, /RATE_BUCKET_MAX_ENTRIES = 2_000/);
+  assert.match(serverSource, /cleanupRateBuckets\(rateBuckets, now, RATE_BUCKET_MAX_ENTRIES\)/);
+  assert.match(serverSource, /'Retry-After'/);
+  assert.match(serverSource, /res\.status\(429\)/);
+});
+
+test('backend request and AI image input bounds remain enforced', () => {
+  assert.match(serverSource, /express\.json\(\{ limit: '16mb' \}\)/);
+  assert.match(serverSource, /MAX_IMAGE_BASE64_LENGTH = 12_000_000/);
+  assert.match(serverSource, /imageBase64\.length > MAX_IMAGE_BASE64_LENGTH/);
+  assert.match(serverSource, /safeString\(/);
+  assert.match(serverSource, /safeInsightArray\(/);
+});
+
 test('WP17 product shape remains frozen', () => {
   const entries = navSource.match(/\{ screen: '(home|history|insights|statistics)'/g) || [];
   assert.equal(entries.length, 4);
   assert.match(historySource, /\['ALL',[\s\S]*\['DAY',[\s\S]*\['CATEGORY'/);
   assert.doesNotMatch(detailSource, /onEdit|Edit2|onDelete/);
-  assert.match(insightSource, /slice\(0, 3\)|remaining = 3/);
+  assert.match(insightSource, /Math\.min\(3, limit\)/);
   assert.match(statisticsSource, /CategoryStatisticsSection/);
 });
