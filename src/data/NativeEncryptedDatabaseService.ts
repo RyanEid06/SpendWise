@@ -718,6 +718,14 @@ export class NativeEncryptedDatabaseService {
     const snapshot = await readSnapshot(destination);
     validateFinancialState(snapshot.state);
 
+    const journal = safeReadMigration(storage);
+    if (
+      !journal ||
+      (journal.phase !== 'active' && journal.phase !== 'complete')
+    ) {
+      throw new Error('DATABASE_MIGRATION_NOT_ACTIVE');
+    }
+
     const sourceExists =
       (await sqlite.isDatabase(PLAINTEXT_DATABASE_NAME)).result === true;
     if (sourceExists) {
@@ -728,7 +736,6 @@ export class NativeEncryptedDatabaseService {
       }
     }
 
-    const journal = safeReadMigration(storage);
     writeMigration(
       storage,
       'complete',
