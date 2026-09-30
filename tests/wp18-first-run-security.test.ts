@@ -249,4 +249,3 @@ test('final audit leaves no stale browser-only clear-data copy or old backend ve
   assert.match(settings, /financialDataCleared/);
   assert.match(settings, /financialDataClearFailed/);
 });
-
