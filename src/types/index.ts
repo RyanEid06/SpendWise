@@ -228,7 +228,8 @@ export interface CategoryTrend {
   percentageOfPeriod: number;
   monthlyData: CategoryTrendMonth[];
   trendDirection: 'UP' | 'DOWN' | 'STABLE';
-  trendPercent: number; // change from first month to last month in period
+  trendPercent: number; // change between the two most recent comparable complete months
+  hasComparableHistory: boolean;
 }
 
 export interface StatisticsOverview {

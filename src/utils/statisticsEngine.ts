@@ -186,12 +186,14 @@ export class StatisticsEngine {
         // intentionally excluded so an incomplete month is not labeled as a drop.
         let trendDirection: 'UP' | 'DOWN' | 'STABLE' = 'STABLE';
         let trendPercent = 0;
+        let hasComparableHistory = false;
         const completeMonths = monthlyData.filter((m) => m.monthKey !== currentCalendarKey);
         if (completeMonths.length >= 2) {
           const previous = completeMonths[completeMonths.length - 2].amount;
           const latest = completeMonths[completeMonths.length - 1].amount;
 
           if (previous > 0) {
+            hasComparableHistory = true;
             trendPercent = ((latest - previous) / previous) * 100;
             if (trendPercent > 10) trendDirection = 'UP';
             else if (trendPercent < -10) trendDirection = 'DOWN';
@@ -205,6 +207,7 @@ export class StatisticsEngine {
           monthlyData,
           trendDirection,
           trendPercent,
+          hasComparableHistory,
         };
       })
       .sort((a, b) => b.totalSpent - a.totalSpent);

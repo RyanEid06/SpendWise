@@ -1,10 +1,19 @@
 import React from 'react';
-import { ChevronDown, ChevronUp, PieChart, TrendingDown, TrendingUp } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronUp,
+  Info,
+  Minus,
+  PieChart,
+  TrendingDown,
+  TrendingUp,
+} from 'lucide-react';
 import { Language, StatisticsOverview } from '../types';
 import { formatCurrency } from '../utils/currency';
 import { getLocalizedCategoryName, getLocalizedMonthName, t } from '../utils/translations';
 import { wp17Copy } from '../utils/wp17Copy';
-import { currentMonthYear, getMonthKey } from '../utils/date';
+import { getCategoryInfo } from '../utils/categories';
+import { CategorySpendRow } from './CategorySpendRow';
 
 interface Props {
   stats: StatisticsOverview;
@@ -41,67 +50,96 @@ export const CategoryStatisticsSection: React.FC<Props> = ({
         <div className="space-y-2.5">
           {stats.categoryTrends.map((catTrend) => {
             const isExpanded = expandedCategory === catTrend.category;
-            const liveCurrentMonthKey = getMonthKey(currentMonthYear());
-            const hasComparableHistory =
-              catTrend.monthlyData.filter((item) => item.monthKey !== liveCurrentMonthKey && item.amount > 0).length >= 2;
-            const trendLabel = !hasComparableHistory
-              ? wp17Copy(language, 'trendUnavailable')
-              : catTrend.trendDirection === 'UP'
-                ? wp17Copy(language, 'trendUp')
-                : catTrend.trendDirection === 'DOWN'
-                  ? wp17Copy(language, 'trendDown')
-                  : wp17Copy(language, 'trendStable');
+            const categoryInfo = getCategoryInfo(catTrend.category);
+
+            let TrendIcon = Minus;
+            let trendLabel = wp17Copy(language, 'trendStable');
+            let trendTone = 'text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/50 border-sky-200/80 dark:border-sky-900/60';
+            let trendState = 'STABLE';
+
+            if (!catTrend.hasComparableHistory) {
+              TrendIcon = Info;
+              trendLabel = wp17Copy(language, 'trendUnavailable');
+              trendTone = 'text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900/70 border-slate-200 dark:border-slate-800';
+              trendState = 'INSUFFICIENT_HISTORY';
+            } else if (catTrend.trendDirection === 'UP') {
+              TrendIcon = TrendingUp;
+              trendLabel = wp17Copy(language, 'trendUp');
+              trendTone = 'text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/50 border-rose-200/80 dark:border-rose-900/60';
+              trendState = 'UP';
+            } else if (catTrend.trendDirection === 'DOWN') {
+              TrendIcon = TrendingDown;
+              trendLabel = wp17Copy(language, 'trendDown');
+              trendTone = 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200/80 dark:border-emerald-900/60';
+              trendState = 'DOWN';
+            }
+
+            const trendPercentLabel =
+              catTrend.hasComparableHistory && catTrend.trendDirection !== 'STABLE'
+                ? (catTrend.trendPercent > 0 ? '+' : '') + Math.round(catTrend.trendPercent) + '%'
+                : null;
+
+            const localizedCategory = getLocalizedCategoryName(catTrend.category, language);
 
             return (
-              <div key={catTrend.category} className="rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/70 dark:border-slate-800/60 overflow-hidden">
+              <div
+                key={catTrend.category}
+                className="rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/70 dark:border-slate-800/60 overflow-hidden"
+              >
                 <button
                   type="button"
                   onClick={() => onToggleCategory(catTrend.category)}
                   aria-expanded={isExpanded}
-                  className="w-full min-h-[52px] p-3.5 flex items-center justify-between gap-3 text-left rtl:text-right hover:bg-slate-100 dark:hover:bg-slate-900/60 transition-colors"
+                  aria-label={(isExpanded ? wp17Copy(language, 'collapseCategory') : wp17Copy(language, 'expandCategory')) + ': ' + localizedCategory}
+                  className="w-full min-h-[56px] p-3.5 text-left rtl:text-right hover:bg-slate-100 dark:hover:bg-slate-900/60 transition-colors"
                 >
-                  <div className="min-w-0">
-                    <div className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
-                      {getLocalizedCategoryName(catTrend.category, language)}
-                    </div>
-                    <div dir="ltr" className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 [overflow-wrap:anywhere]">
-                      {formatCurrency(catTrend.totalSpent, currencyCode)} · {catTrend.percentageOfPeriod.toFixed(1)}%
-                    </div>
-                  </div>
+                  <CategorySpendRow
+                    categoryName={catTrend.category}
+                    amount={catTrend.totalSpent}
+                    percentage={catTrend.percentageOfPeriod}
+                    iconEmoji={categoryInfo.iconEmoji}
+                    color={categoryInfo.color}
+                    currencyCode={currencyCode}
+                    language={language}
+                  />
 
-                  <div className="shrink-0 flex items-center gap-2">
+                  <div className="mt-2.5 flex items-center justify-between gap-2">
                     <span
-                      className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg ${
-                        !hasComparableHistory || catTrend.trendDirection === 'STABLE'
-                          ? 'text-slate-600 dark:text-slate-300 bg-slate-200/70 dark:bg-slate-800'
-                          : catTrend.trendDirection === 'UP'
-                            ? 'text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-950/60'
-                            : 'text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/60'
-                      }`}
+                      data-trend-state={trendState}
+                      className={'min-w-0 inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-lg border ' + trendTone}
                     >
-                      {hasComparableHistory && catTrend.trendDirection === 'UP' && <TrendingUp className="w-3 h-3" />}
-                      {hasComparableHistory && catTrend.trendDirection === 'DOWN' && <TrendingDown className="w-3 h-3" />}
-                      <span>
-                        {trendLabel}
-                        {hasComparableHistory && catTrend.trendDirection !== 'STABLE'
-                          ? ` ${catTrend.trendPercent > 0 ? '+' : ''}${Math.round(catTrend.trendPercent)}%`
-                          : ''}
-                      </span>
+                      <TrendIcon className="w-3 h-3 shrink-0" aria-hidden="true" />
+                      <span className="min-w-0 break-words">{trendLabel}</span>
+                      {trendPercentLabel && (
+                        <span dir="ltr" className="tabular-nums shrink-0">{trendPercentLabel}</span>
+                      )}
                     </span>
-                    {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+
+                    <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                      <span className="hidden min-[360px]:inline">{t(language, 'tapToExpand')}</span>
+                      {isExpanded
+                        ? <ChevronUp className="w-4 h-4" aria-hidden="true" />
+                        : <ChevronDown className="w-4 h-4" aria-hidden="true" />}
+                    </span>
                   </div>
                 </button>
 
                 {isExpanded && (
-                  <div className="px-3.5 pb-3.5 pt-1 border-t border-slate-200 dark:border-slate-800/80 space-y-2">
+                  <div className="px-3.5 pb-3.5 pt-2 border-t border-slate-200 dark:border-slate-800/80 space-y-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      {t(language, 'monthlyHistory')}
+                    </p>
                     {catTrend.monthlyData.map((item) => {
                       const [year, month] = item.monthKey.split('-').map(Number);
                       return (
-                        <div key={item.monthKey} className="flex items-center justify-between gap-3 text-xs py-1.5 px-2.5 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200/50 dark:border-transparent">
-                          <span className="text-slate-600 dark:text-slate-300">
+                        <div
+                          key={item.monthKey}
+                          className="flex flex-col min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between gap-1.5 min-[360px]:gap-3 text-xs py-1.5 px-2.5 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200/50 dark:border-transparent"
+                        >
+                          <span className="text-slate-600 dark:text-slate-300 break-words">
                             {getLocalizedMonthName({ year, month }, language)}
                           </span>
-                          <span dir="ltr" className="font-bold tabular-nums text-slate-900 dark:text-white text-right">
+                          <span dir="ltr" className="min-w-0 font-bold tabular-nums text-slate-900 dark:text-white text-left min-[360px]:text-right rtl:min-[360px]:text-left [overflow-wrap:anywhere]">
                             {formatCurrency(item.amount, currencyCode)}
                             <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal mx-1">
                               ({item.count})

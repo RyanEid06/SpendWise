@@ -84,6 +84,9 @@ jobs:
       - name: Run WP21 statistics density regression tests
         run: npm run test:wp21
 
+      - name: Run WP22 category statistics and ranking regression tests
+        run: npm run test:wp22
+
       - name: Run WP23 Settings regression tests
         run: npm run test:wp23
 
