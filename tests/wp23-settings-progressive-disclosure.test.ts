@@ -2,7 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const settings = readFileSync('src/screens/SettingsScreen.tsx', 'utf8');
+const settingsScreen = readFileSync('src/screens/SettingsScreen.tsx', 'utf8');
+const settingsOverview = readFileSync('src/features/settings/SettingsOverview.tsx', 'utf8');
+const settingsCopy = readFileSync('src/features/settings/settingsCopy.ts', 'utf8');
+const settingsRow = readFileSync('src/features/settings/SettingsRow.tsx', 'utf8');
+const settings = [settingsScreen, settingsOverview, settingsCopy, settingsRow].join('\n');
 
 function indexOfRequired(marker: string): number {
   const index = settings.indexOf(marker);
@@ -56,8 +60,8 @@ test('complex settings areas use dedicated internal sub-screens', () => {
 });
 
 test('App Lock keeps PIN validation, toggle and timeout controls', () => {
-  includesRequired('StorageManager.hasLockPin()');
-  includesRequired('StorageManager.setLockPin(newPin)');
+  includesRequired('legacyAppLockService.hasPin()');
+  includesRequired('legacyAppLockService.savePin(newPin)');
   includesRequired("if (!/^\\d{4,8}$/.test(newPin)");
   includesRequired('onAppLockToggle(enabled)');
   includesRequired('onLockTimeoutChange(option.seconds)');
@@ -65,13 +69,13 @@ test('App Lock keeps PIN validation, toggle and timeout controls', () => {
 });
 
 test('Storage and backup capabilities remain reachable without engine rewrites', () => {
-  includesRequired('StorageManager.getMediaStorageSummary()');
+  includesRequired('mediaService.getStorageSummary()');
   includesRequired('setShowMediaLibrary(true)');
-  includesRequired('StorageManager.createBackupV2(includeMedia)');
-  includesRequired('StorageManager.createBackupJson()');
-  includesRequired('StorageManager.createCsvExport()');
-  includesRequired('StorageManager.restoreBackup(pendingImportBackup, replaceExisting)');
-  includesRequired('StorageManager.restoreBackupV2(pendingV2Backup.file, replaceExisting)');
+  includesRequired('backupService.createV2(includeMedia)');
+  includesRequired('backupService.createLegacy()');
+  includesRequired('backupService.createCsv()');
+  includesRequired('backupService.restoreLegacy(pendingImportBackup, replaceExisting)');
+  includesRequired('backupService.restoreV2(pendingV2Backup.file, replaceExisting)');
   includesRequired('BACKUP_CURRENCY_MISMATCH');
 });
 
