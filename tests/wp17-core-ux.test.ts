@@ -112,7 +112,7 @@ test('History exposes All, Day, and Category controls while keeping All as initi
 
 test('History metadata is positive-only and attachment counts are derived once per ledger change', () => {
   assert.match(historySource, /AttachmentStorage\.getAllAttachments\(\)/);
-  assert.match(cardSource, /attachmentCount > 0/);
+  assert.match(cardSource, /attachmentCount\s*>\s*0/);
   assert.match(cardSource, /Boolean\(expense\.note\?\.trim\(\)\)/);
   assert.doesNotMatch(cardSource, /No photos|No note/);
 });
