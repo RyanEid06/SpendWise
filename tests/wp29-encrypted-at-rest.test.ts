@@ -177,11 +177,16 @@ test('WP29 SQLCipher configuration and staged migration preserve the plaintext s
   assert.match(db, /closeConnection\(sqlite, ENCRYPTED_DATABASE_NAME\)/);
   assert.match(db, /writeMigration\([\s\S]*'active'/);
 
-  const activeIndex = db.lastIndexOf("'active'");
+  const activationIndex = db.indexOf(
+    "writeMigration(\n        storage,\n        'active'"
+  );
+  const finalizeIndex = db.indexOf('async finalizePlaintextSourceCleanup');
   const plaintextDeleteIndex = db.lastIndexOf(
     'deleteDatabase(sqlite, PLAINTEXT_DATABASE_NAME, false)'
   );
-  assert.ok(activeIndex >= 0 && plaintextDeleteIndex > activeIndex);
+  assert.ok(activationIndex >= 0);
+  assert.ok(finalizeIndex > activationIndex);
+  assert.ok(plaintextDeleteIndex > finalizeIndex);
 });
 
 test('WP29 retires plaintext legacy financial snapshots only after the encrypted database migration marker is complete', () => {
@@ -197,6 +202,15 @@ test('WP29 retires plaintext legacy financial snapshots only after the encrypted
   );
   const cleanupIndex = localStore.lastIndexOf('clearLegacyFinancialSnapshot(storage)');
   assert.ok(markerIndex >= 0 && cleanupIndex > markerIndex);
+});
+
+test('WP29 defers plaintext DB deletion until legacy localStorage recovery and cleanup have completed', () => {
+  const localStore = source('src/utils/localDataStore.ts');
+  const db = source('src/data/NativeEncryptedDatabaseService.ts');
+  assert.match(localStore, /migrateLegacyLocalStorage\(storage\)[\s\S]*loadNativeState\(\)[\s\S]*finalizePlaintextSourceCleanup\(storage\)/);
+  assert.match(db, /Do not delete the plaintext source here/);
+  assert.match(db, /finalizePlaintextSourceCleanup/);
+  assert.match(db, /'complete'/);
 });
 
 test('WP29 DB failures do not silently manufacture replacement keys for existing encrypted data', () => {
