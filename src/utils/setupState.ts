@@ -20,6 +20,23 @@ function browserStorage(): SetupKeyValueStore {
   return localStorage;
 }
 
+const EXISTING_STATE_KEYS = [
+  SETUP_KEYS.LEGACY_INITIALIZED,
+  'spendwise_currency',
+  'spendwise_theme',
+  'spendwise_language',
+  'spendwise_app_lock_enabled',
+  'spendwise_lock_timeout_seconds',
+  'spendwise_lock_pin',
+  'spendwise_expenses',
+  'spendwise_budgets',
+  'spendwise_expense_attachments_v1',
+] as const;
+
+function hasPreWp18State(storage: SetupKeyValueStore): boolean {
+  return EXISTING_STATE_KEYS.some((key) => storage.getItem(key) !== null);
+}
+
 function parsedVersion(value: string | null): number {
   const parsed = Number.parseInt(value || '', 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
@@ -37,7 +54,7 @@ export function initializeSetupState(
     return 'fresh';
   }
 
-  if (storage.getItem(SETUP_KEYS.LEGACY_INITIALIZED) === 'true') {
+  if (hasPreWp18State(storage)) {
     storage.setItem(SETUP_KEYS.VERSION, String(CURRENT_SETUP_VERSION));
     storage.removeItem(SETUP_KEYS.PENDING);
     return 'migrated';
