@@ -9,6 +9,10 @@ healthRouter.get('/health', (_req, res) => {
     ok: true,
     aiConfigured: geminiService.isConfigured(),
     authentication: 'installation-signature-v1',
-    legacyCompatibilityEnabled: Boolean(serverConfig.legacyApiToken),
+    legacyCompatibilityEnabled: Boolean(
+      serverConfig.legacyApiToken &&
+        serverConfig.legacyCompatibilityUntilMs != null &&
+        Date.now() < serverConfig.legacyCompatibilityUntilMs
+    ),
   });
 });
