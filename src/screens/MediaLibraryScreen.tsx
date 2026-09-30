@@ -116,7 +116,7 @@ export const MediaLibraryScreen: React.FC<{ language: Language; onClose: () => v
   return (
     <div className="space-y-4 pb-28 animate-screen-enter" data-native-back-layer="true">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={onClose} className="min-w-[48px] min-h-[48px] rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-center">
+        <button type="button" onClick={onClose} className="min-w-[48px] min-h-[48px] rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-center" aria-label={text.back}>
           <ArrowLeft className="w-5 h-5 rtl:rotate-180" />
         </button>
         <div>
@@ -188,7 +188,7 @@ export const MediaLibraryScreen: React.FC<{ language: Language; onClose: () => v
           <div className="w-full max-w-md rounded-3xl bg-white dark:bg-[#111928] overflow-hidden border border-slate-200 dark:border-slate-800">
             <div className="flex justify-between items-center p-3 border-b border-slate-200 dark:border-slate-800">
               <div className="font-bold text-sm">{selectedExpense?.description || text.unknown}</div>
-              <button type="button" onClick={() => setSelected(null)} className="min-w-[48px] min-h-[48px] flex items-center justify-center"><X className="w-5 h-5" /></button>
+              <button type="button" onClick={() => setSelected(null)} className="min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label={text.close}><X className="w-5 h-5" /></button>
             </div>
             <LazyAttachmentImage item={selected} className="aspect-square" />
             <div className="p-4 space-y-2 text-xs">
