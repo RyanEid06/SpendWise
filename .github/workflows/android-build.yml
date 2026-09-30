@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - 'maintenance/**'
+      - 'wp17/**'
     tags:
       - 'v*'
 
@@ -62,6 +63,9 @@ jobs:
 
       - name: Run final product freeze regression tests
         run: npm run test:final-freeze
+
+      - name: Run WP17 core UX regression tests
+        run: npm run test:wp17
 
       - name: Sync Capacitor Android
         run: npm run android:sync
