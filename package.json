@@ -16,7 +16,8 @@
     "test:persistence": "tsx --test tests/persistence.test.ts",
     "test:media-backup": "tsx --test tests/media-backup.test.ts",
     "test:core-ux": "tsx --test tests/core-ux.test.ts",
-    "test:final-freeze": "tsx --test tests/final-freeze.test.ts"
+    "test:final-freeze": "tsx --test tests/final-freeze.test.ts",
+    "test:wp17": "tsx --test tests/wp17-core-ux.test.ts"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",
