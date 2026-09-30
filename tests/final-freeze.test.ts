@@ -8,7 +8,9 @@ import { StatisticsEngine } from '../src/utils/statisticsEngine';
 
 const navigation = readFileSync('src/components/Navigation.tsx', 'utf8');
 const topBar = readFileSync('src/components/AppTopBar.tsx', 'utf8');
-const app = readFileSync('src/App.tsx', 'utf8');
+const app = readFileSync('src/app/AppShell.tsx', 'utf8');
+const appNavigation = readFileSync('src/app/navigation/useAppNavigation.ts', 'utf8');
+const themeLanguage = readFileSync('src/app/hooks/useThemeLanguage.ts', 'utf8');
 const css = readFileSync('src/index.css', 'utf8');
 const freeze = readFileSync('PRODUCT_FREEZE.md', 'utf8');
 
@@ -24,16 +26,16 @@ test('Settings is secondary in the top app bar and returns to its previous prima
   assert.match(topBar, /onOpenSettings/);
   assert.match(topBar, /onCloseSettings/);
   assert.match(topBar, /aria-label=\{copy\.settings\}/);
-  assert.match(app, /settingsReturnScreen/);
-  assert.match(app, /currentScreen === 'settings'[\s\S]*setCurrentScreen\(settingsReturnScreen\)/);
-  assert.match(app, /currentScreen !== 'settings' && \([\s\S]*<Navigation/);
+  assert.match(appNavigation, /settingsReturnScreen/);
+  assert.match(appNavigation, /case 'close-settings':[\s\S]*currentScreen: state\.settingsReturnScreen/);
+  assert.match(app, /navigation\.currentScreen !== 'settings' && \([\s\S]*<Navigation/);
 });
 
 test('app exposes a keyboard skip link and language direction remains explicit', () => {
   assert.match(app, /href="#main-content"/);
   assert.match(app, /id="main-content"/);
-  assert.match(app, /root\.setAttribute\('dir', 'rtl'\)/);
-  assert.match(app, /root\.setAttribute\('lang', language\)/);
+  assert.match(themeLanguage, /root\.setAttribute\('dir', directionForLanguage\(language\)\)/);
+  assert.match(themeLanguage, /root\.setAttribute\('lang', language\)/);
 });
 
 test('accessibility baseline enforces 48px targets, visible focus and reduced motion', () => {
