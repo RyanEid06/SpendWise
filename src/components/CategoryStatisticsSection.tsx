@@ -4,6 +4,7 @@ import { Language, StatisticsOverview } from '../types';
 import { formatCurrency } from '../utils/currency';
 import { getLocalizedCategoryName, getLocalizedMonthName, t } from '../utils/translations';
 import { wp17Copy } from '../utils/wp17Copy';
+import { currentMonthYear, getMonthKey } from '../utils/date';
 
 interface Props {
   stats: StatisticsOverview;
@@ -40,7 +41,9 @@ export const CategoryStatisticsSection: React.FC<Props> = ({
         <div className="space-y-2.5">
           {stats.categoryTrends.map((catTrend) => {
             const isExpanded = expandedCategory === catTrend.category;
-            const hasComparableHistory = catTrend.monthlyData.filter((item) => item.amount > 0).length >= 2;
+            const liveCurrentMonthKey = getMonthKey(currentMonthYear());
+            const hasComparableHistory =
+              catTrend.monthlyData.filter((item) => item.monthKey !== liveCurrentMonthKey && item.amount > 0).length >= 2;
             const trendLabel = !hasComparableHistory
               ? wp17Copy(language, 'trendUnavailable')
               : catTrend.trendDirection === 'UP'
