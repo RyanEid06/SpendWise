@@ -13,7 +13,9 @@ import {
 
 const read = (path: string) => readFileSync(path, 'utf8');
 
-const app = read('src/App.tsx');
+const appShell = read('src/app/AppShell.tsx');
+const deleteUndo = read('src/app/hooks/useExpenseDeleteUndo.ts');
+const androidBack = read('src/app/navigation/useAndroidBack.ts');
 const navigation = read('src/components/Navigation.tsx');
 const manifest = read('android/app/src/main/AndroidManifest.xml');
 const topBar = read('src/components/AppTopBar.tsx');
@@ -84,13 +86,13 @@ test('WP24 keeps History delete swipe-first, accessible, staged, and non-duplica
   assert.match(swipeable, /wp17Copy\(language, 'deleteAction'\)/);
   assert.doesNotMatch(detail, /Trash2|onDelete|deleteAction/);
 
-  const deleteHandlerStart = app.indexOf('const handleDeleteExpense');
-  const deleteHandlerEnd = app.indexOf('const handleSetStartingMoney', deleteHandlerStart);
-  assert.ok(deleteHandlerStart >= 0 && deleteHandlerEnd > deleteHandlerStart);
-  const deleteHandler = app.slice(deleteHandlerStart, deleteHandlerEnd);
-  assert.match(deleteHandler, /deleteUndoRef\.current\?\.stage/);
-  assert.doesNotMatch(deleteHandler, /StorageManager\.deleteExpenses/);
-  assert.match(app, /onCommit: async \(entries\) => \{[\s\S]*StorageManager\.deleteExpenses/);
+  const stageDeleteStart = deleteUndo.indexOf('const stageDelete');
+  const stageDeleteEnd = deleteUndo.indexOf('useEffect', stageDeleteStart);
+  assert.ok(stageDeleteStart >= 0 && stageDeleteEnd > stageDeleteStart);
+  const stageDelete = deleteUndo.slice(stageDeleteStart, stageDeleteEnd);
+  assert.match(stageDelete, /controllerRef\.current\?\.stage/);
+  assert.doesNotMatch(stageDelete, /StorageManager\.deleteExpenses/);
+  assert.match(deleteUndo, /onCommit: async \(entries\) => \{[\s\S]*StorageManager\.deleteExpenses/);
 });
 
 test('WP24 staged deletion does not commit before the 5-second expiry and rapid deletes share one batch', () => {
@@ -230,15 +232,14 @@ test('WP24 keeps Settings progressive disclosure and nested native Back hierarch
   assert.match(settings, /type SettingsPage = 'overview' \| 'app-lock' \| 'storage-media' \| 'backup-restore'/);
   assert.match(settings, /data-native-back-layer=\{modalLayerOpen \? 'true' : undefined\}/);
 
-  const appBack = app.slice(app.indexOf("CapacitorApp.addListener('backButton'"), app.indexOf('// Filter expenses'));
   const backMarkers = [
-    '[data-attachment-viewer="true"]',
-    '[data-native-back-layer="true"]',
-    'showAddModal || editingExpense !== null',
-    'showBudgetModal',
-    "currentScreen === 'settings'",
-    "currentScreen !== 'home'",
-  ].map((marker) => appBack.indexOf(marker));
+    'state.attachmentViewerOpen',
+    'state.nativeBackLayerOpen',
+    'state.expenseEditorOpen',
+    'state.budgetModalOpen',
+    "state.currentScreen === 'settings'",
+    "state.currentScreen !== 'home'",
+  ].map((marker) => androidBack.indexOf(marker));
   for (const index of backMarkers) assert.ok(index >= 0, 'missing Back marker');
   for (let index = 1; index < backMarkers.length; index += 1) {
     assert.ok(backMarkers[index - 1] < backMarkers[index], 'native Back priority regressed');
