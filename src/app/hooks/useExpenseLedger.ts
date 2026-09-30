@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { Expense, MonthlyBudget } from '../../types';
 import { getMonthKey, MonthYear } from '../../utils/date';
 import { AttachmentEditPayload } from '../../utils/attachmentStorage';
-import { StorageManager } from '../../utils/storage';
+import { expenseService } from '../../features/expenses/ExpenseService';
 
 export interface ExpenseMutationInput {
   amount: number;
@@ -20,25 +20,25 @@ export function filterVisibleExpenses(expenses: Expense[], hiddenExpenseIds: num
 }
 
 export function useExpenseLedger() {
-  const [expenses, setExpenses] = useState<Expense[]>(() => StorageManager.getExpenses());
-  const [budgets, setBudgets] = useState<MonthlyBudget[]>(() => StorageManager.getBudgets());
-  const [currencyCode, setCurrencyCode] = useState<string>(() => StorageManager.getCurrencyCode());
+  const [expenses, setExpenses] = useState<Expense[]>(() => expenseService.listExpenses());
+  const [budgets, setBudgets] = useState<MonthlyBudget[]>(() => expenseService.listBudgets());
+  const [currencyCode, setCurrencyCode] = useState<string>(() => expenseService.getCurrencyCode());
 
   const refreshExpenses = useCallback((hiddenExpenseIds: number[] = []) => {
-    setExpenses(filterVisibleExpenses(StorageManager.getExpenses(), hiddenExpenseIds));
+    setExpenses(filterVisibleExpenses(expenseService.listExpenses(), hiddenExpenseIds));
   }, []);
 
   const refreshFromStorage = useCallback((hiddenExpenseIds: number[] = []) => {
-    setExpenses(filterVisibleExpenses(StorageManager.getExpenses(), hiddenExpenseIds));
-    setBudgets(StorageManager.getBudgets());
-    setCurrencyCode(StorageManager.getCurrencyCode());
+    setExpenses(filterVisibleExpenses(expenseService.listExpenses(), hiddenExpenseIds));
+    setBudgets(expenseService.listBudgets());
+    setCurrencyCode(expenseService.getCurrencyCode());
   }, []);
 
   const addExpense = useCallback(async (
     input: ExpenseMutationInput,
     hiddenExpenseIds: number[] = []
   ) => {
-    await StorageManager.addExpense(
+    await expenseService.create(
       {
         amount: input.amount,
         description: input.description,
@@ -59,7 +59,7 @@ export function useExpenseLedger() {
     const existing = expenses.find((expense) => expense.id === id);
     if (!existing) return;
 
-    await StorageManager.updateExpense(
+    await expenseService.update(
       {
         ...existing,
         amount: input.amount,
@@ -74,35 +74,20 @@ export function useExpenseLedger() {
   }, [expenses, refreshExpenses]);
 
   const setStartingMoney = useCallback(async (monthYear: MonthYear, amount: number) => {
-    await StorageManager.setBudget(getMonthKey(monthYear), amount);
-    setBudgets(StorageManager.getBudgets());
+    await expenseService.upsertBudget(getMonthKey(monthYear), amount);
+    setBudgets(expenseService.listBudgets());
   }, []);
 
   const changeCurrency = useCallback(async (
     code: string,
     targetUnitsPerSourceUnit?: number
   ) => {
-    const storedExpenses = StorageManager.getExpenses();
-    const storedBudgets = StorageManager.getBudgets();
-    const hasFinancialData = storedExpenses.length > 0 || storedBudgets.length > 0;
-
-    if (code === StorageManager.getCurrencyCode()) return;
-
-    if (hasFinancialData) {
-      if (targetUnitsPerSourceUnit === undefined) {
-        throw new Error('A conversion rate is required for an existing financial ledger.');
-      }
-      await StorageManager.convertCurrency(code, targetUnitsPerSourceUnit);
-    } else {
-      await StorageManager.setCurrencyCode(code);
-      StorageManager.clearAnalysisCache();
-    }
-
+    await expenseService.changeCurrency(code, targetUnitsPerSourceUnit);
     refreshFromStorage();
   }, [refreshFromStorage]);
 
   const clearAllData = useCallback(async () => {
-    await StorageManager.clearAllData();
+    await expenseService.clearAllData();
     setExpenses([]);
     setBudgets([]);
   }, []);
