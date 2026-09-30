@@ -152,11 +152,18 @@ export class StorageManager {
     this.invalidateExpenseMonths([previous.date, updated.date]);
   }
 
-  static async deleteExpense(id: number): Promise<void> {
-    const deleted = this.getExpenses().find((expense) => expense.id === id);
-    const detached = await LocalDataStore.deleteExpense(id);
+  static async deleteExpenses(ids: number[]): Promise<void> {
+    const idSet = new Set(ids);
+    const deleted = this.getExpenses().filter((expense) => idSet.has(expense.id));
+    if (deleted.length === 0) return;
+
+    const detached = await LocalDataStore.deleteExpenses(deleted.map((expense) => expense.id));
     await AttachmentStorage.deleteDetachedFiles(detached);
-    if (deleted) this.invalidateExpenseMonths([deleted.date]);
+    this.invalidateExpenseMonths(deleted.map((expense) => expense.date));
+  }
+
+  static async deleteExpense(id: number): Promise<void> {
+    await this.deleteExpenses([id]);
   }
 
   static async setBudget(monthKey: string, startingAmount: number): Promise<void> {
