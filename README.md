@@ -62,6 +62,11 @@ The checked-in npm lock currently resolves the frozen release line to:
 
 Major upgrades such as Express 5, Vite 8, TypeScript 7, and Lucide 1.x are intentionally not mixed into maintenance updates without a dedicated compatibility pass.
 
+## Roadmaps
+
+- `UX_REFINEMENT_ROADMAP.md` documents the completed v1.4 UX refinement program.
+- `PRODUCTION_HARDENING_ROADMAP.md` is the approved WP25–WP34 security, architecture, testing, and production-hardening plan. Implementation starts with WP25 and the release version is not bumped until the final gate.
+
 ## Verification
 
 ```bash
