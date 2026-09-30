@@ -20,7 +20,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
-      VITE_API_ACCESS_TOKEN: ${{ secrets.VITE_API_ACCESS_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -102,6 +101,9 @@ jobs:
       - name: Run WP28 secure authentication and Keystore regression tests
         run: npm run test:wp28
 
+      - name: Run WP31 backend authentication and network hardening tests
+        run: npm run test:wp31
+
       - name: Sync Capacitor Android
         run: npm run android:sync
 
@@ -119,49 +121,25 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
-      - name: Smoke test deployed Gemini backend
+      - name: Smoke test deployed Gemini backend with installation authentication
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
         shell: bash
         run: |
           set -euo pipefail
-          if [ -z "${VITE_API_BASE_URL:-}" ] || [ -z "${VITE_API_ACCESS_TOKEN:-}" ]; then
-            echo "::error::Missing VITE_API_BASE_URL or VITE_API_ACCESS_TOKEN for deployed AI smoke test."
+          if [ -z "${VITE_API_BASE_URL:-}" ]; then
+            echo "::error::Missing VITE_API_BASE_URL for deployed AI smoke test."
             exit 1
           fi
 
-          HEALTH="$(curl --silent --show-error --fail --retry 2 --retry-all-errors --connect-timeout 15 --max-time 90             "${VITE_API_BASE_URL%/}/api/health")"
-          HEALTH="$HEALTH" node -e '
-            const h = JSON.parse(process.env.HEALTH || "{}");
-            if (!h.ok || !h.aiConfigured || !h.accessProtected) {
-              console.error("Backend health is not AI-ready:", h);
-              process.exit(1);
-            }
-            console.log("Backend AI health ready; model:", h.model, "fallback:", h.fallbackModel || "not-deployed");
-          '
-
-          BODY='{"summary":{"totalMonthsRecorded":0,"historicalMonthlyAverage":0,"currentMonthKey":"2026-09","currentMonthTotal":0,"previousMonthTotal":null,"categoryBaselines":[],"currentMonthExpenses":[],"recurringCandidates":[]},"currencyCode":"USD","language":"en"}'
-          RESPONSE_FILE="$(mktemp)"
-          HTTP_STATUS="$(curl --silent --show-error --retry 1 --retry-all-errors --connect-timeout 15 --max-time 90             -o "$RESPONSE_FILE" -w "%{http_code}"             -H "Content-Type: application/json"             -H "X-SpendWise-Token: ${VITE_API_ACCESS_TOKEN}"             --data "$BODY"             "${VITE_API_BASE_URL%/}/api/gemini/analyze")"
-          node - "$HTTP_STATUS" "$RESPONSE_FILE" <<'NODE'
-          const fs = require('fs');
-          const status = Number(process.argv[2] || 0);
-          const responseFile = process.argv[3];
-          const body = fs.readFileSync(responseFile, 'utf8');
-          let r = {};
-          try { r = JSON.parse(body); } catch {}
-          if (status < 200 || status >= 300) {
-            console.error("Gemini smoke failed:", status, {
-              error: r.error,
-              message: r.message,
-            });
-            process.exit(1);
-          }
-          if (r.isAiGenerated !== true || typeof r.spendingOverview !== "string") {
-            console.error("Gemini smoke response was not valid JSON.");
-            process.exit(1);
-          }
-          console.log("Live Gemini smoke test passed.");
-          NODE
-          rm -f "$RESPONSE_FILE"
+          for attempt in {1..12}; do
+            if node scripts/deployed-auth-smoke.mjs; then
+              exit 0
+            fi
+            echo "Deployed WP31 backend not ready yet (attempt $attempt/12)."
+            sleep 10
+          done
+          echo "::error::Deployed installation-authenticated Gemini smoke failed."
+          exit 1
 
 
   signed-release:
@@ -172,7 +150,6 @@ jobs:
       contents: write
     env:
       VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
-      VITE_API_ACCESS_TOKEN: ${{ secrets.VITE_API_ACCESS_TOKEN }}
 
     steps:
       - name: Checkout
