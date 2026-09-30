@@ -63,7 +63,7 @@ export function parseInstallationPublicKey(publicKeySpkiBase64: string): KeyObje
     }
 
     const curve = publicKey.asymmetricKeyDetails?.namedCurve;
-    if (curve && curve !== 'prime256v1' && curve !== 'P-256') {
+    if (curve !== 'prime256v1' && curve !== 'P-256') {
       throw new AuthServiceError('INVALID_PUBLIC_KEY', 400);
     }
 
@@ -109,6 +109,7 @@ function normalizeRecord(value: unknown): InstallationRecord | null {
 
 export class FileInstallationRegistry implements InstallationRegistry {
   private readonly records = new Map<string, InstallationRecord>();
+  private loadFailed = false;
 
   constructor(private readonly filePath: string | null) {
     this.load();
@@ -124,13 +125,15 @@ export class FileInstallationRegistry implements InstallationRegistry {
         if (record) this.records.set(record.id, record);
       }
     } catch {
-      // A corrupt registry is not silently replaced. Registration will fail on persist
-      // rather than deleting the only server-side installation state.
+      this.loadFailed = true;
     }
   }
 
   private persist() {
     if (!this.filePath) return;
+    if (this.loadFailed) {
+      throw new Error('Installation registry is unreadable; refusing to overwrite it.');
+    }
     const directory = path.dirname(this.filePath);
     fs.mkdirSync(directory, { recursive: true });
     const temporary = this.filePath + '.tmp';
@@ -224,6 +227,28 @@ function tokenHash(token: string): string {
   return createHash('sha256').update(token, 'utf8').digest('base64url');
 }
 
+function rawP256SignatureToDer(signature: Buffer): Buffer {
+  if (signature.length !== 64) return signature;
+
+  const encodeInteger = (value: Buffer) => {
+    let offset = 0;
+    while (offset < value.length - 1 && value[offset] === 0) offset += 1;
+    let normalized = value.subarray(offset);
+    if ((normalized[0] & 0x80) !== 0) {
+      normalized = Buffer.concat([Buffer.from([0]), normalized]);
+    }
+    return Buffer.concat([
+      Buffer.from([0x02, normalized.length]),
+      normalized,
+    ]);
+  };
+
+  const r = encodeInteger(signature.subarray(0, 32));
+  const s = encodeInteger(signature.subarray(32));
+  const body = Buffer.concat([r, s]);
+  return Buffer.concat([Buffer.from([0x30, body.length]), body]);
+}
+
 export class InstallationAuthService {
   private readonly challenges = new Map<string, ChallengeRecord>();
   private readonly sessions = new Map<string, SessionRecord>();
@@ -313,11 +338,12 @@ export class InstallationAuthService {
     const publicKey = parseInstallationPublicKey(
       installation.publicKeySpkiBase64
     );
+    const suppliedSignature = Buffer.from(signatureBase64, 'base64');
     const valid = verifySignature(
       'sha256',
       Buffer.from(canonicalChallengePayload(challenge), 'utf8'),
       publicKey,
-      Buffer.from(signatureBase64, 'base64')
+      rawP256SignatureToDer(suppliedSignature)
     );
 
     if (!valid) throw new AuthServiceError('INVALID_SIGNATURE', 401);
@@ -348,9 +374,7 @@ export class InstallationAuthService {
       throw new AuthServiceError('ACCESS_TOKEN_EXPIRED', 401);
     }
 
-    const installation = this.getActiveInstallation(session.installationId);
-    this.registry.touch(installation.id, now);
-    return installation;
+    return this.getActiveInstallation(session.installationId);
   }
 
   revokeInstallation(id: string, reason = 'revoked', now = Date.now()): boolean {
