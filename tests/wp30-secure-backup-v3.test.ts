@@ -176,6 +176,41 @@ async function rewriteManifest(blob: Blob, mutate: (manifest: any) => void): Pro
   return zip.generateAsync({ type: 'blob' });
 }
 
+function findEocdOffset(bytes: Uint8Array): number {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  for (let offset = bytes.byteLength - 22; offset >= Math.max(0, bytes.byteLength - 65_557); offset--) {
+    if (view.getUint32(offset, true) === 0x06054b50) return offset;
+  }
+  throw new Error('EOCD not found');
+}
+
+function centralDirectoryEntries(bytes: Uint8Array): Array<{ offset: number; path: string }> {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const eocd = findEocdOffset(bytes);
+  const totalEntries = view.getUint16(eocd + 10, true);
+  let offset = view.getUint32(eocd + 16, true);
+  const decoder = new TextDecoder();
+  const entries: Array<{ offset: number; path: string }> = [];
+  for (let index = 0; index < totalEntries; index++) {
+    assert.equal(view.getUint32(offset, true), 0x02014b50);
+    const fileNameLength = view.getUint16(offset + 28, true);
+    const extraLength = view.getUint16(offset + 30, true);
+    const commentLength = view.getUint16(offset + 32, true);
+    entries.push({
+      offset,
+      path: decoder.decode(bytes.subarray(offset + 46, offset + 46 + fileNameLength)),
+    });
+    offset += 46 + fileNameLength + extraLength + commentLength;
+  }
+  return entries;
+}
+
+async function mutateZipBytes(blob: Blob, mutate: (bytes: Uint8Array) => void): Promise<Blob> {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  mutate(bytes);
+  return new Blob([bytes], { type: 'application/zip' });
+}
+
 test('Backup v3 round trip uses Argon2id + AES-GCM with unique salt and nonce', async () => {
   const state = stateWith({ expenses: [expense(1, 'Food'), expense(2, 'Transport', 33)] });
   const payload = await innerBackup(state, false);
@@ -481,6 +516,82 @@ test('malicious v2 payloads are rejected before v3 restore mutation', async () =
   bomb.file('media/bomb.jpg', jpegBytes(6 * 1024 * 1024), { compression: 'DEFLATE' });
   const bombBlob = await bomb.generateAsync({ type: 'blob', compression: 'DEFLATE' });
   await assert.rejects(() => validateBackupV2Archive(bombBlob), /BACKUP_V2_MEDIA_SIZE_MISMATCH/);
+});
+
+
+test('ZIP entry-count, aggregate-size and duplicate-path bombs are rejected before inflation', async () => {
+  const tiny = new JSZip();
+  tiny.file(BACKUP_V2_MANIFEST_PATH, '{}');
+  tiny.file('media/a1.jpg', jpegBytes(16));
+  tiny.file('media/a2.jpg', jpegBytes(16));
+  const tinyBlob = await tiny.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+
+  const excessiveFiles = await mutateZipBytes(tinyBlob, (bytes) => {
+    const eocd = findEocdOffset(bytes);
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    view.setUint16(eocd + 8, 10_001, true);
+    view.setUint16(eocd + 10, 10_001, true);
+  });
+  await assert.rejects(() => validateBackupV2Archive(excessiveFiles), /BACKUP_V2_ARCHIVE_LIMIT/);
+
+  const duplicatePaths = await mutateZipBytes(tinyBlob, (bytes) => {
+    const entries = centralDirectoryEntries(bytes);
+    const second = entries.find((entry) => entry.path === 'media/a2.jpg');
+    assert.ok(second);
+    const nameStart = second.offset + 46;
+    const current = new TextDecoder().decode(bytes.subarray(nameStart, nameStart + 'media/a2.jpg'.length));
+    assert.equal(current, 'media/a2.jpg');
+    bytes[nameStart + 'media/a'.length] = '1'.charCodeAt(0);
+  });
+  await assert.rejects(() => validateBackupV2Archive(duplicatePaths), /BACKUP_V2_DUPLICATE_PATH/);
+
+  const aggregate = new JSZip();
+  aggregate.file(BACKUP_V2_MANIFEST_PATH, '{}');
+  for (let index = 0; index < 130; index++) {
+    aggregate.file('media/p' + String(index).padStart(3, '0') + '.jpg', jpegBytes(16), { compression: 'DEFLATE' });
+  }
+  const aggregateBlob = await aggregate.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+  const aggregateBomb = await mutateZipBytes(aggregateBlob, (bytes) => {
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    for (const entry of centralDirectoryEntries(bytes)) {
+      if (entry.path.startsWith('media/') && entry.path.endsWith('.jpg')) {
+        view.setUint32(entry.offset + 24, 4 * 1024 * 1024, true);
+      }
+    }
+  });
+  await assert.rejects(() => validateBackupV2Archive(aggregateBomb), /BACKUP_V2_ARCHIVE_LIMIT/);
+});
+
+test('unsafe numeric magnitudes are rejected in v1 and v2 backup input', async () => {
+  const v2 = await innerBackup(stateWith(), false);
+  const overflowV2 = await rewriteManifest(v2, (manifest) => {
+    manifest.expenses[0].amount = Number.MAX_VALUE;
+  });
+  await assert.rejects(() => validateBackupV2Archive(overflowV2), /LEGACY_EXPENSES_INVALID_RECORD/);
+
+  const legacy = {
+    metadata: {
+      appVersion: '1.4.0',
+      schemaVersion: 1,
+      exportedAt: 1_780_000_000_000,
+      exportedAtFormatted: '2026-09-30 12:00:00',
+      totalExpenses: 1,
+      totalBudgets: 0,
+    },
+    settings,
+    monthlyBudgets: [],
+    expenses: [{
+      id: 1,
+      amount: Number.MAX_VALUE,
+      description: 'Overflow',
+      category: 'Other',
+      date: 1_780_000_000_001,
+      dateFormatted: '2026-05-27',
+      note: null,
+      createdAt: 1_780_000_100_001,
+    }],
+  };
+  assert.throws(() => StorageManager.validateBackup(legacy), /invalid or duplicate expense/i);
 });
 
 test('corrupted v3 photo is rejected before restore mutation', async () => {
