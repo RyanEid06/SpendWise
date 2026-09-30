@@ -30,7 +30,8 @@ export type DatabaseMigrationPhase =
   | 'copying'
   | 'copied'
   | 'verified'
-  | 'active';
+  | 'active'
+  | 'complete';
 
 export interface DatabaseMigrationCounts {
   expenses: number;
@@ -70,7 +71,7 @@ export function decideDatabaseRecovery(input: {
       : 'fail-unencrypted-destination';
   }
   if (!input.sourceExists) return 'open-encrypted';
-  return input.migrationPhase === 'active'
+  return input.migrationPhase === 'active' || input.migrationPhase === 'complete'
     ? 'resume-active-cleanup'
     : 'restart-migration';
 }
@@ -111,7 +112,7 @@ function safeReadMigration(storage: KeyValueStore): DatabaseMigrationRecord | nu
     const parsed = JSON.parse(raw) as DatabaseMigrationRecord;
     if (
       parsed.version !== 1 ||
-      !['copying', 'copied', 'verified', 'active'].includes(parsed.phase) ||
+      !['copying', 'copied', 'verified', 'active', 'complete'].includes(parsed.phase) ||
       !Number.isInteger(parsed.sourceSchemaVersion) ||
       !parsed.expectedCounts ||
       !Object.values(parsed.expectedCounts).every(
@@ -471,6 +472,8 @@ async function ensureSqlCipherSecret(
 }
 
 export class NativeEncryptedDatabaseService {
+  private sqlite: SQLiteConnection | null = null;
+
   constructor(
     private readonly keyService: SecureKeyService = secureKeyService
   ) {}
@@ -480,6 +483,7 @@ export class NativeEncryptedDatabaseService {
       '@capacitor-community/sqlite'
     );
     const sqlite = new SQLiteConnection(CapacitorSQLite);
+    this.sqlite = sqlite;
 
     const destinationExists =
       (await sqlite.isDatabase(ENCRYPTED_DATABASE_NAME)).result === true;
@@ -568,18 +572,12 @@ export class NativeEncryptedDatabaseService {
         'secret'
       );
       await assertSpendWiseDatabaseIntegrity(destination);
-      const counts = await countRows(destination);
-      if (!countsEqual(counts, journal.expectedCounts)) {
-        throw new Error('DATABASE_MIGRATION_COUNT_MISMATCH');
-      }
       const snapshot = await readSnapshot(destination);
       validateFinancialState(snapshot.state);
-      try {
-        await deleteDatabase(sqlite, PLAINTEXT_DATABASE_NAME, false);
-      } catch {
-        throw new Error('PLAINTEXT_DATABASE_CLEANUP_FAILED');
-      }
-      sourceExists = false;
+
+      // Do not delete the plaintext source here. LocalDataStore may still need
+      // to reconcile a valid v1.4 localStorage recovery snapshot. The caller
+      // explicitly finalizes source cleanup only after that recovery succeeds.
       return destination;
     }
 
@@ -628,6 +626,48 @@ export class NativeEncryptedDatabaseService {
       { expenses: 0, budgets: 0, attachments: 0, meta: 0 }
     );
     return reopened;
+  }
+
+  async finalizePlaintextSourceCleanup(
+    storage: KeyValueStore
+  ): Promise<void> {
+    const sqlite = this.sqlite;
+    if (!sqlite) throw new Error('DATABASE_SERVICE_NOT_OPEN');
+
+    const destinationExists =
+      (await sqlite.isDatabase(ENCRYPTED_DATABASE_NAME)).result === true;
+    if (!destinationExists) throw new Error('ENCRYPTED_DATABASE_MISSING');
+    const destinationEncrypted =
+      (await sqlite.isDatabaseEncrypted(ENCRYPTED_DATABASE_NAME)).result === true;
+    if (!destinationEncrypted) throw new Error('ENCRYPTED_DATABASE_EXPECTED');
+
+    const destination = await openConnection(
+      sqlite,
+      ENCRYPTED_DATABASE_NAME,
+      true,
+      'secret'
+    );
+    await assertSpendWiseDatabaseIntegrity(destination);
+    const snapshot = await readSnapshot(destination);
+    validateFinancialState(snapshot.state);
+
+    const sourceExists =
+      (await sqlite.isDatabase(PLAINTEXT_DATABASE_NAME)).result === true;
+    if (sourceExists) {
+      try {
+        await deleteDatabase(sqlite, PLAINTEXT_DATABASE_NAME, false);
+      } catch {
+        throw new Error('PLAINTEXT_DATABASE_CLEANUP_FAILED');
+      }
+    }
+
+    const journal = safeReadMigration(storage);
+    writeMigration(
+      storage,
+      'complete',
+      journal?.sourceSchemaVersion ?? SPENDWISE_DATABASE_SCHEMA_VERSION,
+      snapshotCounts(snapshot)
+    );
   }
 
   private async migrateFromPlaintext(
@@ -709,13 +749,8 @@ export class NativeEncryptedDatabaseService {
         expectedCounts
       );
 
-      await closeConnection(sqlite, PLAINTEXT_DATABASE_NAME);
-      try {
-        await deleteDatabase(sqlite, PLAINTEXT_DATABASE_NAME, false);
-      } catch {
-        throw new Error('PLAINTEXT_DATABASE_CLEANUP_FAILED');
-      }
-
+      // Activation is deliberately separate from destruction. The caller must
+      // finish legacy localStorage recovery before deleting the v1.4 source.
       return destination;
     } catch (error) {
       // Never delete the plaintext source here. Any failure before cleanup keeps
