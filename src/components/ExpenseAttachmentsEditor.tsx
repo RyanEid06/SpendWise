@@ -22,6 +22,7 @@ import {
   waitForPhotoUiPaint,
   type AcquiredPhoto,
 } from '../utils/imageAcquisition';
+import { ViewportPortal } from './ViewportPortal';
 
 interface ExpenseAttachmentsEditorProps {
   expenseId?: number;
@@ -414,7 +415,7 @@ export const ExpenseAttachmentsEditor: React.FC<ExpenseAttachmentsEditorProps> =
         disabled={disabled || isPreparing || isAcquiring}
         onChange={(event) => setSelectedKind(event.target.value as ExpenseAttachmentKind)}
         aria-label={ta(language, 'attachmentKind')}
-        className="w-full min-h-[44px] px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#111928] text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        className="w-full min-h-[48px] px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#111928] text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
       >
         <option value="purchase">{ta(language, 'kindPurchase')}</option>
         <option value="receipt">{ta(language, 'kindReceipt')}</option>
@@ -426,7 +427,7 @@ export const ExpenseAttachmentsEditor: React.FC<ExpenseAttachmentsEditorProps> =
           type="button"
           disabled={disabled || isPreparing || isAcquiring || totalVisible >= MAX_ATTACHMENTS_PER_EXPENSE}
           onClick={() => void beginCameraAcquisition()}
-          className="min-h-[44px] px-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-extrabold flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="min-h-[48px] px-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-extrabold flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Camera className="w-4 h-4" />
           <span>{ta(language, 'takePhoto')}</span>
@@ -435,7 +436,7 @@ export const ExpenseAttachmentsEditor: React.FC<ExpenseAttachmentsEditorProps> =
           type="button"
           disabled={disabled || isPreparing || isAcquiring || totalVisible >= MAX_ATTACHMENTS_PER_EXPENSE}
           onClick={() => void beginGalleryAcquisition()}
-          className="min-h-[44px] px-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-extrabold flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="min-h-[48px] px-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-extrabold flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isAcquiring ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
           <span>{ta(language, 'choosePhoto')}</span>
@@ -450,6 +451,7 @@ export const ExpenseAttachmentsEditor: React.FC<ExpenseAttachmentsEditorProps> =
       )}
 
       {preview && (
+        <ViewportPortal>
         <div
           data-attachment-viewer="true"
           className="fixed inset-0 z-[70] bg-black/90 flex items-center justify-center p-4"
@@ -461,7 +463,7 @@ export const ExpenseAttachmentsEditor: React.FC<ExpenseAttachmentsEditorProps> =
           <button
             type="button"
             onClick={() => setPreview(null)}
-            className="absolute top-4 right-4 rtl:right-auto rtl:left-4 min-w-[44px] min-h-[44px] rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer"
+            className="absolute top-4 right-4 rtl:right-auto rtl:left-4 min-w-[48px] min-h-[48px] rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer"
             aria-label={ta(language, 'closePreview')}
           >
             <X className="w-5 h-5" />
@@ -473,6 +475,7 @@ export const ExpenseAttachmentsEditor: React.FC<ExpenseAttachmentsEditorProps> =
             onClick={(event) => event.stopPropagation()}
           />
         </div>
+        </ViewportPortal>
       )}
     </section>
   );
