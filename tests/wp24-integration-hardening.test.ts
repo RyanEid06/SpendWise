@@ -85,7 +85,7 @@ test('WP24 keeps History delete swipe-first, accessible, staged, and non-duplica
   assert.doesNotMatch(detail, /Trash2|onDelete|deleteAction/);
 
   const deleteHandlerStart = app.indexOf('const handleDeleteExpense');
-  const deleteHandlerEnd = app.indexOf('const handleSetBudget', deleteHandlerStart);
+  const deleteHandlerEnd = app.indexOf('const handleSetStartingMoney', deleteHandlerStart);
   assert.ok(deleteHandlerStart >= 0 && deleteHandlerEnd > deleteHandlerStart);
   const deleteHandler = app.slice(deleteHandlerStart, deleteHandlerEnd);
   assert.match(deleteHandler, /deleteUndoRef\.current\?\.stage/);
