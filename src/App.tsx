@@ -26,6 +26,8 @@ import { AiInsightsScreen } from './screens/AiInsightsScreen';
 import { StatisticsScreen } from './screens/StatisticsScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { LockScreen } from './screens/LockScreen';
+import { SetupWizardScreen } from './screens/SetupWizardScreen';
+import { SetupState } from './utils/setupState';
 import { AddEditExpenseModal } from './components/AddEditExpenseModal';
 import { SetBudgetModal } from './components/SetBudgetModal';
 import { ExpenseDetailModal } from './components/ExpenseDetailModal';
@@ -36,6 +38,9 @@ export const App: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [settingsReturnScreen, setSettingsReturnScreen] = useState<PrimaryScreen>('home');
   const [currentMY, setCurrentMY] = useState(currentMonthYear());
+  const [setupMode, setSetupMode] = useState<'first-run' | 'replay' | null>(() =>
+    SetupState.shouldShowFirstRun() ? 'first-run' : null
+  );
 
   // Data states
   const [expenses, setExpenses] = useState<Expense[]>(() => StorageManager.getExpenses());
@@ -487,6 +492,28 @@ export const App: React.FC = () => {
     }
   }, [expenses, monthlyExpenses, currentMY, currencyCode, language]);
 
+  if (setupMode) {
+    return (
+      <SetupWizardScreen
+        mode={setupMode}
+        language={language}
+        currencyCode={currencyCode}
+        themeMode={themeMode}
+        totalExpensesCount={expenses.length}
+        totalBudgetsCount={budgets.length}
+        onLanguageChange={handleLanguageChange}
+        onCurrencyChange={handleCurrencyChange}
+        onThemeChange={handleThemeChange}
+        onAppLockConfigured={() => {
+          setAppLockEnabledState(StorageManager.isAppLockEnabled());
+          setIsLocked(false);
+        }}
+        onComplete={() => setSetupMode(null)}
+        onCancel={setupMode === 'replay' ? () => setSetupMode(null) : undefined}
+      />
+    );
+  }
+
   if (isLocked) {
     return <LockScreen storedPin={StorageManager.getLockPin()} language={language} onUnlock={() => setIsLocked(false)} />;
   }
@@ -596,6 +623,7 @@ export const App: React.FC = () => {
             onLanguageChange={handleLanguageChange}
             onClearAllData={handleClearAllData}
             onBackupRestored={handleBackupRestored}
+            onReviewSetup={() => setSetupMode('replay')}
           />
         )}
       </main>
