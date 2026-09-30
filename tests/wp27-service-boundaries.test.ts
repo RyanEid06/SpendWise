@@ -101,7 +101,8 @@ test('ExpenseService preserves create update delete budget and currency orchestr
 
   await service.permanentDelete([created.id]);
   assert.equal(service.listExpenses().length, 0);
-  assert.equal(deletedMedia.length, 1);
+  assert.equal(deletedMedia.filter((items) => items.length > 0).length, 1);
+  assert.equal(deletedMedia.at(-1)?.[0]?.id, 'a');
 });
 
 test('WP27 hooks consume focused services rather than StorageManager', () => {
