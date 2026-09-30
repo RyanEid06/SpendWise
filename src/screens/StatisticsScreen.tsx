@@ -183,18 +183,21 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
         })}
       </div>
 
-      {/* High-Level Stat Cards Grid */}
-      <div className="grid grid-cols-1 min-[390px]:grid-cols-2 gap-3">
+      {/* Compact 2x2 high-level statistics summary */}
+      <div
+        data-statistics-summary-grid="2x2"
+        className="grid grid-cols-2 gap-px overflow-hidden rounded-3xl border border-slate-200/90 dark:border-slate-800/80 bg-slate-200/90 dark:bg-slate-800/80 shadow-xs"
+      >
         {/* Total Spent in Period */}
-        <div className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 rounded-3xl p-4 shadow-xs space-y-1 transition-colors">
-          <div className="flex items-center space-x-2 rtl:space-x-reverse text-xs font-semibold text-slate-500 dark:text-slate-400">
-            <span className="w-2 h-2 rounded-full bg-rose-500" aria-hidden="true"></span>
-            <span>{t(language, 'statTotalSpent')}</span>
+        <div data-stat-summary-cell="true" className="min-w-0 bg-white dark:bg-[#111928] p-3 min-[390px]:p-4 space-y-1 transition-colors">
+          <div className="flex items-start gap-1.5 text-[11px] min-[390px]:text-xs font-semibold text-slate-500 dark:text-slate-400 leading-tight">
+            <span className="mt-1 w-2 h-2 rounded-full bg-rose-500 shrink-0" aria-hidden="true"></span>
+            <span className="min-w-0">{t(language, 'statTotalSpent')}</span>
           </div>
-          <div dir="ltr" className="min-w-0 text-xl font-extrabold tabular-nums text-slate-900 dark:text-white tracking-tight [overflow-wrap:anywhere] leading-tight">
+          <div dir="ltr" className="min-w-0 text-lg min-[390px]:text-xl font-extrabold tabular-nums text-slate-900 dark:text-white tracking-tight [overflow-wrap:anywhere] leading-tight">
             {formatCurrency(stats.totalSpent, currencyCode)}
           </div>
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+          <div className="text-[10px] min-[390px]:text-[11px] text-slate-500 dark:text-slate-400 font-medium leading-snug">
             {t(language, 'statAcrossMonths', {
               count: stats.monthlyStats.length,
               months: stats.monthlyStats.length === 1 ? t(language, 'monthSingle') : t(language, 'monthPlural'),
@@ -203,45 +206,50 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
         </div>
 
         {/* Average Transaction */}
-        <div className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 rounded-3xl p-4 shadow-xs space-y-1 transition-colors">
-          <div className="flex items-center space-x-2 rtl:space-x-reverse text-xs font-semibold text-slate-500 dark:text-slate-400">
-            <span className="w-2 h-2 rounded-full bg-indigo-500" aria-hidden="true"></span>
-            <span>{t(language, 'statAvgExpense')}</span>
+        <div data-stat-summary-cell="true" className="min-w-0 bg-white dark:bg-[#111928] p-3 min-[390px]:p-4 space-y-1 transition-colors">
+          <div className="flex items-start gap-1.5 text-[11px] min-[390px]:text-xs font-semibold text-slate-500 dark:text-slate-400 leading-tight">
+            <span className="mt-1 w-2 h-2 rounded-full bg-indigo-500 shrink-0" aria-hidden="true"></span>
+            <span className="min-w-0">{t(language, 'statAvgExpense')}</span>
           </div>
-          <div dir="ltr" className="min-w-0 text-xl font-extrabold tabular-nums text-slate-900 dark:text-white tracking-tight [overflow-wrap:anywhere] leading-tight">
+          <div dir="ltr" className="min-w-0 text-lg min-[390px]:text-xl font-extrabold tabular-nums text-slate-900 dark:text-white tracking-tight [overflow-wrap:anywhere] leading-tight">
             {formatCurrency(stats.averageTransactionAmount, currencyCode)}
           </div>
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+          <div className="text-[10px] min-[390px]:text-[11px] text-slate-500 dark:text-slate-400 font-medium leading-snug">
             {t(language, 'statTotalTxns', { count: stats.totalTransactions })}
           </div>
         </div>
 
         {/* Spending Frequency */}
-        <div className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 rounded-3xl p-4 shadow-xs space-y-1 transition-colors">
-          <div className="flex items-center space-x-2 rtl:space-x-reverse text-xs font-semibold text-slate-500 dark:text-slate-400">
-            <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            <span>{t(language, 'statFrequency')}</span>
+        <div data-stat-summary-cell="true" className="min-w-0 bg-white dark:bg-[#111928] p-3 min-[390px]:p-4 space-y-1 transition-colors">
+          <div className="flex items-start gap-1.5 text-[11px] min-[390px]:text-xs font-semibold text-slate-500 dark:text-slate-400 leading-tight">
+            <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span className="min-w-0">{t(language, 'statFrequency')}</span>
           </div>
-          <div className="min-w-0 text-xl font-extrabold tabular-nums text-slate-900 dark:text-white tracking-tight [overflow-wrap:anywhere] leading-tight">
-            {stats.averageTransactionsPerMonth.toFixed(1)} {t(language, 'statPerMonth')}
+          <div className="min-w-0 flex flex-wrap items-baseline gap-x-1 leading-tight">
+            <span className="text-lg min-[390px]:text-xl font-extrabold tabular-nums text-slate-900 dark:text-white tracking-tight">
+              {stats.averageTransactionsPerMonth.toFixed(1)}
+            </span>
+            <span className="text-[10px] min-[390px]:text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+              {t(language, 'statPerMonth')}
+            </span>
           </div>
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+          <div className="text-[10px] min-[390px]:text-[11px] text-slate-500 dark:text-slate-400 font-medium leading-snug">
             {t(language, 'statTxnsPerWeek', { count: Math.round(stats.averageTransactionsPerMonth / 4.3) })}
           </div>
         </div>
 
         {/* Overall Largest Expense */}
-        <div className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 rounded-3xl p-4 shadow-xs space-y-1 transition-colors">
-          <div className="flex items-center space-x-2 rtl:space-x-reverse text-xs font-semibold text-slate-500 dark:text-slate-400">
-            <ArrowUpRight className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 rtl:rotate-90" />
-            <span>{t(language, 'statLargestExpense')}</span>
+        <div data-stat-summary-cell="true" className="min-w-0 bg-white dark:bg-[#111928] p-3 min-[390px]:p-4 space-y-1 transition-colors">
+          <div className="flex items-start gap-1.5 text-[11px] min-[390px]:text-xs font-semibold text-slate-500 dark:text-slate-400 leading-tight">
+            <ArrowUpRight className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 rtl:rotate-90 shrink-0" />
+            <span className="min-w-0">{t(language, 'statLargestExpense')}</span>
           </div>
-          <div dir="ltr" className="min-w-0 text-xl font-extrabold tabular-nums text-amber-600 dark:text-amber-400 tracking-tight [overflow-wrap:anywhere] leading-tight">
+          <div dir="ltr" className="min-w-0 text-lg min-[390px]:text-xl font-extrabold tabular-nums text-amber-600 dark:text-amber-400 tracking-tight [overflow-wrap:anywhere] leading-tight">
             {stats.overallLargestExpense
               ? formatCurrency(stats.overallLargestExpense.amount, currencyCode)
               : '—'}
           </div>
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+          <div className="text-[10px] min-[390px]:text-[11px] text-slate-500 dark:text-slate-400 truncate leading-snug">
             {stats.overallLargestExpense ? stats.overallLargestExpense.description : t(language, 'statNoneRecorded')}
           </div>
         </div>
