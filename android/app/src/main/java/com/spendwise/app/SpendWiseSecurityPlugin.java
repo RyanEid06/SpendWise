@@ -21,10 +21,14 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
 import java.nio.charset.StandardCharsets;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.security.KeyStore;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
+import java.security.Signature;
 import java.security.UnrecoverableKeyException;
+import java.security.spec.ECGenParameterSpec;
 import java.util.Arrays;
 import java.util.concurrent.Executor;
 
@@ -39,6 +43,8 @@ public class SpendWiseSecurityPlugin extends Plugin {
     private static final String KEYSTORE = "AndroidKeyStore";
     private static final String ALIAS_PREFIX = "spendwise.local-kek.v";
     private static final String WRAP_FORMAT = "spendwise-wrap-v1";
+    private static final String INSTALLATION_IDENTITY_ALIAS =
+        "spendwise.installation-identity.v1";
     private static final int GCM_TAG_BITS = 128;
     private static final int AUTH_VALIDITY_SECONDS = 5;
 
@@ -701,6 +707,83 @@ public class SpendWiseSecurityPlugin extends Plugin {
         JSObject result = new JSObject();
         result.put("deleted", deleted);
         call.resolve(result);
+    }
+
+    private KeyPair ensureInstallationKeyPair() throws Exception {
+        KeyStore keyStore = loadKeyStore();
+        if (keyStore.containsAlias(INSTALLATION_IDENTITY_ALIAS)) {
+            KeyStore.PrivateKeyEntry entry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(
+                INSTALLATION_IDENTITY_ALIAS,
+                null
+            );
+            if (entry == null || entry.getPrivateKey() == null || entry.getCertificate() == null) {
+                throw new IllegalStateException("Installation identity is unavailable.");
+            }
+            return new KeyPair(
+                entry.getCertificate().getPublicKey(),
+                entry.getPrivateKey()
+            );
+        }
+
+        KeyPairGenerator generator = KeyPairGenerator.getInstance(
+            KeyProperties.KEY_ALGORITHM_EC,
+            KEYSTORE
+        );
+        KeyGenParameterSpec spec = new KeyGenParameterSpec.Builder(
+            INSTALLATION_IDENTITY_ALIAS,
+            KeyProperties.PURPOSE_SIGN | KeyProperties.PURPOSE_VERIFY
+        )
+            .setAlgorithmParameterSpec(new ECGenParameterSpec("secp256r1"))
+            .setDigests(KeyProperties.DIGEST_SHA256)
+            .build();
+        generator.initialize(spec);
+        return generator.generateKeyPair();
+    }
+
+    @PluginMethod
+    public void ensureInstallationIdentity(PluginCall call) {
+        try {
+            KeyPair pair = ensureInstallationKeyPair();
+            JSObject result = new JSObject();
+            result.put("algorithm", "ECDSA_P256_SHA256");
+            result.put(
+                "publicKeyBase64",
+                Base64.encodeToString(pair.getPublic().getEncoded(), Base64.NO_WRAP)
+            );
+            call.resolve(result);
+        } catch (Exception error) {
+            call.reject(
+                "Installation identity is unavailable.",
+                "INSTALLATION_IDENTITY_FAILED"
+            );
+        }
+    }
+
+    @PluginMethod
+    public void signInstallationPayload(PluginCall call) {
+        String payload = call.getString("payload");
+        if (payload == null || payload.isEmpty() || payload.length() > 8192) {
+            call.reject("Invalid signing payload.", "INVALID_SIGNING_PAYLOAD");
+            return;
+        }
+
+        try {
+            KeyPair pair = ensureInstallationKeyPair();
+            Signature signer = Signature.getInstance("SHA256withECDSA");
+            signer.initSign(pair.getPrivate());
+            signer.update(payload.getBytes(StandardCharsets.UTF_8));
+            JSObject result = new JSObject();
+            result.put(
+                "signatureBase64",
+                Base64.encodeToString(signer.sign(), Base64.NO_WRAP)
+            );
+            call.resolve(result);
+        } catch (Exception error) {
+            call.reject(
+                "Installation signing failed.",
+                "INSTALLATION_SIGNING_FAILED"
+            );
+        }
     }
 
     @PluginMethod
