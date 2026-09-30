@@ -20,6 +20,12 @@ function requireCrypto(): Crypto {
   return crypto;
 }
 
+function ownedArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
+}
+
 function requireAes256Key(key: Uint8Array): void {
   if (!(key instanceof Uint8Array) || key.byteLength !== 32) {
     throw new Error('MEDIA_KEY_INVALID');
@@ -84,7 +90,7 @@ export async function encryptMediaBytes(
   const header = buildHeader(plaintext.byteLength, nonce);
   const cryptoKey = await webCrypto.subtle.importKey(
     'raw',
-    key,
+    ownedArrayBuffer(key),
     { name: 'AES-GCM' },
     false,
     ['encrypt']
@@ -94,12 +100,12 @@ export async function encryptMediaBytes(
     await webCrypto.subtle.encrypt(
       {
         name: 'AES-GCM',
-        iv: nonce,
-        additionalData: header,
+        iv: ownedArrayBuffer(nonce),
+        additionalData: ownedArrayBuffer(header),
         tagLength: TAG_BYTES * 8,
       },
       cryptoKey,
-      plaintext
+      ownedArrayBuffer(plaintext)
     )
   );
 
@@ -131,12 +137,12 @@ export async function decryptMediaBytes(
       await webCrypto.subtle.decrypt(
         {
           name: 'AES-GCM',
-          iv: info.nonce,
-          additionalData: header,
+          iv: ownedArrayBuffer(info.nonce),
+          additionalData: ownedArrayBuffer(header),
           tagLength: TAG_BYTES * 8,
         },
         cryptoKey,
-        encrypted
+        ownedArrayBuffer(encrypted)
       )
     );
     if (plaintext.byteLength !== info.plaintextLength) {
