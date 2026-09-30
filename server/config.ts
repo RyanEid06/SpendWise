@@ -19,6 +19,7 @@ export interface ServerConfig {
   deniedInstallationIds: Set<string>;
   legacyApiToken: string | null;
   legacyCompatibilityUntil: string | null;
+  legacyCompatibilityUntilMs: number | null;
   registrationHourlyLimit: number;
   registrationDailyLimit: number;
   challengeWindowMs: number;
@@ -97,7 +98,21 @@ export function parseServerConfig(env: NodeJS.ProcessEnv = process.env): ServerC
             path.join(process.cwd(), '.spendwise-security', 'installations.json')
         );
 
-  const legacyApiToken = env.SPENDWISE_API_TOKEN?.trim() || null;
+  const configuredLegacyToken = env.SPENDWISE_API_TOKEN?.trim() || null;
+  const configuredLegacyUntil =
+    env.SPENDWISE_LEGACY_AUTH_UNTIL?.trim() || null;
+  const parsedLegacyUntil = configuredLegacyUntil
+    ? Date.parse(configuredLegacyUntil)
+    : Number.NaN;
+  const legacyCompatibilityUntilMs = Number.isFinite(parsedLegacyUntil)
+    ? parsedLegacyUntil
+    : null;
+  // A legacy bearer is deliberately unusable unless a concrete expiry is
+  // configured. This prevents a migration crutch from becoming permanent.
+  const legacyApiToken =
+    configuredLegacyToken && legacyCompatibilityUntilMs != null
+      ? configuredLegacyToken
+      : null;
 
   return {
     port,
@@ -118,7 +133,9 @@ export function parseServerConfig(env: NodeJS.ProcessEnv = process.env): ServerC
     deniedInstallationIds: csvSet(env.SPENDWISE_DENIED_INSTALLATION_IDS),
     legacyApiToken,
     legacyCompatibilityUntil:
-      env.SPENDWISE_LEGACY_AUTH_UNTIL?.trim() || null,
+      legacyApiToken ? configuredLegacyUntil : null,
+    legacyCompatibilityUntilMs:
+      legacyApiToken ? legacyCompatibilityUntilMs : null,
     registrationHourlyLimit: boundedInteger(
       env.SPENDWISE_REGISTRATION_HOURLY_LIMIT,
       5,
