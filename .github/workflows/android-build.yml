@@ -99,6 +99,9 @@ jobs:
       - name: Run WP27 service boundary regression tests
         run: npm run test:wp27
 
+      - name: Run WP28 secure authentication and Keystore regression tests
+        run: npm run test:wp28
+
       - name: Sync Capacitor Android
         run: npm run android:sync
 

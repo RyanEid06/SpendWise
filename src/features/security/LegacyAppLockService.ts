@@ -1,24 +1,31 @@
 import { StorageManager } from '../../utils/storage';
 
+export type LegacyPinState =
+  | { kind: 'none' }
+  | { kind: 'valid'; pin: string }
+  | { kind: 'malformed'; raw: string };
+
 /**
- * Compatibility boundary for the v1.4 custom PIN implementation.
- * WP28 replaces this behavior behind SecureSessionService/SecureKeyService.
+ * Read-only compatibility boundary for the v1.4 plaintext custom PIN.
+ *
+ * WP28 may read this credential only long enough to perform a lockout-safe
+ * migration. New credentials must never be written through this service.
  */
 export interface LegacyAppLockService {
-  hasPin(): boolean;
-  readPin(): string;
-  savePin(pin: string): void;
+  getPinState(): LegacyPinState;
+  clearPin(): void;
 }
 
 class StorageManagerLegacyAppLockService implements LegacyAppLockService {
-  hasPin(): boolean {
-    return StorageManager.hasLockPin();
+  getPinState(): LegacyPinState {
+    const raw = StorageManager.getLockPin();
+    if (!raw) return { kind: 'none' };
+    if (/^\d{4,8}$/.test(raw)) return { kind: 'valid', pin: raw };
+    return { kind: 'malformed', raw };
   }
-  readPin(): string {
-    return StorageManager.getLockPin();
-  }
-  savePin(pin: string): void {
-    StorageManager.setLockPin(pin);
+
+  clearPin(): void {
+    StorageManager.clearLockPin();
   }
 }
 

@@ -141,7 +141,8 @@ test('initial setup has one required Terms and Privacy acknowledgement', () => {
   assert.match(setupSource, /disabled=\{mode === 'first-run' && !accepted\}/);
   assert.match(setupSource, /setLegalKind\('terms'\)/);
   assert.match(setupSource, /setLegalKind\('privacy'\)/);
-  assert.equal((setupSource.match(/type="checkbox"/g) || []).length, 1);
+  assert.match(setupSource, /checked=\{accepted\}/);
+  assert.match(setupSource, /checked=\{enableNativeLock\}/);
 });
 
 test('replay is separate from first-run completion and does not clear consent', () => {
@@ -159,7 +160,8 @@ test('PIN setup is optional and only matching 4-8 digit PINs are valid', () => {
   assert.equal(isValidSetupPin('123', '123'), false);
   assert.equal(isValidSetupPin('123456789', '123456789'), false);
   assert.equal(isValidSetupPin('1234', '4321'), false);
-  assert.match(setupSource, /const wantsPin = pin\.length > 0 \|\| confirmPin\.length > 0/);
+  assert.match(setupSource, /const wantsPin = !nativeSecurity && \(pin\.length > 0 \|\| confirmPin\.length > 0\)/);
+  assert.match(setupSource, /isNativeAndroidSecurity\(\)/);
 });
 
 test('lock throttling is bounded, temporary, deterministic, and resettable', () => {

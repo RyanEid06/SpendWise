@@ -25,7 +25,8 @@
     "test:wp23": "tsx --test tests/wp23-settings-progressive-disclosure.test.ts",
     "test:wp24": "tsx --test tests/wp24-integration-hardening.test.ts",
     "test:wp26": "tsx --test tests/wp26-app-shell-refactor.test.ts",
-    "test:wp27": "tsx --test tests/wp27-service-boundaries.test.ts"
+    "test:wp27": "tsx --test tests/wp27-service-boundaries.test.ts",
+    "test:wp28": "tsx --test tests/wp28-secure-auth-keystore.test.ts"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",
@@ -41,7 +42,8 @@
     "tailwind-merge": "^3.7.0",
     "tsx": "^4.23.15",
     "@capacitor-community/sqlite": "^8.1.1",
-    "jszip": "^3.10.2"
+    "jszip": "^3.10.2",
+    "hash-wasm": "^4.12.0"
   },
   "devDependencies": {
     "@capacitor/android": "^8.5.2",

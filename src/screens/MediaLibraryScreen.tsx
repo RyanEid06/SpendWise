@@ -7,6 +7,7 @@ import { StorageManager } from '../utils/storage';
 import { exportBlobFile } from '../utils/fileExport';
 import { formatDate } from '../utils/date';
 import { ViewportPortal } from '../components/ViewportPortal';
+import { useSensitivePrivacySurface } from '../app/hooks/useSensitivePrivacySurface';
 
 const copy = {
   en: {
@@ -82,6 +83,7 @@ const LazyAttachmentImage: React.FC<{ item: ExpenseAttachment; className: string
 };
 
 export const MediaLibraryScreen: React.FC<{ language: Language; onClose: () => void }> = ({ language, onClose }) => {
+  useSensitivePrivacySurface();
   const text = copy[language];
   const [attachments, setAttachments] = useState<ExpenseAttachment[]>([]);
   const [report, setReport] = useState<MediaIntegrityReport | null>(null);

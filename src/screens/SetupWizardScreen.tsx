@@ -11,6 +11,8 @@ import {
 import { LegalDocumentScreen } from './LegalDocumentScreen';
 import type { LegalDocumentKind } from '../utils/legalDocuments';
 import { CurrencyConversionModal } from '../components/CurrencyConversionModal';
+import { isNativeAndroidSecurity } from '../platform/android/AndroidSecurityAdapter';
+import type { SecureSessionActionResult } from '../security/SecureSessionService';
 
 interface Props {
   mode: 'first-run' | 'replay';
@@ -19,10 +21,11 @@ interface Props {
   themeMode: ThemeMode;
   totalExpensesCount: number;
   totalBudgetsCount: number;
+  appLockEnabled: boolean;
   onLanguageChange: (language: Language) => void;
   onCurrencyChange: (code: string, targetUnitsPerSourceUnit?: number) => void | Promise<void>;
   onThemeChange: (theme: ThemeMode) => void;
-  onAppLockConfigured: () => void;
+  onAppLockConfigured: (pin?: string) => Promise<SecureSessionActionResult>;
   onComplete: () => void;
   onCancel?: () => void;
 }
@@ -142,6 +145,7 @@ export const SetupWizardScreen: React.FC<Props> = ({
   themeMode,
   totalExpensesCount,
   totalBudgetsCount,
+  appLockEnabled,
   onLanguageChange,
   onCurrencyChange,
   onThemeChange,
@@ -156,6 +160,8 @@ export const SetupWizardScreen: React.FC<Props> = ({
   const [confirmPin, setConfirmPin] = useState('');
   const [pinError, setPinError] = useState<string | null>(null);
   const [pendingCurrencyCode, setPendingCurrencyCode] = useState<string | null>(null);
+  const nativeSecurity = isNativeAndroidSecurity();
+  const [enableNativeLock, setEnableNativeLock] = useState(appLockEnabled);
   const copy = COPY[language];
   const hasFinancialData = totalExpensesCount > 0 || totalBudgetsCount > 0;
   const currencyPreviewAmount =
@@ -193,17 +199,37 @@ export const SetupWizardScreen: React.FC<Props> = ({
 
   const finish = async () => {
     setPinError(null);
-    const wantsPin = pin.length > 0 || confirmPin.length > 0;
+    const wantsPin = !nativeSecurity && (pin.length > 0 || confirmPin.length > 0);
     if (wantsPin && !isValidSetupPin(pin, confirmPin)) {
       setPinError(copy.mismatch);
       return;
     }
     if (mode === 'first-run' && !accepted) return;
 
-    if (wantsPin) {
-      StorageManager.setLockPin(pin);
-      StorageManager.setAppLockEnabled(true);
-      onAppLockConfigured();
+    if (nativeSecurity && enableNativeLock && !appLockEnabled) {
+      const result = await onAppLockConfigured();
+      if (!result.ok) {
+        setPinError(
+          language === 'ar'
+            ? 'تعذّر تفعيل قفل التطبيق. اضبط قفل شاشة Android آمنًا ثم أعد المحاولة.'
+            : language === 'fr'
+              ? 'Impossible d’activer le verrouillage. Configurez un verrouillage Android sécurisé puis réessayez.'
+              : 'App Lock could not be enabled. Set a secure Android screen lock and try again.'
+        );
+        return;
+      }
+    } else if (wantsPin) {
+      const result = await onAppLockConfigured(pin);
+      if (!result.ok) {
+        setPinError(
+          language === 'ar'
+            ? 'تعذّر حفظ قفل الويب بأمان.'
+            : language === 'fr'
+              ? 'Impossible d’enregistrer le verrou web de manière sûre.'
+              : 'The web privacy lock could not be saved securely.'
+        );
+        return;
+      }
     }
 
     if (accepted) SetupState.acknowledgeCurrentLegal();
@@ -348,29 +374,59 @@ export const SetupWizardScreen: React.FC<Props> = ({
                   <Lock className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
                   <div>
                     <h3 className="text-sm font-bold">{copy.lockTitle}</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{copy.lockBody}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      {nativeSecurity
+                        ? language === 'ar'
+                          ? 'استخدم قفل شاشة Android أو المصادقة الحيوية القوية. لا ينشئ SpendWise رمز PIN منفصلًا.'
+                          : language === 'fr'
+                            ? 'Utilisez le verrouillage Android ou une biométrie forte. SpendWise ne crée pas de PIN séparé.'
+                            : 'Use Android screen lock or strong biometrics. SpendWise does not create a separate native PIN.'
+                        : copy.lockBody}
+                    </p>
                   </div>
                 </div>
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  autoComplete="new-password"
-                  maxLength={8}
-                  value={pin}
-                  onChange={(event) => { setPin(event.target.value.replace(/\D/g, '')); setPinError(null); }}
-                  placeholder={copy.pin}
-                  className="w-full min-h-[48px] rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] px-3"
-                />
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  autoComplete="new-password"
-                  maxLength={8}
-                  value={confirmPin}
-                  onChange={(event) => { setConfirmPin(event.target.value.replace(/\D/g, '')); setPinError(null); }}
-                  placeholder={copy.confirm}
-                  className="w-full min-h-[48px] rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] px-3"
-                />
+
+                {nativeSecurity ? (
+                  <label className="min-h-[52px] flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={enableNativeLock}
+                      disabled={appLockEnabled}
+                      onChange={(event) => setEnableNativeLock(event.target.checked)}
+                      className="w-5 h-5 accent-emerald-500"
+                    />
+                    <span className="text-sm font-bold">
+                      {language === 'ar'
+                        ? appLockEnabled ? 'قفل التطبيق مفعّل' : 'تفعيل قفل التطبيق'
+                        : language === 'fr'
+                          ? appLockEnabled ? 'Verrouillage activé' : 'Activer le verrouillage'
+                          : appLockEnabled ? 'App Lock is enabled' : 'Enable App Lock'}
+                    </span>
+                  </label>
+                ) : (
+                  <>
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      autoComplete="new-password"
+                      maxLength={8}
+                      value={pin}
+                      onChange={(event) => { setPin(event.target.value.replace(/\D/g, '')); setPinError(null); }}
+                      placeholder={copy.pin}
+                      className="w-full min-h-[48px] rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] px-3"
+                    />
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      autoComplete="new-password"
+                      maxLength={8}
+                      value={confirmPin}
+                      onChange={(event) => { setConfirmPin(event.target.value.replace(/\D/g, '')); setPinError(null); }}
+                      placeholder={copy.confirm}
+                      className="w-full min-h-[48px] rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] px-3"
+                    />
+                  </>
+                )}
                 {pinError && <p className="text-xs font-bold text-rose-600 dark:text-rose-400">{pinError}</p>}
               </div>
 

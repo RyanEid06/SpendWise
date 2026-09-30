@@ -8,6 +8,7 @@ import { formatCurrency } from '../utils/currency';
 import { getLocalizedCategoryName } from '../utils/translations';
 import { localeForLanguage } from '../utils/historyView';
 import { ViewportPortal } from './ViewportPortal';
+import { useSensitivePrivacySurface } from '../app/hooks/useSensitivePrivacySurface';
 
 const DETAIL_COPY = {
   en: {
@@ -109,6 +110,7 @@ export const ExpenseDetailModal: React.FC<{
   language: Language;
   onClose: () => void;
 }> = ({ expense, currencyCode, language, onClose }) => {
+  useSensitivePrivacySurface();
   const copy = DETAIL_COPY[language];
   const category = getCategoryInfo(expense.category);
   const attachments = useMemo(

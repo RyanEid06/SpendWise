@@ -121,7 +121,7 @@ test('WP27 hooks consume focused services rather than StorageManager', () => {
 test('Preferences repository excludes raw PIN and future cryptographic secrets', () => {
   const preferences = read('src/data/PreferencesRepository.ts');
   assert.doesNotMatch(preferences, /getLockPin|setLockPin|DB encryption key|media key|backup passphrase|private key/i);
-  assert.match(read('src/features/security/LegacyAppLockService.ts'), /Compatibility boundary for the v1\.4 custom PIN implementation/);
+  assert.match(read('src/features/security/LegacyAppLockService.ts'), /compatibility boundary for the v1\.4 plaintext custom PIN/i);
 });
 
 test('Settings is decomposed while preserving approved overview ordering', () => {
@@ -133,7 +133,8 @@ test('Settings is decomposed while preserving approved overview ordering', () =>
   assert.match(screen, /backupService\.createV2/);
   assert.match(screen, /backupService\.restoreV2/);
   assert.match(screen, /mediaService\.getStorageSummary/);
-  assert.match(screen, /legacyAppLockService\.savePin/);
+  assert.match(screen, /onSetWebPin\(newPin\)/);
+  assert.doesNotMatch(screen, /legacyAppLockService|BiometricPrompt|AndroidKeyStore|KeyGenParameterSpec/);
   assert.doesNotMatch(screen, /StorageManager/);
 
   const order = [
@@ -223,14 +224,18 @@ test('logging boundary stays metadata-only', () => {
   assert.doesNotMatch(logging, /description|amount|budget|receipt|imageBase64|PIN|apiKey|token/i);
 });
 
-test('future secure key and session seams exist without WP28 implementation', () => {
+test('WP27 secure seams remain the only app-facing owners after WP28 implementation', () => {
   const key = read('src/security/SecureKeyService.ts');
   const session = read('src/security/SecureSessionService.ts');
+  const hook = read('src/app/hooks/useAppLockLifecycle.ts');
+  const settings = read('src/screens/SettingsScreen.tsx');
   assert.match(key, /export interface SecureKeyService/);
   assert.match(session, /export interface SecureSessionService/);
-  for (const source of [key, session]) {
-    assert.doesNotMatch(source, /BiometricPrompt|DEVICE_CREDENTIAL|AndroidKeyStore|KeyGenParameterSpec|SQLCipher|AES-GCM/);
+  assert.match(hook, /secureSessionService/);
+  for (const source of [hook, settings, session]) {
+    assert.doesNotMatch(source, /BiometricPrompt|AndroidKeyStore|KeyGenParameterSpec|WindowManager\.LayoutParams\.FLAG_SECURE/);
   }
+  assert.doesNotMatch(key, /BiometricPrompt|AndroidKeyStore|KeyGenParameterSpec/);
 });
 
 test('WP27 remains version and release frozen', () => {

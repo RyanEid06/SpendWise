@@ -29,7 +29,6 @@ import { Language, MediaStorageSummary, SpendWiseBackup, ThemeMode } from '../ty
 import { getSuggestedConversionRate, SUPPORTED_CURRENCIES } from '../utils/currency';
 import { backupService } from '../features/backup/BackupService';
 import { expenseService } from '../features/expenses/ExpenseService';
-import { legacyAppLockService } from '../features/security/LegacyAppLockService';
 import { SettingsOverview, InlineSettingsSection } from '../features/settings/SettingsOverview';
 import { overviewCopy } from '../features/settings/settingsCopy';
 import { mediaService } from '../services/MediaService';
@@ -44,6 +43,10 @@ import { BackupV2ImportModal } from '../components/BackupV2ImportModal';
 import type { BackupV2Preview } from '../utils/backupV2';
 import { LegalDocumentScreen } from './LegalDocumentScreen';
 import type { LegalDocumentKind } from '../utils/legalDocuments';
+import type {
+  SecureSessionActionResult,
+  SensitiveAuthenticationReason,
+} from '../security/SecureSessionService';
 
 interface SettingsScreenProps {
   currentCurrencyCode: string;
@@ -53,8 +56,15 @@ interface SettingsScreenProps {
   totalBudgetsCount: number;
   isAppLockEnabled: boolean;
   lockTimeoutSeconds: number;
-  onAppLockToggle: (enabled: boolean) => void;
-  onLockTimeoutChange: (seconds: number) => void;
+  securityMode: 'native' | 'web';
+  hasWebPin: boolean;
+  migrationIssue: string | null;
+  onAppLockToggle: (enabled: boolean) => Promise<SecureSessionActionResult>;
+  onLockTimeoutChange: (seconds: number) => Promise<SecureSessionActionResult>;
+  onSetWebPin: (pin: string) => Promise<SecureSessionActionResult>;
+  onRequireFreshAuthentication: (
+    reason: SensitiveAuthenticationReason
+  ) => Promise<SecureSessionActionResult>;
   onCurrencyChange: (code: string, targetUnitsPerSourceUnit?: number) => void | Promise<void>;
   onThemeChange: (mode: ThemeMode) => void;
   onLanguageChange: (lang: Language) => void;
@@ -73,8 +83,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   totalBudgetsCount,
   isAppLockEnabled,
   lockTimeoutSeconds,
+  securityMode,
+  hasWebPin,
+  migrationIssue,
   onAppLockToggle,
   onLockTimeoutChange,
+  onSetWebPin,
+  onRequireFreshAuthentication,
   onCurrencyChange,
   onThemeChange,
   onLanguageChange,
@@ -101,7 +116,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
 
-  const hasSavedPin = legacyAppLockService.hasPin();
+  const hasSavedPin = hasWebPin;
   const hasFinancialData = totalExpensesCount > 0 || totalBudgetsCount > 0;
   const currencyPreviewAmount =
     expenseService.listExpenses()[0]?.amount ??
@@ -114,6 +129,41 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     { seconds: 300, label: t(currentLanguage, 'timeout5Mins') },
     { seconds: 900, label: t(currentLanguage, 'timeout15Mins') },
   ];
+
+  const securityFailureMessage = (result: SecureSessionActionResult) => {
+    if (currentLanguage === 'ar') {
+      if (result.code === 'cancelled') return 'تم إلغاء المصادقة.';
+      if (result.code === 'unavailable') return 'اضبط قفل شاشة Android آمنًا أو مصادقة حيوية قوية ثم أعد المحاولة.';
+      if (result.code === 'credential_required') return 'يلزم تحقق حديث. اقفل SpendWise وافتحه مجددًا ثم أعد المحاولة.';
+      if (result.code === 'missing_key' || result.code === 'invalidated_key' || result.code === 'unrecoverable_key') {
+        return 'مفتاح الأمان المحمي غير متاح. لم يتم تعطيل قفل التطبيق ولم يتم حذف البيانات.';
+      }
+      return 'تعذّر إكمال عملية الأمان.';
+    }
+    if (currentLanguage === 'fr') {
+      if (result.code === 'cancelled') return 'Authentification annulée.';
+      if (result.code === 'unavailable') return 'Configurez un verrouillage Android sécurisé ou une biométrie forte puis réessayez.';
+      if (result.code === 'credential_required') return 'Une authentification récente est requise. Reverrouillez puis déverrouillez SpendWise et réessayez.';
+      if (result.code === 'missing_key' || result.code === 'invalidated_key' || result.code === 'unrecoverable_key') {
+        return 'La clé de sécurité protégée est indisponible. Le verrouillage n’a pas été désactivé et les données n’ont pas été supprimées.';
+      }
+      return 'L’opération de sécurité n’a pas pu être terminée.';
+    }
+    if (result.code === 'cancelled') return 'Authentication was cancelled.';
+    if (result.code === 'unavailable') return 'Set a secure Android screen lock or strong biometric, then try again.';
+    if (result.code === 'credential_required') return 'Fresh authentication is required. Lock and unlock SpendWise, then try again.';
+    if (result.code === 'missing_key' || result.code === 'invalidated_key' || result.code === 'unrecoverable_key') {
+      return 'The protected security key is unavailable. App Lock stayed enabled and no data was discarded.';
+    }
+    return 'The security operation could not be completed.';
+  };
+
+  const requireFresh = async (reason: SensitiveAuthenticationReason) => {
+    const result = await onRequireFreshAuthentication(reason);
+    if (result.ok) return true;
+    setErrorMessage(securityFailureMessage(result));
+    return false;
+  };
 
   const humanBytes = (bytes: number) => {
     if (bytes < 1024) return String(bytes) + ' B';
@@ -171,6 +221,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   };
 
   const handleExportCsv = async () => {
+    if (!(await requireFresh('plaintext-export'))) return;
     try {
       const dateStamp = new Date().toISOString().split('T')[0];
       await exportTextFile({
@@ -212,6 +263,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
   const handleConfirmImport = async (replaceExisting: boolean) => {
     if (!pendingImportBackup) return;
+    if (replaceExisting && !(await requireFresh('replace-restore'))) return;
     try {
       const summary = await backupService.restoreLegacy(pendingImportBackup, replaceExisting);
       setPendingImportBackup(null);
@@ -233,6 +285,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
   const handleConfirmV2Import = async (replaceExisting: boolean) => {
     if (!pendingV2Backup || isBackupBusy) return;
+    if (replaceExisting && !(await requireFresh('replace-restore'))) return;
     setIsBackupBusy(true);
     try {
       const summary = await backupService.restoreV2(pendingV2Backup.file, replaceExisting);
@@ -405,12 +458,15 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 checked={isAppLockEnabled}
                 onChange={(event) => {
                   const enabled = event.target.checked;
-                  if (enabled && !legacyAppLockService.hasPin()) {
+                  if (securityMode === 'web' && enabled && !hasWebPin) {
                     setErrorMessage(t(currentLanguage, 'pinRequiredToEnable'));
                     return;
                   }
-                  setErrorMessage(null);
-                  onAppLockToggle(enabled);
+                  void (async () => {
+                    setErrorMessage(null);
+                    const result = await onAppLockToggle(enabled);
+                    if (!result.ok) setErrorMessage(securityFailureMessage(result));
+                  })();
                 }}
                 className="sr-only peer"
                 aria-label={t(currentLanguage, 'appLockTitle')}
@@ -420,46 +476,82 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           </div>
 
           <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-              {t(currentLanguage, hasSavedPin ? 'changePinLabel' : 'setPinLabel')}
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <input
-                type="password"
-                inputMode="numeric"
-                maxLength={8}
-                value={newPin}
-                onChange={(event) => setNewPin(event.target.value.replace(/\D/g, ''))}
-                placeholder={t(currentLanguage, 'newPinPlaceholder')}
-                className="min-h-[48px] px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] text-sm"
-              />
-              <input
-                type="password"
-                inputMode="numeric"
-                maxLength={8}
-                value={confirmPin}
-                onChange={(event) => setConfirmPin(event.target.value.replace(/\D/g, ''))}
-                placeholder={t(currentLanguage, 'confirmPinPlaceholder')}
-                className="min-h-[48px] px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] text-sm"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                if (!/^\d{4,8}$/.test(newPin) || newPin !== confirmPin) {
-                  setErrorMessage(t(currentLanguage, 'pinMismatch'));
-                  return;
-                }
-                legacyAppLockService.savePin(newPin);
-                setNewPin('');
-                setConfirmPin('');
-                setErrorMessage(null);
-                setStatusMessage(t(currentLanguage, 'pinSaved'));
-              }}
-              className="min-h-[48px] px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-extrabold"
-            >
-              {t(currentLanguage, 'savePinBtn')}
-            </button>
+            {securityMode === 'native' ? (
+              <div className="rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200 dark:border-slate-800 p-3">
+                <div className="text-sm font-bold">
+                  {currentLanguage === 'ar'
+                    ? 'مصادقة Android'
+                    : currentLanguage === 'fr'
+                      ? 'Authentification Android'
+                      : 'Android authentication'}
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                  {currentLanguage === 'ar'
+                    ? 'يستخدم SpendWise قفل شاشة الجهاز أو المصادقة الحيوية القوية. لا يتم حفظ رمز PIN خاص بـ SpendWise على Android.'
+                    : currentLanguage === 'fr'
+                      ? 'SpendWise utilise le verrouillage de l’appareil ou une biométrie forte. Aucun PIN SpendWise séparé n’est enregistré sur Android.'
+                      : 'SpendWise uses your device screen lock or strong biometrics. No separate SpendWise PIN is stored on Android.'}
+                </p>
+                {migrationIssue && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 font-bold mt-2">
+                    {currentLanguage === 'ar'
+                      ? 'ترقية الأمان القديمة لم تكتمل بعد. تم الاحتفاظ بالحالة القديمة لمنع فقدان الوصول.'
+                      : currentLanguage === 'fr'
+                        ? 'La migration de sécurité héritée reste incomplète. L’ancien état a été conservé pour éviter un blocage.'
+                        : 'Legacy security migration is still pending. The old state was preserved to prevent lockout.'}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  {t(currentLanguage, hasSavedPin ? 'changePinLabel' : 'setPinLabel')}
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={8}
+                    value={newPin}
+                    onChange={(event) => setNewPin(event.target.value.replace(/\D/g, ''))}
+                    placeholder={t(currentLanguage, 'newPinPlaceholder')}
+                    className="min-h-[48px] px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] text-sm"
+                  />
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={8}
+                    value={confirmPin}
+                    onChange={(event) => setConfirmPin(event.target.value.replace(/\D/g, ''))}
+                    placeholder={t(currentLanguage, 'confirmPinPlaceholder')}
+                    className="min-h-[48px] px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] text-sm"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void (async () => {
+                      if (!/^\d{4,8}$/.test(newPin) || newPin !== confirmPin) {
+                        setErrorMessage(t(currentLanguage, 'pinMismatch'));
+                        return;
+                      }
+                      const result = await onSetWebPin(newPin);
+                      if (!result.ok) {
+                        setErrorMessage(securityFailureMessage(result));
+                        return;
+                      }
+                      setNewPin('');
+                      setConfirmPin('');
+                      setErrorMessage(null);
+                      setStatusMessage(t(currentLanguage, 'pinSaved'));
+                    })();
+                  }}
+                  className="min-h-[48px] px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-extrabold"
+                >
+                  {t(currentLanguage, 'savePinBtn')}
+                </button>
+              </>
+            )}
           </div>
 
           <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
@@ -472,7 +564,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                   key={option.seconds}
                   type="button"
                   disabled={!isAppLockEnabled}
-                  onClick={() => onLockTimeoutChange(option.seconds)}
+                  onClick={() => {
+                    void (async () => {
+                      const result = await onLockTimeoutChange(option.seconds);
+                      if (!result.ok) setErrorMessage(securityFailureMessage(result));
+                    })();
+                  }}
                   className={
                     'min-h-[48px] flex items-center justify-between gap-2 p-2.5 rounded-xl border text-xs font-medium disabled:opacity-45 ' +
                     (lockTimeoutSeconds === option.seconds
@@ -708,6 +805,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         onConfirm={() => {
           void (async () => {
             try {
+              if (!(await requireFresh('clear-app-data'))) return;
               await onClearAllData();
               setShowClearModal(false);
               setStatusMessage(t(currentLanguage, 'financialDataCleared'));

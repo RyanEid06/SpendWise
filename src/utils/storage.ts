@@ -80,10 +80,9 @@ export class StorageManager {
     if (localStorage.getItem(STORAGE_KEYS.THEME) === null) localStorage.setItem(STORAGE_KEYS.THEME, 'SYSTEM');
     if (localStorage.getItem(STORAGE_KEYS.LANGUAGE) === null) localStorage.setItem(STORAGE_KEYS.LANGUAGE, 'en');
 
-    const storedPin = localStorage.getItem(STORAGE_KEYS.LOCK_PIN) || '';
-    if (localStorage.getItem(STORAGE_KEYS.APP_LOCK) === 'true' && !/^\d{4,8}$/.test(storedPin)) {
-      localStorage.setItem(STORAGE_KEYS.APP_LOCK, 'false');
-    }
+    // WP28 deliberately does not "repair" malformed legacy PIN state here.
+    // SecureSessionService owns the lockout-safe migration and must never
+    // silently disable App Lock because a credential is missing or malformed.
 
     await LocalDataStore.init(localStorage);
     localStorage.setItem(STORAGE_KEYS.INITIALIZED, 'true');
@@ -286,6 +285,10 @@ export class StorageManager {
   static setLockPin(pin: string): void {
     if (!/^\d{4,8}$/.test(pin)) throw new Error('PIN must contain 4-8 digits.');
     localStorage.setItem(STORAGE_KEYS.LOCK_PIN, pin);
+  }
+
+  static clearLockPin(): void {
+    localStorage.removeItem(STORAGE_KEYS.LOCK_PIN);
   }
 
   static getCachedAnalysis(monthKey: string): AiAnalysisResult | null {
