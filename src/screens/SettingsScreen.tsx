@@ -483,6 +483,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         setShowSetupReplayModal(false);
         return;
       }
+      if (showMediaLibrary || legalKind) {
+        return;
+      }
       if (settingsPage !== 'overview') {
         setSettingsPage('overview');
       }
@@ -494,8 +497,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     pendingCurrencyCode,
     pendingImportBackup,
     pendingV2Backup,
+    legalKind,
     settingsPage,
     showClearModal,
+    showMediaLibrary,
     showSetupReplayModal,
   ]);
 
