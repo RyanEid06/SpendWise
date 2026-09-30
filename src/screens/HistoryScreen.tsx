@@ -5,11 +5,9 @@ import { MonthYear } from '../utils/date';
 import { formatCurrency } from '../utils/currency';
 import { MonthSelector } from '../components/MonthSelector';
 import { SwipeableExpenseCard } from '../components/SwipeableExpenseCard';
-import { ConfirmationModal } from '../components/ConfirmationModal';
 import { getLocalizedCategoryName, getLocalizedMonthName, t } from '../utils/translations';
 import { getCategoryInfo } from '../utils/categories';
 import { AttachmentStorage } from '../utils/attachmentStorage';
-import { ta } from '../utils/attachmentTranslations';
 import {
   dateFromInputValue,
   dateInputValue,
@@ -57,8 +55,6 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
   const [viewMode, setViewMode] = useState<HistoryViewMode>('ALL');
   const [selectedDay, setSelectedDay] = useState(() => defaultSelectedDay(expenses, currentMonthYear));
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
-  const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     setSelectedDay(defaultSelectedDay(expenses, currentMonthYear));
@@ -105,15 +101,6 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
   const previousDay = shiftLocalDay(selectedDay, -1);
   const nextDay = shiftLocalDay(selectedDay, 1);
 
-  useEffect(() => {
-    const handleNativeBack = () => {
-      if (expenseToDelete !== null) setExpenseToDelete(null);
-    };
-
-    window.addEventListener('spendwise-native-back', handleNativeBack);
-    return () => window.removeEventListener('spendwise-native-back', handleNativeBack);
-  }, [expenseToDelete]);
-
   const renderExpense = (expense: Expense) => (
     <SwipeableExpenseCard
       key={expense.id}
@@ -122,7 +109,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
       language={language}
       attachmentCount={attachmentCounts.get(expense.id) || 0}
       onOpen={() => onExpenseClick(expense)}
-      onRequestDelete={() => setExpenseToDelete(expense)}
+      onRequestDelete={() => onDeleteExpense(expense)}
     />
   );
 
@@ -132,10 +119,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
   };
 
   return (
-    <div
-      className="space-y-4 pb-28 animate-screen-enter"
-      data-native-back-layer={expenseToDelete !== null ? 'true' : undefined}
-    >
+    <div className="space-y-4 pb-28 animate-screen-enter">
       <MonthSelector
         currentMonthYear={currentMonthYear}
         language={language}
@@ -329,33 +313,6 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
         </div>
       )}
 
-      {deleteError && (
-        <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 text-xs font-medium text-rose-700 dark:text-rose-300">
-          {ta(language, 'expenseDeleteError')}
-        </div>
-      )}
-
-      <ConfirmationModal
-        isOpen={expenseToDelete !== null}
-        title={t(language, 'deleteExpenseTitle')}
-        message={t(language, 'deleteExpenseMessage', {
-          description: expenseToDelete?.description || '',
-          amount: expenseToDelete ? formatCurrency(expenseToDelete.amount, currencyCode) : '',
-        })}
-        confirmText={t(language, 'deleteBtn')}
-        cancelText={t(language, 'cancelBtn')}
-        isDestructive={true}
-        onConfirm={() => {
-          if (!expenseToDelete) return;
-          const target = expenseToDelete;
-          setExpenseToDelete(null);
-          setDeleteError(null);
-          void Promise.resolve(onDeleteExpense(target)).catch(() => {
-            setDeleteError(ta(language, 'expenseDeleteError'));
-          });
-        }}
-        onCancel={() => setExpenseToDelete(null)}
-      />
     </div>
   );
 };
