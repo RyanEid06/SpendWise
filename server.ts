@@ -666,7 +666,7 @@ function getGeminiClient(): GoogleGenAI | null {
     apiKey,
     httpOptions: {
       headers: {
-        'User-Agent': 'SpendWise/1.1',
+        'User-Agent': 'SpendWise',
       },
     },
   });

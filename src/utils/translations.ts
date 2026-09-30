@@ -260,7 +260,9 @@ export const TRANSLATIONS = {
     dangerZoneSub: 'Reset all stored financial data, erasing all {count} expenses and budget allocations.',
     clearAllDataBtn: 'Clear Financial Data',
     clearAllDataModalTitle: 'Clear Financial Data?',
-    clearAllDataModalMessage: 'This will permanently erase all your expenses and monthly budget settings from your browser. This action cannot be undone.',
+    clearAllDataModalMessage: 'This will permanently erase all your expenses and monthly budget settings from this device. This action cannot be undone.',
+    financialDataCleared: 'Financial data has been erased.',
+    financialDataClearFailed: 'Unable to erase financial data.',
     eraseEverythingBtn: 'Erase Financial Data',
 
     // Import Preview Modal
@@ -560,7 +562,9 @@ export const TRANSLATIONS = {
     dangerZoneSub: 'Réinitialisez toutes vos données en effaçant l\'ensemble des {count} dépenses et allocations budgétaires.',
     clearAllDataBtn: 'Effacer les donn\u00E9es financi\u00E8res',
     clearAllDataModalTitle: 'Effacer les donn\u00E9es financi\u00E8res ?',
-    clearAllDataModalMessage: 'Cette action supprimera définitivement toutes vos dépenses et vos réglages budgétaires de votre navigateur. Cette opération est irréversible.',
+    clearAllDataModalMessage: 'Cette action supprimera définitivement toutes vos dépenses et vos réglages budgétaires de cet appareil. Cette opération est irréversible.',
+    financialDataCleared: 'Les données financières ont été effacées.',
+    financialDataClearFailed: 'Impossible d’effacer les données financières.',
     eraseEverythingBtn: 'Effacer les donn\u00E9es financi\u00E8res',
 
     // Import Preview Modal
@@ -860,7 +864,9 @@ export const TRANSLATIONS = {
     dangerZoneSub: 'إعادة ضبط وحذف جميع السجلات، ومسح كافة المصاريف البالغ عددها {count} وتخصيصات الميزانية.',
     clearAllDataBtn: '\u0645\u0633\u062D \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0627\u0644\u064A\u0629',
     clearAllDataModalTitle: '\u0645\u0633\u062D \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0627\u0644\u064A\u0629\u061F',
-    clearAllDataModalMessage: 'سيؤدي هذا الإجراء إلى حذف جميع مصاريفك وإعدادات الميزانية نهائياً من المتصفح. لا يمكن التراجع عن هذا الإجراء.',
+    clearAllDataModalMessage: 'سيؤدي هذا الإجراء إلى حذف جميع مصاريفك وإعدادات الميزانية نهائياً من هذا الجهاز. لا يمكن التراجع عن هذا الإجراء.',
+    financialDataCleared: 'تم حذف البيانات المالية.',
+    financialDataClearFailed: 'تعذر حذف البيانات المالية.',
     eraseEverythingBtn: '\u0645\u0633\u062D \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0627\u0644\u064A\u0629',
 
     // Import Preview Modal

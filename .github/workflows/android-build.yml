@@ -45,6 +45,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=moderate
+
+      - name: Audit all dependencies for high severity
+        run: npm audit --audit-level=high
+
       - name: Verify web app
         run: npm run verify
 

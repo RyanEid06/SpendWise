@@ -849,10 +849,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             try {
               await onClearAllData();
               setShowClearModal(false);
-              setStatusMessage('All local data has been erased.');
+              setStatusMessage(t(currentLanguage, 'financialDataCleared'));
               setErrorMessage(null);
             } catch {
-              setErrorMessage('Unable to erase all local data.');
+              setErrorMessage(t(currentLanguage, 'financialDataClearFailed'));
             }
           })();
         }}
