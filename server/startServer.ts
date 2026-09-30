@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import { createServerApp } from './app';
 import { serverConfig } from './config';
@@ -10,7 +11,7 @@ export async function startServer() {
   const distPath = path.resolve(process.cwd(), 'dist');
 
   if (isProd && fs.existsSync(distPath)) {
-    app.use(require('express').default.static(distPath));
+    app.use(express.static(distPath));
     app.get('*', (_req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
