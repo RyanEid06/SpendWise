@@ -15,6 +15,7 @@ import {
 import { ta } from '../utils/attachmentTranslations';
 import { SmartCaptureCard } from './SmartCaptureCard';
 import { ReceiptScanCard } from './ReceiptScanCard';
+import { ViewportPortal } from './ViewportPortal';
 
 interface AddEditExpenseModalProps {
   isOpen: boolean;
@@ -236,6 +237,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
   };
 
   return (
+    <ViewportPortal>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
       role="dialog"
@@ -265,7 +267,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
           <button
             onClick={onClose}
             disabled={isSaving || isPhotoPreparing}
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-50"
+            className="min-w-[48px] min-h-[48px] flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-50"
             aria-label={t(language, 'cancelBtn')}
           >
             <X className="w-5 h-5" />
@@ -352,7 +354,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
                       borderColor: isSelected ? cat.color : undefined,
                       backgroundColor: isSelected ? `${cat.color}20` : undefined,
                     }}
-                    className={`min-h-[44px] flex items-center space-x-1.5 rtl:space-x-reverse px-3.5 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                    className={`min-h-[48px] flex items-center space-x-1.5 rtl:space-x-reverse px-3.5 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
                       isSelected
                         ? 'border-2 text-slate-900 dark:text-white shadow-xs font-bold'
                         : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -477,7 +479,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
             type="button"
             onClick={onClose}
             disabled={isSaving || isPhotoPreparing}
-            className="min-h-[44px] px-5 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-50"
+            className="min-h-[48px] px-5 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-50"
           >
             {t(language, 'cancelBtn')}
           </button>
@@ -485,12 +487,13 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
             type="button"
             onClick={() => void handleSave()}
             disabled={isSaving || isPhotoPreparing}
-            className="min-h-[44px] px-6 py-2.5 rounded-xl text-sm font-extrabold bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-sm transition-all cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="min-h-[48px] px-6 py-2.5 rounded-xl text-sm font-extrabold bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-sm transition-all cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {initialExpense ? t(language, 'updateExpenseBtn') : t(language, 'saveExpenseBtn')}
           </button>
         </div>
       </div>
     </div>
+    </ViewportPortal>
   );
 };
