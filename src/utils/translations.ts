@@ -866,7 +866,7 @@ export const TRANSLATIONS = {
     clearAllDataModalTitle: '\u0645\u0633\u062D \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0627\u0644\u064A\u0629\u061F',
     clearAllDataModalMessage: 'سيؤدي هذا الإجراء إلى حذف جميع مصاريفك وإعدادات الميزانية نهائياً من هذا الجهاز. لا يمكن التراجع عن هذا الإجراء.',
     financialDataCleared: 'تم حذف البيانات المالية.',
-    financialDataClearFailed: 'تعذر حذف البيانات المالية.'
+    financialDataClearFailed: 'تعذر حذف البيانات المالية.',
     eraseEverythingBtn: '\u0645\u0633\u062D \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0627\u0644\u064A\u0629',
 
     // Import Preview Modal
