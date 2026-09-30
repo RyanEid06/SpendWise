@@ -1,6 +1,8 @@
 import { Capacitor } from '@capacitor/core';
 import type { SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { Expense, ExpenseAttachment, MonthlyBudget } from '../types';
+import { applySpendWiseSchema } from '../data/databaseSchema';
+import { nativeEncryptedDatabaseService } from '../data/NativeEncryptedDatabaseService';
 import {
   cloneFinancialState,
   FinancialState,
@@ -12,52 +14,9 @@ import {
   validateFinancialState,
 } from './financialState';
 
-const DATABASE_NAME = 'spendwise';
-const SCHEMA_VERSION = 1;
 const LEGACY_MIGRATION_KEY = 'legacy_localstorage_migration_v1';
 const LEGACY_MIGRATION_LOCAL_FLAG = 'spendwise_sqlite_migration_v1_complete';
 const LEDGER_CURRENCY_KEY = 'ledger_currency';
-
-const SCHEMA_MIGRATIONS: Array<{ version: number; statements: string[] }> = [
-  {
-    version: 1,
-    statements: [
-      `CREATE TABLE IF NOT EXISTS expenses (
-        id INTEGER PRIMARY KEY NOT NULL,
-        amount REAL NOT NULL CHECK(amount > 0),
-        description TEXT NOT NULL,
-        category TEXT NOT NULL,
-        transaction_date INTEGER NOT NULL,
-        note TEXT,
-        created_at INTEGER NOT NULL
-      )`,
-      `CREATE TABLE IF NOT EXISTS monthly_budgets (
-        month_key TEXT PRIMARY KEY NOT NULL,
-        starting_amount REAL NOT NULL CHECK(starting_amount > 0),
-        updated_at INTEGER NOT NULL
-      )`,
-      `CREATE TABLE IF NOT EXISTS expense_attachments (
-        id TEXT PRIMARY KEY NOT NULL,
-        expense_id INTEGER NOT NULL,
-        storage_key TEXT NOT NULL UNIQUE,
-        mime_type TEXT NOT NULL,
-        created_at INTEGER NOT NULL,
-        original_filename TEXT,
-        kind TEXT NOT NULL CHECK(kind IN ('purchase', 'receipt', 'proof')),
-        byte_size INTEGER NOT NULL CHECK(byte_size > 0),
-        width INTEGER NOT NULL CHECK(width > 0),
-        height INTEGER NOT NULL CHECK(height > 0),
-        FOREIGN KEY(expense_id) REFERENCES expenses(id) ON DELETE CASCADE
-      )`,
-      `CREATE TABLE IF NOT EXISTS app_meta (
-        key TEXT PRIMARY KEY NOT NULL,
-        value TEXT NOT NULL
-      )`,
-      'CREATE INDEX IF NOT EXISTS idx_expenses_transaction_date ON expenses(transaction_date)',
-      'CREATE INDEX IF NOT EXISTS idx_expense_attachments_expense_id ON expense_attachments(expense_id)',
-    ],
-  },
-];
 
 function emptyState(): FinancialState {
   return { expenses: [], budgets: [], attachments: [], currencyCode: 'USD' };
@@ -95,17 +54,7 @@ export class LocalDataStoreImpl {
       return;
     }
 
-    const { CapacitorSQLite, SQLiteConnection } = await import('@capacitor-community/sqlite');
-    const sqlite = new SQLiteConnection(CapacitorSQLite);
-    const consistent = await sqlite.checkConnectionsConsistency();
-    const hasConnection = (await sqlite.isConnection(DATABASE_NAME, false)).result === true;
-    this.db = consistent.result && hasConnection
-      ? await sqlite.retrieveConnection(DATABASE_NAME, false)
-      : await sqlite.createConnection(DATABASE_NAME, false, 'no-encryption', SCHEMA_VERSION, false);
-
-    const isOpen = (await this.db.isDBOpen()).result === true;
-    if (!isOpen) await this.db.open();
-    await this.db.execute('PRAGMA foreign_keys = ON;', false);
+    this.db = await nativeEncryptedDatabaseService.open(storage);
     await this.applySchemaMigrations();
     await this.migrateLegacyLocalStorage(storage);
     this.state = await this.loadNativeState();
@@ -338,20 +287,7 @@ export class LocalDataStoreImpl {
   }
 
   private async applySchemaMigrations(): Promise<void> {
-    const db = this.requireDb();
-    const result = await db.query('PRAGMA user_version;');
-    const current = Number((result.values?.[0] as Record<string, unknown> | undefined)?.user_version ?? 0);
-    if (!Number.isInteger(current) || current < 0 || current > SCHEMA_VERSION) {
-      throw new Error('UNSUPPORTED_DATABASE_SCHEMA');
-    }
-
-    for (const migration of SCHEMA_MIGRATIONS) {
-      if (migration.version <= current) continue;
-      await this.withNativeTransaction(async (connection) => {
-        for (const statement of migration.statements) await connection.execute(`${statement};`, false);
-        await connection.execute(`PRAGMA user_version = ${migration.version};`, false);
-      });
-    }
+    await applySpendWiseSchema(this.requireDb());
   }
 
   private async migrateLegacyLocalStorage(storage: KeyValueStore): Promise<void> {
