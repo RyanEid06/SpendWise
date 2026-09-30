@@ -59,13 +59,14 @@ test('complex settings areas use dedicated internal sub-screens', () => {
   includesRequired('rtl:rotate-180');
 });
 
-test('App Lock keeps PIN validation, toggle and timeout controls', () => {
-  includesRequired('legacyAppLockService.hasPin()');
-  includesRequired('legacyAppLockService.savePin(newPin)');
+test('App Lock keeps secure credential, toggle and timeout controls', () => {
+  includesRequired("securityMode === 'native'");
+  includesRequired('onSetWebPin(newPin)');
   includesRequired("if (!/^\\d{4,8}$/.test(newPin)");
   includesRequired('onAppLockToggle(enabled)');
   includesRequired('onLockTimeoutChange(option.seconds)');
   includesRequired('pinRequiredToEnable');
+  assert.equal(settingsScreen.includes('legacyAppLockService'), false);
 });
 
 test('Storage and backup capabilities remain reachable without engine rewrites', () => {

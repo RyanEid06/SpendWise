@@ -134,10 +134,11 @@ export const AppShell: React.FC = () => {
         themeMode={preferences.themeMode}
         totalExpensesCount={ledger.expenses.length}
         totalBudgetsCount={ledger.budgets.length}
+        appLockEnabled={appLock.appLockEnabled}
         onLanguageChange={handleLanguageChange}
         onCurrencyChange={handleCurrencyChange}
         onThemeChange={preferences.setThemeMode}
-        onAppLockConfigured={appLock.refreshAfterSetup}
+        onAppLockConfigured={appLock.configureFromSetup}
         onComplete={() => setSetupMode(null)}
         onCancel={setupMode === 'replay' ? () => setSetupMode(null) : undefined}
       />
@@ -147,7 +148,8 @@ export const AppShell: React.FC = () => {
   if (appLock.isLocked) {
     return (
       <LockScreen
-        storedPin={appLock.storedPin}
+        unlockMode={appLock.unlockMode}
+        migrationIssue={appLock.migrationIssue}
         language={preferences.language}
         onUnlock={appLock.unlock}
       />
@@ -249,8 +251,13 @@ export const AppShell: React.FC = () => {
             totalBudgetsCount={ledger.budgets.length}
             isAppLockEnabled={appLock.appLockEnabled}
             lockTimeoutSeconds={appLock.lockTimeoutSeconds}
+            securityMode={appLock.securityMode}
+            hasWebPin={appLock.hasWebPin}
+            migrationIssue={appLock.migrationIssue}
             onAppLockToggle={appLock.setAppLockEnabled}
             onLockTimeoutChange={appLock.setLockTimeoutSeconds}
+            onSetWebPin={appLock.setWebPin}
+            onRequireFreshAuthentication={appLock.requireFreshAuthentication}
             onCurrencyChange={handleCurrencyChange}
             onThemeChange={preferences.setThemeMode}
             onLanguageChange={handleLanguageChange}
