@@ -177,6 +177,11 @@ export class DefaultSecureSessionService {
   }
 
   async initialize(): Promise<SecureSessionSnapshot> {
+    if (this.initialized) {
+      await this.reconcilePrivacyShield();
+      return this.getSnapshot();
+    }
+
     this.initialized = true;
     this.state = safeAppLockEnabled() ? 'locked' : 'unlocked';
 

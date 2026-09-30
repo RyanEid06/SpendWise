@@ -101,6 +101,9 @@ jobs:
       - name: Run WP28 secure authentication and Keystore regression tests
         run: npm run test:wp28
 
+      - name: Run WP29 encrypted-at-rest regression tests
+        run: npm run test:wp29
+
       - name: Run WP31 backend authentication and network hardening tests
         run: npm run test:wp31
 

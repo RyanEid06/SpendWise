@@ -85,6 +85,7 @@ export class StorageManager {
     // silently disable App Lock because a credential is missing or malformed.
 
     await LocalDataStore.init(localStorage);
+    await AttachmentStorage.ensureNativeEncryption();
     localStorage.setItem(STORAGE_KEYS.INITIALIZED, 'true');
     this.initialized = true;
     AttachmentStorage.scheduleMaintenance();

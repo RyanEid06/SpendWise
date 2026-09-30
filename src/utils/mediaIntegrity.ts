@@ -7,11 +7,13 @@ export type MediaIntegrityIssueType =
   | 'duplicate-id'
   | 'duplicate-storage-key'
   | 'invalid-metadata'
-  | 'size-mismatch';
+  | 'size-mismatch'
+  | 'unreadable-file';
 
 export interface MediaBinaryInventoryItem {
   storageKey: string;
   byteSize: number;
+  valid?: boolean;
 }
 
 export interface MediaIntegrityIssue {
@@ -40,6 +42,7 @@ export interface MediaIntegrityReport {
   duplicateStorageKeyCount: number;
   invalidMetadataCount: number;
   sizeMismatchCount: number;
+  unreadableFileCount: number;
   healthy: boolean;
 }
 
@@ -76,7 +79,7 @@ export function analyzeMediaIntegrity(
   checkedAt = Date.now()
 ): MediaIntegrityReport {
   const expenseIds = new Set(expenses.map((item) => item.id));
-  const binaryMap = new Map(binaries.map((item) => [item.storageKey, item.byteSize]));
+  const binaryMap = new Map(binaries.map((item) => [item.storageKey, item]));
   const referencedKeys = new Set<string>();
   const idCounts = new Map<string, number>();
   const keyCounts = new Map<string, number>();
@@ -115,15 +118,21 @@ export function analyzeMediaIntegrity(
         storageKey: attachment.storageKey,
       });
     }
-    const binarySize = binaryMap.get(attachment.storageKey);
-    if (binarySize === undefined) {
+    const binary = binaryMap.get(attachment.storageKey);
+    if (!binary) {
       issues.push({ type: 'missing-file', attachmentId: attachment.id, storageKey: attachment.storageKey });
-    } else if (binarySize !== attachment.byteSize) {
+    } else if (binary.valid === false) {
+      issues.push({
+        type: 'unreadable-file',
+        attachmentId: attachment.id,
+        storageKey: attachment.storageKey,
+      });
+    } else if (binary.byteSize !== attachment.byteSize) {
       issues.push({
         type: 'size-mismatch',
         attachmentId: attachment.id,
         storageKey: attachment.storageKey,
-        detail: `${attachment.byteSize}:${binarySize}`,
+        detail: `${attachment.byteSize}:${binary.byteSize}`,
       });
     }
   }
@@ -150,6 +159,7 @@ export function analyzeMediaIntegrity(
     duplicateStorageKeyCount: count('duplicate-storage-key'),
     invalidMetadataCount: count('invalid-metadata'),
     sizeMismatchCount: count('size-mismatch'),
+    unreadableFileCount: count('unreadable-file'),
     healthy: issues.length === 0,
   };
 }
