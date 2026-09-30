@@ -374,6 +374,7 @@ export class AndroidSecureKeyService implements SecureKeyService {
         authenticationRequired: current.authenticationRequired,
         title: 'Unlock SpendWise',
         reason: 'Open protected local data',
+        authenticate: false,
       });
       if (result.status !== 'success' || !result.secretBase64) {
         return keyFailure(result.keyStatus, result);
