@@ -27,6 +27,7 @@ export const SwipeableExpenseCard: React.FC<SwipeableExpenseCardProps> = ({
   const [holding, setHolding] = useState(false);
   const startRef = useRef<{ x: number; y: number; pointerId: number } | null>(null);
   const horizontalRef = useRef(false);
+  const offsetRef = useRef(0);
   const suppressClickUntilRef = useRef(0);
   const holdTimerRef = useRef<number | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -47,6 +48,7 @@ export const SwipeableExpenseCard: React.FC<SwipeableExpenseCardProps> = ({
   const reset = () => {
     clearHold();
     setDragging(false);
+    offsetRef.current = 0;
     setOffsetX(0);
     startRef.current = null;
     horizontalRef.current = false;
@@ -88,13 +90,15 @@ export const SwipeableExpenseCard: React.FC<SwipeableExpenseCardProps> = ({
       armHoldAnimation();
     }
 
-    setOffsetX(clampSwipeOffset(dx, isRtl));
+    const nextOffset = clampSwipeOffset(dx, isRtl);
+    offsetRef.current = nextOffset;
+    setOffsetX(nextOffset);
   };
 
   const finishPointer = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!startRef.current || startRef.current.pointerId !== event.pointerId) return;
     const width = rootRef.current?.clientWidth || 320;
-    const armed = horizontalRef.current && isSwipeDeleteArmed(offsetX, width, isRtl);
+    const armed = horizontalRef.current && isSwipeDeleteArmed(offsetRef.current, width, isRtl);
     if (horizontalRef.current) suppressClickUntilRef.current = Date.now() + 500;
     reset();
     if (armed) onRequestDelete();
