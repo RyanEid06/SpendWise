@@ -180,13 +180,15 @@ test('WP29 SQLCipher configuration and staged migration preserve the plaintext s
   const activationIndex = db.indexOf(
     "writeMigration(\n        storage,\n        'active'"
   );
-  const finalizeIndex = db.indexOf('async finalizePlaintextSourceCleanup');
-  const plaintextDeleteIndex = db.lastIndexOf(
-    'deleteDatabase(sqlite, PLAINTEXT_DATABASE_NAME, false)'
-  );
+  const finalizeStart = db.indexOf('async finalizePlaintextSourceCleanup');
+  const finalizeEnd = db.indexOf('\n  private async migrateFromPlaintext', finalizeStart);
+  const finalizeBody = db.slice(finalizeStart, finalizeEnd);
   assert.ok(activationIndex >= 0);
-  assert.ok(finalizeIndex > activationIndex);
-  assert.ok(plaintextDeleteIndex > finalizeIndex);
+  assert.match(finalizeBody, /journal\.phase !== 'active' && journal\.phase !== 'complete'/);
+  assert.match(
+    finalizeBody,
+    /deleteDatabase\(sqlite, PLAINTEXT_DATABASE_NAME, false\)/
+  );
 });
 
 test('WP29 retires plaintext legacy financial snapshots only after the encrypted database migration marker is complete', () => {
@@ -239,8 +241,11 @@ test('WP29 media migration stages encrypted bytes, switches metadata, verifies, 
   assert.match(media, /deleteLegacyPlaintextFilesStrict/);
   assert.match(media, /writeMigrationRecord\('complete'/);
 
-  const replaceIndex = media.indexOf('await LocalDataStore.replaceState');
-  const cleanupIndex = media.indexOf('await deleteLegacyPlaintextFilesStrict');
+  const migrationStart = media.indexOf('static async ensureNativeEncryption');
+  const migrationEnd = media.indexOf('\n  static async prepareImageDraft', migrationStart);
+  const migrationBody = media.slice(migrationStart, migrationEnd);
+  const replaceIndex = migrationBody.indexOf('await LocalDataStore.replaceState');
+  const cleanupIndex = migrationBody.lastIndexOf('await deleteLegacyPlaintextFilesStrict');
   assert.ok(replaceIndex >= 0 && cleanupIndex > replaceIndex);
   assert.doesNotMatch(media, /writeFile\(\{[\s\S]{0,160}draft\.blob/);
 });
