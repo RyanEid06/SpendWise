@@ -1,8 +1,8 @@
 # SpendWise Threat Model — WP25
 
-Status: authoritative design contract for WP26-WP34  
-Baseline reviewed: main at 0a60702eed64e6558e80330c9c2c15905d3e313e  
-Product baseline: SpendWise v1.4.0  
+Status: authoritative design contract for WP26-WP34
+Baseline reviewed: main at 0a60702eed64e6558e80330c9c2c15905d3e313e
+Product baseline: SpendWise v1.4.0
 Scope: Android is the primary hardened target; web behavior is documented separately where its guarantees differ.
 
 This document is an engineering threat model mapped to the OWASP Mobile Application Security Verification Standard (MASVS) and current Android security guidance. It is not a claim of OWASP certification or formal compliance.
