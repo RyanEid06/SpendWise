@@ -10,6 +10,10 @@ function indexOfRequired(marker: string): number {
   return index;
 }
 
+function includesRequired(marker: string): void {
+  assert.ok(settings.includes(marker), 'missing marker: ' + marker);
+}
+
 test('WP23 compact overview keeps the approved top-level order', () => {
   const order = [
     'label={copy.appearance}',
@@ -28,68 +32,70 @@ test('WP23 compact overview keeps the approved top-level order', () => {
     assert.ok(order[index - 1] < order[index], 'Settings overview order regressed');
   }
 
-  assert.match(settings, /data-settings-overview="compact"/);
-  assert.doesNotMatch(settings, /Setup & privacy|100% Local & Private Guarantee/);
+  includesRequired('data-settings-overview="compact"');
+  assert.equal(settings.includes('Setup & privacy'), false);
+  assert.equal(settings.includes('100% Local & Private Guarantee'), false);
 });
 
 test('Appearance, Language and Currency use inline disclosure semantics', () => {
-  assert.match(settings, /indicator="expand"[sS]*data-inline-settings="appearance"/);
-  assert.match(settings, /indicator="expand"[sS]*data-inline-settings="language"/);
-  assert.match(settings, /indicator="expand"[sS]*data-inline-settings="currency"/);
-  assert.match(settings, /<ChevronDown/);
-  assert.match(settings, /<ChevronUp/);
+  includesRequired('data-inline-settings="appearance"');
+  includesRequired('data-inline-settings="language"');
+  includesRequired('data-inline-settings="currency"');
+  includesRequired('indicator="expand"');
+  includesRequired('<ChevronDown');
+  includesRequired('<ChevronUp');
 });
 
 test('complex settings areas use dedicated internal sub-screens', () => {
-  assert.match(settings, /type SettingsPage = 'overview' | 'app-lock' | 'storage-media' | 'backup-restore'/);
-  assert.match(settings, /setSettingsPage('app-lock')/);
-  assert.match(settings, /setSettingsPage('storage-media')/);
-  assert.match(settings, /setSettingsPage('backup-restore')/);
-  assert.match(settings, /indicator="navigate"/);
-  assert.match(settings, /rtl:rotate-180/);
+  includesRequired("type SettingsPage = 'overview' | 'app-lock' | 'storage-media' | 'backup-restore'");
+  includesRequired("setSettingsPage('app-lock')");
+  includesRequired("setSettingsPage('storage-media')");
+  includesRequired("setSettingsPage('backup-restore')");
+  includesRequired('indicator="navigate"');
+  includesRequired('rtl:rotate-180');
 });
 
 test('App Lock keeps PIN validation, toggle and timeout controls', () => {
-  assert.match(settings, /StorageManager.hasLockPin()/);
-  assert.match(settings, /StorageManager.setLockPin(newPin)/);
-  assert.ok(settings.includes("if (!/^\\d{4,8}$/.test(newPin)"));
-  assert.match(settings, /onAppLockToggle(enabled)/);
-  assert.match(settings, /onLockTimeoutChange(option.seconds)/);
-  assert.match(settings, /pinRequiredToEnable/);
+  includesRequired('StorageManager.hasLockPin()');
+  includesRequired('StorageManager.setLockPin(newPin)');
+  includesRequired("if (!/^\\d{4,8}$/.test(newPin)");
+  includesRequired('onAppLockToggle(enabled)');
+  includesRequired('onLockTimeoutChange(option.seconds)');
+  includesRequired('pinRequiredToEnable');
 });
 
 test('Storage and backup capabilities remain reachable without engine rewrites', () => {
-  assert.match(settings, /StorageManager.getMediaStorageSummary()/);
-  assert.match(settings, /setShowMediaLibrary(true)/);
-  assert.match(settings, /StorageManager.createBackupV2(includeMedia)/);
-  assert.match(settings, /StorageManager.createBackupJson()/);
-  assert.match(settings, /StorageManager.createCsvExport()/);
-  assert.match(settings, /StorageManager.restoreBackup(/);
-  assert.match(settings, /StorageManager.restoreBackupV2(/);
-  assert.match(settings, /BACKUP_CURRENCY_MISMATCH/);
+  includesRequired('StorageManager.getMediaStorageSummary()');
+  includesRequired('setShowMediaLibrary(true)');
+  includesRequired('StorageManager.createBackupV2(includeMedia)');
+  includesRequired('StorageManager.createBackupJson()');
+  includesRequired('StorageManager.createCsvExport()');
+  includesRequired('StorageManager.restoreBackup(pendingImportBackup, replaceExisting)');
+  includesRequired('StorageManager.restoreBackupV2(pendingV2Backup.file, replaceExisting)');
+  includesRequired('BACKUP_CURRENCY_MISMATCH');
 });
 
 test('currency changes retain the existing conversion safeguard', () => {
-  assert.match(settings, /if (!hasFinancialData)/);
-  assert.match(settings, /setPendingCurrencyCode(code)/);
-  assert.match(settings, /<CurrencyConversionModal/);
-  assert.match(settings, /await onCurrencyChange(targetCode, targetUnitsPerSourceUnit)/);
+  includesRequired('if (!hasFinancialData)');
+  includesRequired('setPendingCurrencyCode(code)');
+  includesRequired('<CurrencyConversionModal');
+  includesRequired('await onCurrencyChange(targetCode, targetUnitsPerSourceUnit)');
 });
 
 test('setup replay and destructive clear both remain confirmation protected', () => {
-  assert.match(settings, /showSetupReplayModal/);
-  assert.match(settings, /setupConfirmMessage/);
-  assert.match(settings, /onReviewSetup()/);
-  assert.match(settings, /showClearModal/);
-  assert.match(settings, /isDestructive={true}/);
-  assert.match(settings, /await onClearAllData()/);
+  includesRequired('showSetupReplayModal');
+  includesRequired('setupConfirmMessage');
+  includesRequired('onReviewSetup()');
+  includesRequired('showClearModal');
+  includesRequired('isDestructive={true}');
+  includesRequired('await onClearAllData()');
 });
 
 test('legal screens and installed version information remain available', () => {
-  assert.match(settings, /setLegalKind('terms')/);
-  assert.match(settings, /setLegalKind('privacy')/);
-  assert.match(settings, /APP_VERSION_NAME/);
-  assert.match(settings, /APP_VERSION_CODE/);
+  includesRequired("setLegalKind('terms')");
+  includesRequired("setLegalKind('privacy')");
+  includesRequired('APP_VERSION_NAME');
+  includesRequired('APP_VERSION_CODE');
 });
 
 test('native Back closes nested layers before returning a settings sub-screen to overview', () => {
@@ -97,21 +103,25 @@ test('native Back closes nested layers before returning a settings sub-screen to
     settings.indexOf('const handleNativeBack'),
     settings.indexOf("window.addEventListener('spendwise-native-back'")
   );
-  assert.match(backHandler, /pendingCurrencyCode/);
-  assert.match(backHandler, /pendingV2Backup/);
-  assert.match(backHandler, /pendingImportBackup/);
-  assert.match(backHandler, /showClearModal/);
-  assert.match(backHandler, /showSetupReplayModal/);
-  assert.match(backHandler, /showMediaLibrary || legalKind/);
-  assert.match(backHandler, /settingsPage !== 'overview'/);
-  assert.match(backHandler, /setSettingsPage('overview')/);
+  for (const marker of [
+    'pendingCurrencyCode',
+    'pendingV2Backup',
+    'pendingImportBackup',
+    'showClearModal',
+    'showSetupReplayModal',
+    'showMediaLibrary || legalKind',
+    "settingsPage !== 'overview'",
+    "setSettingsPage('overview')",
+  ]) {
+    assert.ok(backHandler.includes(marker), 'native Back missing marker: ' + marker);
+  }
 });
 
 test('EN FR AR copy and RTL-safe directional affordances are explicit', () => {
-  assert.match(settings, /en:/);
-  assert.match(settings, /fr:/);
-  assert.match(settings, /ar:/);
-  assert.match(settings, /العربية/);
-  assert.match(settings, /rtl:rotate-180/);
-  assert.match(settings, /rtl:text-right/);
+  includesRequired('en: {');
+  includesRequired('fr: {');
+  includesRequired('ar: {');
+  includesRequired('العربية');
+  includesRequired('rtl:rotate-180');
+  includesRequired('rtl:text-right');
 });
