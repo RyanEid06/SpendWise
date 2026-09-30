@@ -41,6 +41,15 @@ export interface NativeWrappedSecret {
   ciphertextBase64: string;
 }
 
+export interface NativeInstallationIdentity {
+  algorithm: 'ECDSA_P256_SHA256';
+  publicKeyBase64: string;
+}
+
+export interface NativeInstallationSignature {
+  signatureBase64: string;
+}
+
 interface SpendWiseSecurityPlugin {
   getCapabilities(): Promise<NativeSecurityCapabilities>;
   authenticate(options: {
@@ -103,6 +112,10 @@ interface SpendWiseSecurityPlugin {
     }
   >;
   deleteKey(options: { keyVersion: number }): Promise<{ deleted: boolean }>;
+  ensureInstallationIdentity(): Promise<NativeInstallationIdentity>;
+  signInstallationPayload(options: {
+    payload: string;
+  }): Promise<NativeInstallationSignature>;
   setPrivacyShield(options: { enabled: boolean }): Promise<{ enabled: boolean }>;
 }
 
@@ -198,6 +211,16 @@ export class AndroidSecurityAdapter {
 
   deleteKey(keyVersion: number): Promise<{ deleted: boolean }> {
     return NativeSecurity.deleteKey({ keyVersion });
+  }
+
+  ensureInstallationIdentity(): Promise<NativeInstallationIdentity> {
+    return NativeSecurity.ensureInstallationIdentity();
+  }
+
+  signInstallationPayload(
+    payload: string
+  ): Promise<NativeInstallationSignature> {
+    return NativeSecurity.signInstallationPayload({ payload });
   }
 
   async setPrivacyShield(enabled: boolean): Promise<boolean> {
