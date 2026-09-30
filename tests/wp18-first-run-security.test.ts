@@ -1,0 +1,212 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import {
+  CURRENT_LEGAL_VERSION,
+  CURRENT_SETUP_VERSION,
+  SETUP_KEYS,
+  completeInitialSetup,
+  directionForLanguage,
+  getSetupVersion,
+  hasAcknowledgedCurrentLegal,
+  initializeSetupState,
+  isValidSetupPin,
+  shouldShowFirstRun,
+} from '../src/utils/setupState';
+import {
+  MAX_LOCK_DELAY_MS,
+  clearLockThrottle,
+  lockDelayForFailures,
+  nextLockThrottleState,
+  readLockThrottleState,
+  recordLockFailure,
+  remainingLockDelayMs,
+} from '../src/utils/lockThrottle';
+
+class MemoryStorage {
+  private values = new Map<string, string>();
+  getItem(key: string) { return this.values.get(key) ?? null; }
+  setItem(key: string, value: string) { this.values.set(key, value); }
+  removeItem(key: string) { this.values.delete(key); }
+  snapshot() { return new Map(this.values); }
+}
+
+const appSource = readFileSync('src/App.tsx', 'utf8');
+const setupSource = readFileSync('src/screens/SetupWizardScreen.tsx', 'utf8');
+const settingsSource = readFileSync('src/screens/SettingsScreen.tsx', 'utf8');
+const imageSource = readFileSync('src/utils/imageAcquisition.ts', 'utf8');
+const attachmentCopy = readFileSync('src/utils/attachmentTranslations.ts', 'utf8');
+const navSource = readFileSync('src/components/Navigation.tsx', 'utf8');
+const historySource = readFileSync('src/screens/HistoryScreen.tsx', 'utf8');
+const detailSource = readFileSync('src/components/ExpenseDetailModal.tsx', 'utf8');
+const insightSource = readFileSync('src/utils/insightSelection.ts', 'utf8');
+const statisticsSource = readFileSync('src/screens/StatisticsScreen.tsx', 'utf8');
+const serverSource = readFileSync('server.ts', 'utf8');
+
+test('fresh state is explicitly marked pending and shows first-run setup', () => {
+  const storage = new MemoryStorage();
+  assert.equal(initializeSetupState(storage), 'fresh');
+  assert.equal(shouldShowFirstRun(storage), true);
+  assert.equal(storage.getItem(SETUP_KEYS.PENDING), 'true');
+  assert.equal(getSetupVersion(storage), 0);
+});
+
+test('completed setup persists version and current legal acknowledgement', () => {
+  const storage = new MemoryStorage();
+  initializeSetupState(storage);
+  completeInitialSetup(storage);
+  assert.equal(shouldShowFirstRun(storage), false);
+  assert.equal(getSetupVersion(storage), CURRENT_SETUP_VERSION);
+  assert.equal(hasAcknowledgedCurrentLegal(storage), true);
+  assert.equal(storage.getItem(SETUP_KEYS.LEGAL_VERSION), String(CURRENT_LEGAL_VERSION));
+});
+
+test('existing pre-WP18 installation migrates without fake onboarding', () => {
+  const storage = new MemoryStorage();
+  storage.setItem(SETUP_KEYS.LEGACY_INITIALIZED, 'true');
+  assert.equal(initializeSetupState(storage), 'migrated');
+  assert.equal(shouldShowFirstRun(storage), false);
+  assert.equal(getSetupVersion(storage), CURRENT_SETUP_VERSION);
+  assert.equal(hasAcknowledgedCurrentLegal(storage), false);
+});
+
+test('older zero-expense install with only durable preferences migrates as existing', () => {
+  const storage = new MemoryStorage();
+  storage.setItem('spendwise_language', 'fr');
+  storage.setItem('spendwise_theme', 'DARK');
+  assert.equal(initializeSetupState(storage), 'migrated');
+  assert.equal(shouldShowFirstRun(storage), false);
+  assert.equal(getSetupVersion(storage), CURRENT_SETUP_VERSION);
+});
+
+test('setup migration is idempotent', () => {
+  const storage = new MemoryStorage();
+  storage.setItem(SETUP_KEYS.LEGACY_INITIALIZED, 'true');
+  assert.equal(initializeSetupState(storage), 'migrated');
+  const once = storage.snapshot();
+  assert.equal(initializeSetupState(storage), 'complete');
+  assert.deepEqual(storage.snapshot(), once);
+});
+
+test('an interrupted genuine first-run stays first-run after legacy init marker appears', () => {
+  const storage = new MemoryStorage();
+  assert.equal(initializeSetupState(storage), 'fresh');
+  storage.setItem(SETUP_KEYS.LEGACY_INITIALIZED, 'true');
+  assert.equal(initializeSetupState(storage), 'fresh');
+  assert.equal(shouldShowFirstRun(storage), true);
+});
+
+test('setup state does not mutate financial ledger keys', () => {
+  const storage = new MemoryStorage();
+  storage.setItem('spendwise_expenses', '[{"id":1}]');
+  storage.setItem('spendwise_budgets', '[{"monthKey":"2026-09"}]');
+  storage.setItem('spendwise_expense_attachments_v1', '[{"id":"a"}]');
+  const before = {
+    expenses: storage.getItem('spendwise_expenses'),
+    budgets: storage.getItem('spendwise_budgets'),
+    attachments: storage.getItem('spendwise_expense_attachments_v1'),
+  };
+  initializeSetupState(storage);
+  completeInitialSetup(storage);
+  assert.deepEqual({
+    expenses: storage.getItem('spendwise_expenses'),
+    budgets: storage.getItem('spendwise_budgets'),
+    attachments: storage.getItem('spendwise_expense_attachments_v1'),
+  }, before);
+});
+
+test('language direction applies immediately and correctly', () => {
+  assert.equal(directionForLanguage('ar'), 'rtl');
+  assert.equal(directionForLanguage('en'), 'ltr');
+  assert.equal(directionForLanguage('fr'), 'ltr');
+  assert.match(setupSource, /document\.documentElement\.setAttribute\('dir', directionForLanguage\(language\)\)/);
+});
+
+test('initial setup has one required Terms and Privacy acknowledgement', () => {
+  assert.match(setupSource, /mode === 'first-run' && !accepted/);
+  assert.match(setupSource, /disabled=\{mode === 'first-run' && !accepted\}/);
+  assert.match(setupSource, /setLegalKind\('terms'\)/);
+  assert.match(setupSource, /setLegalKind\('privacy'\)/);
+  assert.equal((setupSource.match(/type="checkbox"/g) || []).length, 1);
+});
+
+test('replay is separate from first-run completion and does not clear consent', () => {
+  assert.match(appSource, /'first-run' \| 'replay'/);
+  assert.match(settingsSource, /onReviewSetup/);
+  assert.match(appSource, /setSetupMode\('replay'\)/);
+  assert.match(setupSource, /if \(mode === 'first-run'\) SetupState\.completeInitialSetup\(\)/);
+  assert.doesNotMatch(setupSource, /removeItem\(SETUP_KEYS\.LEGAL_VERSION/);
+});
+
+test('PIN setup is optional and only matching 4-8 digit PINs are valid', () => {
+  assert.equal(isValidSetupPin('', ''), false);
+  assert.equal(isValidSetupPin('1234', '1234'), true);
+  assert.equal(isValidSetupPin('12345678', '12345678'), true);
+  assert.equal(isValidSetupPin('123', '123'), false);
+  assert.equal(isValidSetupPin('123456789', '123456789'), false);
+  assert.equal(isValidSetupPin('1234', '4321'), false);
+  assert.match(setupSource, /const wantsPin = pin\.length > 0 \|\| confirmPin\.length > 0/);
+});
+
+test('lock throttling is bounded, temporary, deterministic, and resettable', () => {
+  assert.equal(lockDelayForFailures(4), 0);
+  assert.equal(lockDelayForFailures(5), 5_000);
+  assert.equal(lockDelayForFailures(7), 15_000);
+  assert.equal(lockDelayForFailures(9), MAX_LOCK_DELAY_MS);
+  assert.equal(lockDelayForFailures(100), MAX_LOCK_DELAY_MS);
+
+  const state = nextLockThrottleState({ failedAttempts: 8, blockedUntil: 0 }, 1_000);
+  assert.deepEqual(state, { failedAttempts: 9, blockedUntil: 31_000 });
+  assert.equal(remainingLockDelayMs(state, 16_000), 15_000);
+
+  const storage = new MemoryStorage();
+  for (let i = 0; i < 5; i++) recordLockFailure(10_000, storage);
+  assert.equal(readLockThrottleState(storage).failedAttempts, 5);
+  assert.equal(remainingLockDelayMs(readLockThrottleState(storage), 10_000), 5_000);
+  clearLockThrottle(storage);
+  assert.deepEqual(readLockThrottleState(storage), { failedAttempts: 0, blockedUntil: 0 });
+});
+
+test('camera permission remains contextual and gallery remains independent', () => {
+  const takePhotoBody = imageSource.slice(imageSource.indexOf('export async function takePhoto'), imageSource.indexOf('export async function choosePhotos'));
+  const galleryBody = imageSource.slice(imageSource.indexOf('export async function choosePhotos'));
+  assert.match(takePhotoBody, /ensureCameraPermission\(\)/);
+  assert.match(takePhotoBody, /saveToGallery: false/);
+  assert.doesNotMatch(galleryBody, /ensureCameraPermission\(\)/);
+  assert.doesNotMatch(appSource, /requestPermissions/);
+  assert.doesNotMatch(setupSource, /requestPermissions|ensureCameraPermission|takePhoto\(/);
+  assert.match(attachmentCopy, /system settings|réglages système|إعدادات النظام/);
+});
+
+test('replay currency changes preserve existing conversion safeguards', () => {
+  assert.match(setupSource, /if \(hasFinancialData\) setPendingCurrencyCode\(currency\.code\)/);
+  assert.match(setupSource, /<CurrencyConversionModal/);
+  assert.match(setupSource, /await onCurrencyChange\(pendingCurrencyCode, rate\)/);
+  assert.match(appSource, /throw new Error\('A conversion rate is required for an existing financial ledger\.'\)/);
+});
+
+
+test('backend AI rate limiting remains per-IP, bounded, and exposes Retry-After', () => {
+  assert.match(serverSource, /const key = req\.ip \|\| req\.socket\.remoteAddress/);
+  assert.match(serverSource, /RATE_BUCKET_MAX_ENTRIES = 2_000/);
+  assert.match(serverSource, /cleanupRateBuckets\(rateBuckets, now, RATE_BUCKET_MAX_ENTRIES\)/);
+  assert.match(serverSource, /'Retry-After'/);
+  assert.match(serverSource, /res\.status\(429\)/);
+});
+
+test('backend request and AI image input bounds remain enforced', () => {
+  assert.match(serverSource, /express\.json\(\{ limit: '16mb' \}\)/);
+  assert.match(serverSource, /MAX_IMAGE_BASE64_LENGTH = 12_000_000/);
+  assert.match(serverSource, /imageBase64\.length > MAX_IMAGE_BASE64_LENGTH/);
+  assert.match(serverSource, /safeString\(/);
+  assert.match(serverSource, /safeInsightArray\(/);
+});
+
+test('WP17 product shape remains frozen', () => {
+  const entries = navSource.match(/\{ screen: '(home|history|insights|statistics)'/g) || [];
+  assert.equal(entries.length, 4);
+  assert.match(historySource, /\['ALL',[\s\S]*\['DAY',[\s\S]*\['CATEGORY'/);
+  assert.doesNotMatch(detailSource, /onEdit|Edit2|onDelete/);
+  assert.match(insightSource, /Math\.min\(3, limit\)/);
+  assert.match(statisticsSource, /CategoryStatisticsSection/);
+});

@@ -69,6 +69,9 @@ jobs:
       - name: Run WP17 core UX regression tests
         run: npm run test:wp17
 
+      - name: Run WP18 first-run privacy security tests
+        run: npm run test:wp18
+
       - name: Sync Capacitor Android
         run: npm run android:sync
 

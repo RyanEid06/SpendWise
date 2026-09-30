@@ -19,6 +19,7 @@ import { APP_VERSION_NAME } from './appVersion';
 import { AttachmentEditPayload, AttachmentStorage } from './attachmentStorage';
 import { LEGACY_FINANCIAL_KEYS } from './financialState';
 import { LocalDataStore } from './localDataStore';
+import { SetupState } from './setupState';
 import {
   BackupV2Preview,
   BackupV2RestoreSummary,
@@ -71,6 +72,7 @@ export class StorageManager {
   static async init(): Promise<void> {
     if (this.initialized || typeof window === 'undefined') return;
     this.recoverInterruptedLegacyCurrencyConversion();
+    SetupState.initialize();
 
     if (localStorage.getItem(STORAGE_KEYS.CURRENCY) === null) {
       localStorage.setItem(STORAGE_KEYS.CURRENCY, DEFAULT_CURRENCY_CODE);
