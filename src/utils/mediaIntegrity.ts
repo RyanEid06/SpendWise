@@ -79,7 +79,7 @@ export function analyzeMediaIntegrity(
   checkedAt = Date.now()
 ): MediaIntegrityReport {
   const expenseIds = new Set(expenses.map((item) => item.id));
-  const binaryMap = new Map(binaries.map((item) => [item.storageKey, item.byteSize]));
+  const binaryMap = new Map(binaries.map((item) => [item.storageKey, item]));
   const referencedKeys = new Set<string>();
   const idCounts = new Map<string, number>();
   const keyCounts = new Map<string, number>();
@@ -118,7 +118,7 @@ export function analyzeMediaIntegrity(
         storageKey: attachment.storageKey,
       });
     }
-    const binary = binaries.find((item) => item.storageKey === attachment.storageKey);
+    const binary = binaryMap.get(attachment.storageKey);
     if (!binary) {
       issues.push({ type: 'missing-file', attachmentId: attachment.id, storageKey: attachment.storageKey });
     } else if (binary.valid === false) {
