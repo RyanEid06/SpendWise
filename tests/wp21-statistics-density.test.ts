@@ -56,9 +56,9 @@ test('WP21 presentation changes preserve StatisticsEngine summary mappings', () 
     expense(3, 30, 2026, 8, 'September item'),
   ];
   const budgets: MonthlyBudget[] = [
-    { monthKey: '2026-07', startingAmount: 100 },
-    { monthKey: '2026-08', startingAmount: 100 },
-    { monthKey: '2026-09', startingAmount: 100 },
+    { monthKey: '2026-07', startingAmount: 100, updatedAt: 1 },
+    { monthKey: '2026-08', startingAmount: 100, updatedAt: 2 },
+    { monthKey: '2026-09', startingAmount: 100, updatedAt: 3 },
   ];
 
   const stats = StatisticsEngine.calculateStatistics(
