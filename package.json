@@ -26,7 +26,8 @@
     "test:wp24": "tsx --test tests/wp24-integration-hardening.test.ts",
     "test:wp26": "tsx --test tests/wp26-app-shell-refactor.test.ts",
     "test:wp27": "tsx --test tests/wp27-service-boundaries.test.ts",
-    "test:wp28": "tsx --test tests/wp28-secure-auth-keystore.test.ts"
+    "test:wp28": "tsx --test tests/wp28-secure-auth-keystore.test.ts",
+    "test:wp29": "tsx --test tests/wp29-encrypted-at-rest.test.ts"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",
