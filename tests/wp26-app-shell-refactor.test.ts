@@ -20,7 +20,7 @@ import {
   directionForLanguage,
   resolveDarkMode,
 } from '../src/app/hooks/useThemeLanguage';
-import { AiRequestGate } from '../src/app/hooks/useAiAnalysis';
+import { AiRequestGate } from '../src/app/hooks/aiRequestGate';
 import { selectMonthlyLedger } from '../src/app/selectors/monthlyLedger';
 
 const read = (path: string) => readFileSync(path, 'utf8');
