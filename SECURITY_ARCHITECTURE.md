@@ -1,7 +1,7 @@
 # SpendWise Security Architecture — WP25
 
-Status: locked engineering contract for WP28-WP34  
-Reviewed application baseline: 0a60702eed64e6558e80330c9c2c15905d3e313e  
+Status: locked engineering contract for WP28-WP34
+Reviewed application baseline: 0a60702eed64e6558e80330c9c2c15905d3e313e
 Target: hardened native Android release after WP34
 
 This document defines security behavior and ownership. It maps SpendWise engineering decisions to OWASP MASVS control areas; it does not claim certification.
