@@ -205,9 +205,10 @@ test('WP29 DB failures do not silently manufacture replacement keys for existing
     db,
     /destinationExists[\s\S]*!this\.keyService\.hasWrappedSecret\(DATABASE_KEY_PURPOSE\)[\s\S]*DATABASE_KEY_MISSING/
   );
+  const schema = source('src/data/databaseSchema.ts');
   assert.match(db, /ENCRYPTED_DATABASE_KEY_OR_FORMAT_INVALID/);
-  assert.match(db, /DATABASE_INTEGRITY_CHECK_FAILED/);
-  assert.match(db, /DATABASE_FOREIGN_KEY_CHECK_FAILED/);
+  assert.match(schema, /DATABASE_INTEGRITY_CHECK_FAILED/);
+  assert.match(schema, /DATABASE_FOREIGN_KEY_CHECK_FAILED/);
   assert.match(db, /PLAINTEXT_DATABASE_CLEANUP_FAILED/);
 });
 
