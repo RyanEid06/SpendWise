@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { ViewportPortal } from './ViewportPortal';
 import { AlertTriangle, Trash2 } from 'lucide-react';
 
 interface ConfirmationModalProps {
@@ -22,12 +23,19 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   onConfirm,
   onCancel,
 }) => {
+  useEffect(() => {
+    if (!isOpen) return;
+    const close = () => onCancel();
+    const key = (event: KeyboardEvent) => { if (event.key === 'Escape') { event.preventDefault(); onCancel(); } };
+    window.addEventListener('spendwise-native-back', close); document.addEventListener('keydown', key);
+    return () => { window.removeEventListener('spendwise-native-back', close); document.removeEventListener('keydown', key); };
+  }, [isOpen, onCancel]);
   if (!isOpen) return null;
-
-  return (
+  return (<ViewportPortal>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
       role="alertdialog"
+      data-native-back-layer="true"
       aria-modal="true"
       aria-labelledby="confirm-modal-title"
       aria-describedby="confirm-modal-desc"
@@ -73,6 +81,6 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+      </div></ViewportPortal>
   );
 };

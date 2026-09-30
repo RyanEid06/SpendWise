@@ -130,6 +130,17 @@ test('deleting an expense returns exactly its attachment metadata for file clean
   assert.deepEqual(store.getAttachments(), []);
 });
 
+test('batch expense deletion returns all detached media metadata', async () => {
+  const storage = new MemoryStorage();
+  seed(storage);
+  const store = new LocalDataStoreImpl();
+  await store.init(storage);
+  await store.createExpenseWithAttachments(expense(2, 30), []);
+  assert.deepEqual(await store.deleteExpenses([1, 2]), [attachment()]);
+  assert.deepEqual(store.getExpenses(), []);
+  assert.deepEqual(store.getAttachments(), []);
+});
+
 test('currency conversion replacement is atomic on persistence failure', async () => {
   const storage = new MemoryStorage();
   seed(storage);

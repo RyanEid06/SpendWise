@@ -5,8 +5,9 @@ import { AttachmentStorage } from '../utils/attachmentStorage';
 import { ta } from '../utils/attachmentTranslations';
 import { getCategoryInfo } from '../utils/categories';
 import { formatCurrency } from '../utils/currency';
-import { formatDate } from '../utils/date';
 import { getLocalizedCategoryName } from '../utils/translations';
+import { localeForLanguage } from '../utils/historyView';
+import { ViewportPortal } from './ViewportPortal';
 
 const DETAIL_COPY = {
   en: {
@@ -139,7 +140,7 @@ export const ExpenseDetailModal: React.FC<{
   }, [onClose, previewUrl]);
 
   return (
-    <>
+    <ViewportPortal><>
       <div
         className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs p-4 flex items-center justify-center overflow-y-auto"
         role="dialog"
@@ -180,7 +181,7 @@ export const ExpenseDetailModal: React.FC<{
                 </span>
                 <span className="text-slate-500 dark:text-slate-400 inline-flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5" />
-                  {formatDate(expense.date)}
+                  {new Intl.DateTimeFormat(localeForLanguage(language), { dateStyle: 'full', timeStyle: 'short' }).format(new Date(expense.date))}
                 </span>
               </div>
             </div>
@@ -269,6 +270,6 @@ export const ExpenseDetailModal: React.FC<{
           </button>
         </div>
       )}
-    </>
+    </></ViewportPortal>
   );
 };

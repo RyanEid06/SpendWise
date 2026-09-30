@@ -16,8 +16,9 @@ Current app version: **1.3.0**
   - Up to 8 photos can be attached to an expense.
 
 - **History & Statistics**
-  - Search and monthly transaction history with confirmation-protected deletion.
+  - Search and monthly transaction history with swipe-to-delete, a 5-second grouped Undo window, and read-only details.
   - History and Statistics open read-only expense details instead of silently entering edit mode.
+  - Pending History deletes remain in storage until Undo expires; backgrounding/termination conservatively restores them.
   - Multi-period statistics, category trends, largest expenses, and large-ledger regression coverage.
 
 - **AI Spending Analysis & Receipt Scanning**

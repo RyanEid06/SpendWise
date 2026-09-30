@@ -116,14 +116,14 @@ test('History exposes All, Day, and Category controls while keeping All as initi
 
 test('History metadata is positive-only and attachment counts are derived once per ledger change', () => {
   assert.match(historySource, /AttachmentStorage\.getAllAttachments\(\)/);
-  assert.match(cardSource, /attachmentCount > 0/);
+  assert.match(cardSource, /attachmentCount\s*>\s*0/);
   assert.match(cardSource, /Boolean\(expense\.note\?\.trim\(\)\)/);
   assert.doesNotMatch(cardSource, /No photos|No note/);
 });
 
-test('History deletion remains confirmation-protected and detail remains read-only', () => {
-  assert.match(historySource, /<ConfirmationModal/);
-  assert.match(historySource, /onRequestDelete=\{\(\) => setExpenseToDelete\(expense\)\}/);
+test('approved WP20 Undo policy supersedes routine confirmation while detail remains read-only', () => {
+  assert.doesNotMatch(historySource, /<ConfirmationModal|expenseToDelete/);
+  assert.match(historySource, /onRequestDelete=\{\(\) => onDeleteExpense\(expense\)\}/);
   assert.doesNotMatch(detailSource, /onEdit|Edit2|Trash2|onDelete/);
 });
 

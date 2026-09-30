@@ -45,21 +45,9 @@
   background: rgba(148, 163, 184, 0.45);
 }
 
-/* Subtle Android-style micro animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-screen-enter {
-  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
+/* Keep screen entry subtle without leaving a transformed scrolling ancestor. */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.animate-screen-enter { animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
 
 @keyframes pulseSubtle {
   0%, 100% {
