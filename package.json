@@ -19,7 +19,8 @@
     "test:final-freeze": "tsx --test tests/final-freeze.test.ts",
     "test:wp17": "tsx --test tests/wp17-core-ux.test.ts",
     "test:wp18": "tsx --test tests/wp18-first-run-security.test.ts",
-    "test:wp20": "tsx --test tests/wp20-history-undo-overlay.test.ts"
+    "test:wp20": "tsx --test tests/wp20-history-undo-overlay.test.ts",
+    "test:wp21": "tsx --test tests/wp21-statistics-density.test.ts"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",
