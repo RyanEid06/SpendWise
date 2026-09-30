@@ -274,6 +274,8 @@ test('WP24 fixes recent EN/FR/AR localization leaks and keeps all three language
   const media = read('src/screens/MediaLibraryScreen.tsx');
   assert.match(media, /text\.date/);
   assert.match(media, /shareTitle: text\.shareTitle/);
+  assert.match(media, /aria-label=\{text\.back\}/);
+  assert.match(media, /aria-label=\{text\.close\}/);
 });
 
 test('WP24 recent interactive surfaces honor the 48dp target floor', () => {
