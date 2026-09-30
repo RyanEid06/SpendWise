@@ -90,6 +90,9 @@ jobs:
       - name: Run WP23 Settings regression tests
         run: npm run test:wp23
 
+      - name: Run WP24 integration hardening regression tests
+        run: npm run test:wp24
+
       - name: Sync Capacitor Android
         run: npm run android:sync
 

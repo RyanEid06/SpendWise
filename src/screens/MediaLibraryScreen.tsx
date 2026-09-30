@@ -6,6 +6,7 @@ import type { MediaIntegrityReport } from '../utils/mediaIntegrity';
 import { StorageManager } from '../utils/storage';
 import { exportBlobFile } from '../utils/fileExport';
 import { formatDate } from '../utils/date';
+import { ViewportPortal } from '../components/ViewportPortal';
 
 const copy = {
   en: {
@@ -15,7 +16,7 @@ const copy = {
     empty: 'No SpendWise photos yet', emptySub: 'Photos attached to expenses will appear here.',
     purchase: 'Purchase', receipt: 'Receipt', proof: 'Proof', linked: 'Linked expense',
     created: 'Added', size: 'File size', dimensions: 'Dimensions', export: 'Share / export',
-    close: 'Close', unknown: 'Unknown expense',
+    close: 'Close', unknown: 'Unknown expense', date: 'Date', shareTitle: 'SpendWise photo',
   },
   fr: {
     title: 'Médiathèque', sub: 'Photos conservées en privé par SpendWise', back: 'Retour',
@@ -24,7 +25,7 @@ const copy = {
     empty: 'Aucune photo SpendWise', emptySub: 'Les photos jointes aux dépenses apparaîtront ici.',
     purchase: 'Achat', receipt: 'Reçu', proof: 'Preuve', linked: 'Dépense liée',
     created: 'Ajoutée', size: 'Taille du fichier', dimensions: 'Dimensions', export: 'Partager / exporter',
-    close: 'Fermer', unknown: 'Dépense inconnue',
+    close: 'Fermer', unknown: 'Dépense inconnue', date: 'Date', shareTitle: 'Photo SpendWise',
   },
   ar: {
     title: 'مكتبة الوسائط', sub: 'الصور المحفوظة بشكل خاص داخل SpendWise', back: 'رجوع',
@@ -33,7 +34,7 @@ const copy = {
     empty: 'لا توجد صور SpendWise بعد', emptySub: 'ستظهر هنا الصور المرفقة بالمصاريف.',
     purchase: 'شراء', receipt: 'إيصال', proof: 'إثبات', linked: 'المصروف المرتبط',
     created: 'أضيفت', size: 'حجم الملف', dimensions: 'الأبعاد', export: 'مشاركة / تصدير',
-    close: 'إغلاق', unknown: 'مصروف غير معروف',
+    close: 'إغلاق', unknown: 'مصروف غير معروف', date: 'التاريخ', shareTitle: 'صورة SpendWise',
   },
 } as const;
 
@@ -108,14 +109,14 @@ export const MediaLibraryScreen: React.FC<{ language: Language; onClose: () => v
     await exportBlobFile({
       fileName: selected.originalFilename?.toLowerCase().endsWith('.jpg') ? selected.originalFilename : `spendwise-photo-${selected.id}.jpg`,
       blob,
-      shareTitle: 'SpendWise photo',
+      shareTitle: text.shareTitle,
     });
   };
 
   return (
     <div className="space-y-4 pb-28 animate-screen-enter" data-native-back-layer="true">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={onClose} className="min-w-[44px] min-h-[44px] rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-center">
+        <button type="button" onClick={onClose} className="min-w-[48px] min-h-[48px] rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-center" aria-label={text.back}>
           <ArrowLeft className="w-5 h-5 rtl:rotate-180" />
         </button>
         <div>
@@ -146,7 +147,7 @@ export const MediaLibraryScreen: React.FC<{ language: Language; onClose: () => v
               await AttachmentStorage.repairIntegrity();
               setMessage(text.repaired);
               await refresh();
-            }} className="min-h-[40px] px-3 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-950 font-bold flex items-center gap-1">
+            }} className="min-h-[48px] px-3 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-950 font-bold flex items-center gap-1">
               <RefreshCw className="w-3.5 h-3.5" />{text.repair}
             </button>
           )}
@@ -182,16 +183,17 @@ export const MediaLibraryScreen: React.FC<{ language: Language; onClose: () => v
       )}
 
       {selected && (
+        <ViewportPortal>
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" role="dialog" aria-modal="true">
           <div className="w-full max-w-md rounded-3xl bg-white dark:bg-[#111928] overflow-hidden border border-slate-200 dark:border-slate-800">
             <div className="flex justify-between items-center p-3 border-b border-slate-200 dark:border-slate-800">
               <div className="font-bold text-sm">{selectedExpense?.description || text.unknown}</div>
-              <button type="button" onClick={() => setSelected(null)} className="min-w-[44px] min-h-[44px] flex items-center justify-center"><X className="w-5 h-5" /></button>
+              <button type="button" onClick={() => setSelected(null)} className="min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label={text.close}><X className="w-5 h-5" /></button>
             </div>
             <LazyAttachmentImage item={selected} className="aspect-square" />
             <div className="p-4 space-y-2 text-xs">
               <div className="flex justify-between"><span className="text-slate-500">{text.linked}</span><span>{selectedExpense?.description || text.unknown}</span></div>
-              {selectedExpense && <div className="flex justify-between"><span className="text-slate-500">Date</span><span>{formatDate(selectedExpense.date)}</span></div>}
+              {selectedExpense && <div className="flex justify-between"><span className="text-slate-500">{text.date}</span><span>{formatDate(selectedExpense.date)}</span></div>}
               <div className="flex justify-between"><span className="text-slate-500">{text.created}</span><span>{formatDate(selected.createdAt)}</span></div>
               <div className="flex justify-between"><span className="text-slate-500">{text.size}</span><span>{humanBytes(selected.byteSize)}</span></div>
               <div className="flex justify-between"><span className="text-slate-500">{text.dimensions}</span><span>{selected.width} × {selected.height}</span></div>
@@ -201,6 +203,7 @@ export const MediaLibraryScreen: React.FC<{ language: Language; onClose: () => v
             </div>
           </div>
         </div>
+        </ViewportPortal>
       )}
     </div>
   );

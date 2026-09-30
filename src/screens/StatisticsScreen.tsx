@@ -167,7 +167,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                 setAiExplanation(null);
                 setAiError(null);
               }}
-              className={`min-h-[44px] px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 active:scale-95 ${
+              className={`min-h-[48px] px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 active:scale-95 ${
                 isSelected
                   ? 'bg-indigo-600 text-white shadow-sm'
                   : 'bg-white dark:bg-[#111928] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-200/90 dark:border-slate-800'
@@ -268,7 +268,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
           <button
             onClick={handleExplainWithAi}
             disabled={isLoadingAi || stats.totalTransactions === 0}
-            className="w-full min-[390px]:w-auto min-h-[44px] flex items-center justify-center space-x-1.5 rtl:space-x-reverse px-4 py-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50 active:scale-95 shrink-0"
+            className="w-full min-[390px]:w-auto min-h-[48px] flex items-center justify-center space-x-1.5 rtl:space-x-reverse px-4 py-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50 active:scale-95 shrink-0"
           >
             {isLoadingAi ? (
               <>

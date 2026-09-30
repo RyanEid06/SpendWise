@@ -8,6 +8,7 @@ import {
   isValidConversionRate,
 } from '../utils/currency';
 import { t } from '../utils/translations';
+import { ViewportPortal } from './ViewportPortal';
 
 interface CurrencyConversionModalProps {
   isOpen: boolean;
@@ -86,6 +87,7 @@ export const CurrencyConversionModal: React.FC<CurrencyConversionModalProps> = (
   const isValid = isValidConversionRate(parsedRate) && previewConverted !== null;
 
   return (
+    <ViewportPortal>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
       role="dialog"
@@ -105,7 +107,7 @@ export const CurrencyConversionModal: React.FC<CurrencyConversionModalProps> = (
           <button
             type="button"
             onClick={onClose}
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="min-w-[48px] min-h-[48px] flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             aria-label={t(language, 'cancelBtn')}
           >
             <X className="w-5 h-5" />
@@ -186,7 +188,7 @@ export const CurrencyConversionModal: React.FC<CurrencyConversionModalProps> = (
           <button
             type="button"
             onClick={onClose}
-            className="min-h-[44px] px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="min-h-[48px] px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             {t(language, 'cancelBtn')}
           </button>
@@ -204,12 +206,13 @@ export const CurrencyConversionModal: React.FC<CurrencyConversionModalProps> = (
                 }
               })();
             }}
-            className="min-h-[44px] px-5 py-2 rounded-xl text-sm font-extrabold shadow-sm transition-all bg-emerald-500 hover:bg-emerald-600 text-slate-950 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer active:scale-95"
+            className="min-h-[48px] px-5 py-2 rounded-xl text-sm font-extrabold shadow-sm transition-all bg-emerald-500 hover:bg-emerald-600 text-slate-950 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer active:scale-95"
           >
             {t(language, 'currencyConfirmBtn', { target: target.code })}
           </button>
         </div>
       </div>
     </div>
+    </ViewportPortal>
   );
 };

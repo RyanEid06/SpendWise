@@ -67,7 +67,7 @@ export const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
               e.stopPropagation();
               onSetBudgetClick();
             }}
-            className="w-full min-[380px]:w-auto min-h-[44px] px-4 flex items-center justify-center space-x-1.5 rtl:space-x-reverse bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs rounded-full transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
+            className="w-full min-[380px]:w-auto min-h-[48px] px-4 flex items-center justify-center space-x-1.5 rtl:space-x-reverse bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs rounded-full transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
             aria-label={t(language, 'setBudgetBtn')}
           >
             <Plus className="w-3.5 h-3.5" />
@@ -125,7 +125,7 @@ export const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
               aria-valuenow={Math.min(100, percentUsed)}
               aria-valuemin={0}
               aria-valuemax={100}
-              aria-label="Monthly budget usage progress"
+              aria-label={`${t(language, 'startingMoney')}: ${t(language, 'percentUsed', { percent: percentUsed })}`}
             >
               <div
                 className={`h-full rounded-full transition-all duration-500 ease-out ${

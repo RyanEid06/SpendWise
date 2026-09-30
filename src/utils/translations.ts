@@ -143,6 +143,7 @@ export const TRANSLATIONS = {
     quickPresetsLabel: 'Quick Presets:',
     saveBudgetBtn: 'Save Budget',
     budgetError: 'Please enter a budget amount greater than 0',
+    budgetSaveFailed: 'Unable to save this budget. Please try again.',
 
     // AI Insights Screen
     aiInsightsHeroTitle: 'AI Spending Analysis & Smart Flags',
@@ -446,6 +447,7 @@ export const TRANSLATIONS = {
     quickPresetsLabel: 'Montants rapides :',
     saveBudgetBtn: 'Enregistrer le budget',
     budgetError: 'Veuillez saisir un budget supérieur à 0',
+    budgetSaveFailed: 'Impossible d’enregistrer ce budget. Veuillez réessayer.',
 
     // AI Insights Screen
     aiInsightsHeroTitle: 'Analyse des dépenses et alertes IA',
@@ -749,6 +751,7 @@ export const TRANSLATIONS = {
     quickPresetsLabel: 'مبالغ سريعة جاهزة:',
     saveBudgetBtn: 'حفظ الميزانية',
     budgetError: 'يرجى إدخال مبلغ ميزانية أكبر من 0',
+    budgetSaveFailed: 'تعذر حفظ هذه الميزانية. يرجى المحاولة مرة أخرى.',
 
     // AI Insights Screen
     aiInsightsHeroTitle: 'تحليل الإنفاق الذكي والتنبيهات',

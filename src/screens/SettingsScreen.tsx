@@ -102,6 +102,18 @@ const overviewCopy = {
     fullBackupSub: 'Portable ZIP with ledger and private attachment photos.',
     legacy: 'Legacy Backup v1 JSON',
     imported: 'Backup v2 restored',
+    expenses: 'expenses',
+    exportFailed: 'Export failed.',
+    backupExportFailed: 'Backup export failed.',
+    csvExportFailed: 'CSV export failed.',
+    invalidBackup: 'Invalid or unsupported backup file.',
+    importFailed: 'Import failed.',
+    currencyMismatch: 'This backup uses a different currency. Merge is blocked to prevent amounts from being relabeled incorrectly.',
+    currencyMismatchReplace: 'This backup uses a different currency. Merge is blocked to prevent amounts from being relabeled incorrectly. Use Replace only if you intend to restore the backup currency and all backup data.',
+    backupRestoreFailed: 'Backup restore failed. Your current data was kept whenever rollback was possible.',
+    backupWarning: 'Backup restored, but some old media could not be cleaned up automatically.',
+    dismissMessage: 'Dismiss message',
+    dismissError: 'Dismiss error',
   },
   fr: {
     appearance: 'Apparence',
@@ -143,6 +155,18 @@ const overviewCopy = {
     fullBackupSub: 'ZIP portable avec registre et photos privées.',
     legacy: 'Backup v1 JSON hérité',
     imported: 'Backup v2 restauré',
+    expenses: 'dépenses',
+    exportFailed: 'Échec de l’export.',
+    backupExportFailed: 'Échec de l’export de la sauvegarde.',
+    csvExportFailed: 'Échec de l’export CSV.',
+    invalidBackup: 'Fichier de sauvegarde invalide ou non pris en charge.',
+    importFailed: 'Échec de l’import.',
+    currencyMismatch: 'Cette sauvegarde utilise une autre devise. La fusion est bloquée pour éviter de réétiqueter incorrectement les montants.',
+    currencyMismatchReplace: 'Cette sauvegarde utilise une autre devise. La fusion est bloquée pour éviter de réétiqueter incorrectement les montants. Utilisez Remplacer uniquement si vous voulez restaurer la devise et toutes les données de la sauvegarde.',
+    backupRestoreFailed: 'Échec de la restauration. Vos données actuelles ont été conservées chaque fois qu’un retour arrière était possible.',
+    backupWarning: 'La sauvegarde a été restaurée, mais certains anciens médias n’ont pas pu être nettoyés automatiquement.',
+    dismissMessage: 'Fermer le message',
+    dismissError: 'Fermer l’erreur',
   },
   ar: {
     appearance: 'المظهر',
@@ -184,6 +208,18 @@ const overviewCopy = {
     fullBackupSub: 'ملف ZIP محمول يتضمن السجل والصور الخاصة.',
     legacy: 'نسخة v1 JSON القديمة',
     imported: 'تمت استعادة النسخة v2',
+    expenses: 'مصاريف',
+    exportFailed: 'فشل التصدير.',
+    backupExportFailed: 'فشل تصدير النسخة الاحتياطية.',
+    csvExportFailed: 'فشل تصدير CSV.',
+    invalidBackup: 'ملف النسخة الاحتياطية غير صالح أو غير مدعوم.',
+    importFailed: 'فشل الاستيراد.',
+    currencyMismatch: 'تستخدم هذه النسخة الاحتياطية عملة مختلفة. تم منع الدمج لتجنب تغيير تسمية المبالغ بشكل غير صحيح.',
+    currencyMismatchReplace: 'تستخدم هذه النسخة الاحتياطية عملة مختلفة. تم منع الدمج لتجنب تغيير تسمية المبالغ بشكل غير صحيح. استخدم الاستبدال فقط إذا كنت تريد استعادة عملة النسخة وجميع بياناتها.',
+    backupRestoreFailed: 'فشلت الاستعادة. تم الاحتفاظ ببياناتك الحالية كلما كان التراجع ممكناً.',
+    backupWarning: 'تمت استعادة النسخة الاحتياطية، لكن تعذر تنظيف بعض الوسائط القديمة تلقائياً.',
+    dismissMessage: 'إغلاق الرسالة',
+    dismissError: 'إغلاق الخطأ',
   },
 } as const;
 
@@ -334,7 +370,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       setStatusMessage(t(currentLanguage, 'createBackupBtn') + ': ' + backup.metadata.totalExpenses + ' / ' + backup.metadata.totalBudgets);
       setErrorMessage(null);
     } catch {
-      setErrorMessage('Export failed.');
+      setErrorMessage(copy.exportFailed);
     }
   };
 
@@ -352,7 +388,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       setStatusMessage(includeMedia ? copy.fullBackup : copy.dataOnly);
       setErrorMessage(null);
     } catch {
-      setErrorMessage('Backup v2 export failed.');
+      setErrorMessage(copy.backupExportFailed);
     } finally {
       setIsBackupBusy(false);
     }
@@ -370,7 +406,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       setStatusMessage(t(currentLanguage, 'exportCsvBtn'));
       setErrorMessage(null);
     } catch {
-      setErrorMessage('CSV Export failed.');
+      setErrorMessage(copy.csvExportFailed);
     }
   };
 
@@ -393,7 +429,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         }
         setErrorMessage(null);
       } catch {
-        setErrorMessage('Invalid or unsupported backup file.');
+        setErrorMessage(copy.invalidBackup);
       }
     })();
   };
@@ -412,11 +448,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       setErrorMessage(null);
     } catch (error) {
       if (error instanceof Error && error.message === 'BACKUP_CURRENCY_MISMATCH') {
-        setErrorMessage(
-          'This backup uses a different currency. Merge is blocked to prevent amounts from being relabeled incorrectly. Use Replace only if you intend to restore the backup currency and all backup data.'
-        );
+        setErrorMessage(copy.currencyMismatchReplace);
       } else {
-        setErrorMessage('Import failed.');
+        setErrorMessage(copy.importFailed);
       }
     }
   };
@@ -429,13 +463,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       setPendingV2Backup(null);
       onBackupRestored();
       await refreshMediaSummary();
-      setStatusMessage(copy.imported + ': ' + summary.expensesImported + ' expenses, ' + summary.photosImported + ' photos');
-      setErrorMessage(summary.warnings.length ? summary.warnings.join(', ') : null);
+      setStatusMessage(copy.imported + ': ' + summary.expensesImported + ' ' + copy.expenses + ', ' + summary.photosImported + ' ' + copy.photos);
+      setErrorMessage(summary.warnings.length ? copy.backupWarning : null);
     } catch (error) {
       if (error instanceof Error && error.message === 'BACKUP_CURRENCY_MISMATCH') {
-        setErrorMessage('This backup uses a different currency. Merge is blocked to prevent amounts from being relabeled incorrectly.');
+        setErrorMessage(copy.currencyMismatch);
       } else {
-        setErrorMessage('Backup v2 restore failed. Your current data was kept whenever rollback was possible.');
+        setErrorMessage(copy.backupRestoreFailed);
       }
     } finally {
       setIsBackupBusy(false);
@@ -524,7 +558,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             type="button"
             onClick={() => setStatusMessage(null)}
             className="min-w-[48px] min-h-[48px] flex items-center justify-center font-bold"
-            aria-label="Dismiss message"
+            aria-label={copy.dismissMessage}
           >
             ×
           </button>
@@ -541,7 +575,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             type="button"
             onClick={() => setErrorMessage(null)}
             className="min-w-[48px] min-h-[48px] flex items-center justify-center font-bold"
-            aria-label="Dismiss error"
+            aria-label={copy.dismissError}
           >
             ×
           </button>
