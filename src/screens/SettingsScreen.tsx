@@ -16,6 +16,8 @@ import {
   Images,
   Archive,
   Image as ImageIcon,
+  FileText,
+  RotateCcw,
 } from 'lucide-react';
 import { Language, MediaStorageSummary, SpendWiseBackup, ThemeMode } from '../types';
 import { getSuggestedConversionRate, SUPPORTED_CURRENCIES } from '../utils/currency';
@@ -29,6 +31,8 @@ import { exportBlobFile, exportTextFile } from '../utils/fileExport';
 import { MediaLibraryScreen } from './MediaLibraryScreen';
 import { BackupV2ImportModal } from '../components/BackupV2ImportModal';
 import type { BackupV2Preview } from '../utils/backupV2';
+import { LegalDocumentScreen } from './LegalDocumentScreen';
+import type { LegalDocumentKind } from '../utils/legalDocuments';
 
 interface SettingsScreenProps {
   currentCurrencyCode: string;
@@ -45,6 +49,7 @@ interface SettingsScreenProps {
   onLanguageChange: (lang: Language) => void;
   onClearAllData: () => void | Promise<void>;
   onBackupRestored: () => void;
+  onReviewSetup: () => void;
 }
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({
@@ -62,6 +67,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   onLanguageChange,
   onClearAllData,
   onBackupRestored,
+  onReviewSetup,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -69,6 +75,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [showClearModal, setShowClearModal] = useState(false);
+  const [legalKind, setLegalKind] = useState<LegalDocumentKind | null>(null);
   const [showMediaLibrary, setShowMediaLibrary] = useState(false);
   const [mediaSummary, setMediaSummary] = useState<MediaStorageSummary | null>(null);
   const [isBackupBusy, setIsBackupBusy] = useState(false);
@@ -294,6 +301,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     return () => window.removeEventListener('spendwise-native-back', handleNativeBack);
   }, [pendingCurrencyCode, pendingImportBackup, pendingV2Backup, showClearModal]);
 
+  if (legalKind) {
+    return <LegalDocumentScreen language={currentLanguage} kind={legalKind} onClose={() => setLegalKind(null)} />;
+  }
+
   if (showMediaLibrary) {
     return <MediaLibraryScreen language={currentLanguage} onClose={() => setShowMediaLibrary(false)} />;
   }
@@ -349,6 +360,49 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           </button>
         </div>
       )}
+
+      {/* Setup, legal and privacy review */}
+      <div className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 rounded-3xl p-5 shadow-xs space-y-3.5 transition-colors">
+        <div className="flex items-center gap-2.5 rtl:flex-row-reverse">
+          <RotateCcw className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+          <div>
+            <h3 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base">
+              {currentLanguage === 'ar' ? 'الإعداد والخصوصية' : currentLanguage === 'fr' ? 'Configuration et confidentialité' : 'Setup & privacy'}
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {currentLanguage === 'ar' ? 'راجع الإعداد أو اقرأ المستندات القانونية.' : currentLanguage === 'fr' ? 'Revoyez la configuration ou consultez les documents.' : 'Review setup or read the legal documents.'}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onReviewSetup}
+          className="w-full min-h-[56px] rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] px-4 flex items-center justify-between gap-3 text-left rtl:text-right"
+        >
+          <span className="font-bold text-sm">
+            {currentLanguage === 'ar' ? 'مراجعة الإعداد' : currentLanguage === 'fr' ? 'Revoir la configuration' : 'Review setup'}
+          </span>
+          <RotateCcw className="w-4 h-4 text-slate-400" />
+        </button>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setLegalKind('terms')}
+            className="min-h-[52px] rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] px-3 text-xs font-bold flex items-center justify-center gap-2"
+          >
+            <FileText className="w-4 h-4" />
+            {currentLanguage === 'ar' ? 'شروط الاستخدام' : currentLanguage === 'fr' ? "Conditions d’utilisation" : 'Terms of Use'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setLegalKind('privacy')}
+            className="min-h-[52px] rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] px-3 text-xs font-bold flex items-center justify-center gap-2"
+          >
+            <ShieldCheck className="w-4 h-4" />
+            {currentLanguage === 'ar' ? 'سياسة الخصوصية' : currentLanguage === 'fr' ? 'Confidentialité' : 'Privacy Policy'}
+          </button>
+        </div>
+      </div>
 
       {/* Language Section (English, French, Arabic RTL) */}
       <div className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 rounded-3xl p-5 shadow-xs space-y-3.5 transition-colors">
