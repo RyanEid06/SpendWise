@@ -202,16 +202,20 @@ test('replay currency changes preserve existing conversion safeguards', () => {
 });
 
 
-test('backend AI rate limiting remains per-IP, bounded, and exposes Retry-After', () => {
-  assert.match(rateLimitSource, /const key = req\.ip \|\| req\.socket\.remoteAddress/);
+test('backend AI rate limiting remains layered, bounded, and exposes Retry-After', () => {
+  assert.match(rateLimitSource, /getAuthenticatedInstallationId\(req\)/);
+  assert.match(rateLimitSource, /sourceIp\(req\)/);
   assert.match(configSource, /rateBucketMaxEntries: 2_000/);
-  assert.match(rateLimitSource, /cleanupRateBuckets\(rateBuckets, now, serverConfig\.rateBucketMaxEntries\)/);
+  assert.match(rateLimitSource, /cleanupRateBuckets\(/);
+  assert.match(rateLimitSource, /serverConfig\.rateBucketMaxEntries/);
   assert.match(rateLimitSource, /'Retry-After'/);
   assert.match(rateLimitSource, /res\.status\(429\)/);
 });
 
 test('backend request and AI image input bounds remain enforced', () => {
-  assert.match(requestLimitsSource, /express\.json\(\{ limit: '16mb' \}\)/);
+  assert.match(requestLimitsSource, /boundedAiJsonBody/);
+  assert.match(requestLimitsSource, /maxImageJsonBodyBytes/);
+  assert.match(requestLimitsSource, /enforceParsedBodyLimit/);
   assert.match(configSource, /maxImageBase64Length: 12_000_000/);
   assert.match(serverSource, /imageBase64\.length > serverConfig\.maxImageBase64Length/);
   assert.match(validationSource, /safeString\(/);
