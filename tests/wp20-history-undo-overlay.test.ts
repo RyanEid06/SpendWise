@@ -12,7 +12,9 @@ const history = readFileSync('src/screens/HistoryScreen.tsx', 'utf8');
 const card = readFileSync('src/components/ExpenseItemCard.tsx', 'utf8');
 const swipe = readFileSync('src/components/SwipeableExpenseCard.tsx', 'utf8');
 const detail = readFileSync('src/components/ExpenseDetailModal.tsx', 'utf8');
-const app = readFileSync('src/App.tsx', 'utf8');
+const appShell = readFileSync('src/app/AppShell.tsx', 'utf8');
+const deleteUndo = readFileSync('src/app/hooks/useExpenseDeleteUndo.ts', 'utf8');
+const androidBack = readFileSync('src/app/navigation/useAndroidBack.ts', 'utf8');
 const css = readFileSync('src/index.css', 'utf8');
 const settings = readFileSync('src/screens/SettingsScreen.tsx', 'utf8');
 const confirmation = readFileSync('src/components/ConfirmationModal.tsx', 'utf8');
@@ -129,8 +131,9 @@ test('dispose is conservative and never commits pending in-memory deletes', () =
 
 test('attachment destruction only occurs after persistence commit', () => {
   assert.match(storage, /LocalDataStore\.deleteExpenses[\s\S]*AttachmentStorage\.deleteDetachedFiles/);
-  assert.match(app, /onCommit: async \(entries\)[\s\S]*StorageManager\.deleteExpenses/);
-  assert.doesNotMatch(app, /handleDeleteExpense[\s\S]{0,500}deleteDetachedFiles/);
+  assert.match(deleteUndo, /onCommit: async \(entries\)[\s\S]*StorageManager\.deleteExpenses/);
+  const stageDelete = deleteUndo.slice(deleteUndo.indexOf('const stageDelete'), deleteUndo.indexOf('useEffect', deleteUndo.indexOf('const stageDelete')));
+  assert.doesNotMatch(stageDelete, /deleteExpenses|deleteDetachedFiles/);
 });
 
 test('read-only detail includes full date/time and photos without edit/delete controls', () => {
@@ -153,6 +156,6 @@ test('destructive global confirmations remain and Android Back closes modal laye
   assert.match(settings, /<ConfirmationModal/);
   assert.match(confirmation, /data-native-back-layer="true"/);
   assert.match(confirmation, /spendwise-native-back/);
-  assert.match(app, /document\.querySelector\('\[data-native-back-layer="true"\]'\)/);
-  assert.match(app, /<UndoSnackbar/);
+  assert.match(androidBack, /document\.querySelector\('\[data-native-back-layer="true"\]'\)/);
+  assert.match(appShell, /<UndoSnackbar/);
 });
