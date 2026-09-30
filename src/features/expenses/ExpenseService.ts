@@ -6,7 +6,7 @@ import {
   SUPPORTED_CURRENCIES,
 } from '../../utils/currency';
 import { getMonthKey, getMonthYearFromTimestamp } from '../../utils/date';
-import { StorageManager } from '../../utils/storage';
+import { analysisCacheService } from '../../services/AnalysisCacheService';
 import { budgetRepository, BudgetRepository } from '../../data/BudgetRepository';
 import { expenseRepository, ExpenseRepository } from '../../data/ExpenseRepository';
 import { mediaService, MediaService } from '../../services/MediaService';
@@ -136,7 +136,7 @@ export class ExpenseService {
 
     if (!hasFinancialData) {
       await this.expenses.setCurrencyCode(target);
-      StorageManager.clearAnalysisCache();
+      analysisCacheService.clear();
       return {
         sourceCurrencyCode,
         targetCurrencyCode: target,
@@ -166,7 +166,7 @@ export class ExpenseService {
       convertedBudgets,
       target
     );
-    StorageManager.clearAnalysisCache();
+    analysisCacheService.clear();
 
     return {
       sourceCurrencyCode,
@@ -178,18 +178,18 @@ export class ExpenseService {
 
   async clearAllData(): Promise<void> {
     const detached = await this.expenses.clearFinancialData();
-    StorageManager.clearAnalysisCache();
+    analysisCacheService.clear();
     await this.media.deleteDetachedFiles(detached);
   }
 
   clearAnalysisCache(): void {
-    StorageManager.clearAnalysisCache();
+    analysisCacheService.clear();
   }
 
   private invalidateExpenseMonths(timestamps: number[]): void {
     new Set(
       timestamps.map((timestamp) => getMonthKey(getMonthYearFromTimestamp(timestamp)))
-    ).forEach((monthKey) => StorageManager.invalidateAnalysis(monthKey));
+    ).forEach((monthKey) => analysisCacheService.invalidate(monthKey));
   }
 }
 
