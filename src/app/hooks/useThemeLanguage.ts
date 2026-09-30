@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Language, ThemeMode } from '../../types';
-import { StorageManager } from '../../utils/storage';
+import { preferencesRepository } from '../../data/PreferencesRepository';
 
 export function resolveDarkMode(mode: ThemeMode, systemPrefersDark: boolean): boolean {
   if (mode === 'DARK') return true;
@@ -13,8 +13,8 @@ export function directionForLanguage(language: Language): 'rtl' | 'ltr' {
 }
 
 export function useThemeLanguage() {
-  const [themeMode, setThemeModeState] = useState<ThemeMode>(() => StorageManager.getThemeMode());
-  const [language, setLanguageState] = useState<Language>(() => StorageManager.getLanguage());
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(() => preferencesRepository.getThemeMode());
+  const [language, setLanguageState] = useState<Language>(() => preferencesRepository.getLanguage());
 
   useEffect(() => {
     const root = document.documentElement;
@@ -36,19 +36,19 @@ export function useThemeLanguage() {
   }, [language]);
 
   const setThemeMode = useCallback((mode: ThemeMode) => {
-    StorageManager.setThemeMode(mode);
+    preferencesRepository.setThemeMode(mode);
     setThemeModeState(mode);
   }, []);
 
   const setLanguage = useCallback((nextLanguage: Language) => {
-    StorageManager.setLanguage(nextLanguage);
+    preferencesRepository.setLanguage(nextLanguage);
     StorageManager.clearAnalysisCache();
     setLanguageState(nextLanguage);
   }, []);
 
   const refreshFromStorage = useCallback(() => {
-    setThemeModeState(StorageManager.getThemeMode());
-    setLanguageState(StorageManager.getLanguage());
+    setThemeModeState(preferencesRepository.getThemeMode());
+    setLanguageState(preferencesRepository.getLanguage());
   }, []);
 
   return {
