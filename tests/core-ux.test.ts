@@ -38,9 +38,9 @@ test('History and Statistics route to read-only detail while Dashboard retains e
   assert.match(app, /<ExpenseDetailModal/);
 });
 
-test('History preserves delete with confirmation but does not expose edit routing', () => {
-  assert.match(history, /onDeleteExpense/);
-  assert.match(history, /<ConfirmationModal/);
+test('History uses immediate staged deletion with Undo and does not expose edit routing', () => {
+  assert.match(history, /onDeleteExpense\(expense\)/);
+  assert.doesNotMatch(history, /<ConfirmationModal|expenseToDelete/);
   assert.doesNotMatch(history, /setEditingExpense|editExpenseBtnLabel/);
 });
 

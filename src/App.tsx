@@ -33,6 +33,8 @@ import { SetBudgetModal } from './components/SetBudgetModal';
 import { ExpenseDetailModal } from './components/ExpenseDetailModal';
 import { AppTopBar } from './components/AppTopBar';
 import { AttachmentEditPayload } from './utils/attachmentStorage';
+import { UndoSnackbar } from './components/UndoSnackbar';
+import { ExpenseDeleteUndoController, restorePendingExpenses } from './utils/undoDeleteBatch';
 
 export const App: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
@@ -61,6 +63,41 @@ export const App: React.FC = () => {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [viewingExpense, setViewingExpense] = useState<Expense | null>(null);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
+  const [deleteUndoCount, setDeleteUndoCount] = useState(0);
+  const [deleteCommitError, setDeleteCommitError] = useState(false);
+
+  const deleteUndoRef = useRef<ExpenseDeleteUndoController | null>(null);
+  if (!deleteUndoRef.current) {
+    deleteUndoRef.current = new ExpenseDeleteUndoController({
+      onBatchChange: (snapshot) => setDeleteUndoCount(snapshot?.count ?? 0),
+      onCommit: async (entries) => {
+        await StorageManager.deleteExpenses(entries.map((entry) => entry.expense.id));
+      },
+      onCommitError: (entries, error) => {
+        console.error('Failed to commit staged expense deletion.', error);
+        setExpenses((current) => restorePendingExpenses(current, entries));
+        setDeleteCommitError(true);
+      },
+    });
+  }
+
+  const readVisibleExpenses = useCallback(() => {
+    const pendingIds = new Set(deleteUndoRef.current?.getPendingExpenseIds() ?? []);
+    return StorageManager.getExpenses().filter((expense) => !pendingIds.has(expense.id));
+  }, []);
+
+  const undoPendingExpenseDeletes = useCallback(() => {
+    const entries = deleteUndoRef.current?.undo() ?? [];
+    if (entries.length === 0) return;
+    setExpenses((current) => restorePendingExpenses(current, entries));
+    StorageManager.clearAnalysisCache();
+    setAiResult(null);
+    setDeleteCommitError(false);
+  }, []);
+
+  useEffect(() => () => {
+    deleteUndoRef.current?.dispose();
+  }, []);
 
   const selectPrimaryScreen = useCallback((screen: PrimaryScreen) => {
     setSettingsReturnScreen(screen);
@@ -169,6 +206,7 @@ export const App: React.FC = () => {
     if (Capacitor.isNativePlatform()) {
       void CapacitorApp.addListener('appStateChange', ({ isActive }) => {
         if (!isActive) {
+          undoPendingExpenseDeletes();
           backgroundedAt = Date.now();
         } else {
           applyResumeLock();
@@ -189,6 +227,7 @@ export const App: React.FC = () => {
 
     const handleVisibility = () => {
       if (document.hidden) {
+        undoPendingExpenseDeletes();
         backgroundedAt = Date.now();
       } else {
         applyResumeLock();
@@ -197,7 +236,7 @@ export const App: React.FC = () => {
 
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [appLockEnabled, lockTimeoutSeconds]);
+  }, [appLockEnabled, lockTimeoutSeconds, undoPendingExpenseDeletes]);
 
   // Android Back: close app-level dialogs first, then return to Home, then exit.
   useEffect(() => {
@@ -321,7 +360,7 @@ export const App: React.FC = () => {
       },
       attachmentChanges
     );
-    setExpenses(StorageManager.getExpenses());
+    setExpenses(readVisibleExpenses());
   };
 
   const handleUpdateExpense = async (
@@ -347,12 +386,18 @@ export const App: React.FC = () => {
       },
       attachmentChanges
     );
-    setExpenses(StorageManager.getExpenses());
+    setExpenses(readVisibleExpenses());
   };
 
-  const handleDeleteExpense = async (expense: Expense) => {
-    await StorageManager.deleteExpense(expense.id);
-    setExpenses(StorageManager.getExpenses());
+  const handleDeleteExpense = (expense: Expense) => {
+    const currentIndex = expenses.findIndex((item) => item.id === expense.id);
+    if (currentIndex < 0) return;
+    if (!deleteUndoRef.current?.stage(expense, currentIndex)) return;
+
+    StorageManager.clearAnalysisCache();
+    setAiResult(null);
+    setDeleteCommitError(false);
+    setExpenses((current) => current.filter((item) => item.id !== expense.id));
     if (viewingExpense?.id === expense.id) setViewingExpense(null);
   };
 
@@ -363,6 +408,7 @@ export const App: React.FC = () => {
   };
 
   const handleCurrencyChange = async (code: string, targetUnitsPerSourceUnit?: number) => {
+    undoPendingExpenseDeletes();
     const storedExpenses = StorageManager.getExpenses();
     const storedBudgets = StorageManager.getBudgets();
     const hasFinancialData = storedExpenses.length > 0 || storedBudgets.length > 0;
@@ -379,7 +425,7 @@ export const App: React.FC = () => {
       StorageManager.clearAnalysisCache();
     }
 
-    setExpenses(StorageManager.getExpenses());
+    setExpenses(readVisibleExpenses());
     setBudgets(StorageManager.getBudgets());
     setCurrencyCodeState(StorageManager.getCurrencyCode());
     setAiResult(null);
@@ -415,6 +461,8 @@ export const App: React.FC = () => {
   };
 
   const handleClearAllData = async () => {
+    deleteUndoRef.current?.dispose();
+    setDeleteCommitError(false);
     await StorageManager.clearAllData();
     setExpenses([]);
     setBudgets([]);
@@ -423,8 +471,10 @@ export const App: React.FC = () => {
   };
 
   const handleBackupRestored = () => {
+    deleteUndoRef.current?.dispose();
+    setDeleteCommitError(false);
     setViewingExpense(null);
-    setExpenses(StorageManager.getExpenses());
+    setExpenses(readVisibleExpenses());
     setBudgets(StorageManager.getBudgets());
     setCurrencyCodeState(StorageManager.getCurrencyCode());
     setThemeModeState(StorageManager.getThemeMode());
@@ -650,6 +700,16 @@ export const App: React.FC = () => {
           onSelectScreen={selectPrimaryScreen}
         />
       )}
+
+      <UndoSnackbar
+        count={deleteUndoCount}
+        language={language}
+        onUndo={undoPendingExpenseDeletes}
+        hasBottomNavigation={currentScreen !== 'settings'}
+        hasFloatingAction={currentScreen === 'home' || currentScreen === 'history'}
+        commitError={deleteCommitError}
+        onDismissError={() => setDeleteCommitError(false)}
+      />
 
       {/* Add / Edit Expense Modal Dialog */}
       {(showAddModal || editingExpense !== null) && (
