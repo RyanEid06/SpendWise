@@ -195,7 +195,6 @@ export const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
           </div>
         </div>
       </div>
-      </div>
     </div>
   );
 };
