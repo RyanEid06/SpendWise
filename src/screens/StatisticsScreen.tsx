@@ -22,6 +22,8 @@ import { formatCurrency } from '../utils/currency';
 import { StatisticsEngine } from '../utils/statisticsEngine';
 import { getLocalizedCategoryName, getLocalizedMonthName, t } from '../utils/translations';
 import { CategoryStatisticsSection } from '../components/CategoryStatisticsSection';
+import { getCategoryInfo } from '../utils/categories';
+import { rankLargestExpensesByMonth } from '../utils/statisticsRanking';
 
 interface StatisticsScreenProps {
   expenses: Expense[];
@@ -132,16 +134,10 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
     return max;
   }, [stats.monthlyStats]);
 
-  const largestExpenseBaseline = useMemo(() => {
-    const amounts = stats.monthlyStats
-      .flatMap((month) => month.largestExpense ? [month.largestExpense.amount] : [])
-      .sort((a, b) => a - b);
-    if (amounts.length < 3) return null;
-    const middle = Math.floor(amounts.length / 2);
-    return amounts.length % 2 === 1
-      ? amounts[middle]
-      : (amounts[middle - 1] + amounts[middle]) / 2;
-  }, [stats.monthlyStats]);
+  const rankedLargestExpenses = useMemo(
+    () => rankLargestExpensesByMonth(stats.monthlyStats),
+    [stats.monthlyStats]
+  );
 
   return (
     <div className="space-y-4 pb-28 animate-screen-enter">
@@ -427,66 +423,90 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
 
       {/* Section 4: Largest Expense by Month */}
       <div className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 rounded-3xl p-5 shadow-xs space-y-3.5 transition-colors">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2 rtl:space-x-reverse">
-            <Receipt className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center space-x-2 rtl:space-x-reverse min-w-0">
+            <Receipt className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
             <h3 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base">
               {t(language, 'largestByMonthTitle')}
             </h3>
           </div>
         </div>
 
-        <div className="space-y-2">
-          {stats.monthlyStats.map((m) => {
-            const exp = m.largestExpense;
-            const [y, mn] = m.monthKey.split('-').map(Number);
-            const monthLabel = getLocalizedMonthName({ year: y, month: mn }, language);
-            const worthNoticing =
-              exp != null &&
-              largestExpenseBaseline != null &&
-              largestExpenseBaseline > 0 &&
-              exp.amount >= largestExpenseBaseline * 1.5;
+        {rankedLargestExpenses.length === 0 ? (
+          <p className="text-xs text-slate-500 dark:text-slate-400 text-center py-4">
+            {t(language, 'noMonthlyRecords')}
+          </p>
+        ) : (
+          <div className="space-y-2.5">
+            {rankedLargestExpenses.map(({ rank, month, expense }) => {
+              const [year, monthNumber] = month.monthKey.split('-').map(Number);
+              const monthLabel = getLocalizedMonthName({ year, month: monthNumber }, language);
+              const categoryInfo = getCategoryInfo(expense.category);
 
-            return (
-              <div
-                key={m.monthKey}
-                onClick={() => exp && onNavigateToExpense && onNavigateToExpense(exp)}
-                role={exp ? 'button' : undefined}
-                tabIndex={exp ? 0 : undefined}
-                onKeyDown={(event) => {
-                  if (!exp || !onNavigateToExpense) return;
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    onNavigateToExpense(exp);
-                  }
-                }}
-                className={`min-h-[52px] p-3 rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border flex items-start justify-between gap-3 transition-all ${
-                  worthNoticing
-                    ? 'border-amber-300/80 dark:border-amber-800/70'
-                    : 'border-slate-200/70 dark:border-slate-800/60'
-                } ${exp ? 'cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 active:scale-[0.99]' : 'opacity-60'}`}
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">{monthLabel}</div>
-                  <div className="text-sm font-bold text-slate-900 dark:text-white truncate max-w-xs">
-                    {exp ? exp.description : t(language, 'statNoneRecorded')}
-                  </div>
-                  {exp && (
-                    <div className="text-[11px] text-slate-500 font-medium">
-                      {getLocalizedCategoryName(exp.category, language)}
+              const rowTone =
+                rank === 1
+                  ? 'bg-amber-50/60 dark:bg-amber-950/15 border-amber-200/80 dark:border-amber-900/50'
+                  : rank === 2
+                    ? 'bg-slate-50 dark:bg-[#0B0F19] border-slate-300/70 dark:border-slate-700/70'
+                    : rank === 3
+                      ? 'bg-stone-50/70 dark:bg-[#0B0F19] border-stone-300/70 dark:border-stone-800/80'
+                      : 'bg-white dark:bg-[#0B0F19] border-slate-200/70 dark:border-slate-800/60';
+
+              const rankTone =
+                rank === 1
+                  ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300'
+                  : rank === 2
+                    ? 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                    : rank === 3
+                      ? 'bg-stone-200 dark:bg-stone-800 text-stone-700 dark:text-stone-300'
+                      : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400';
+
+              const isNavigable = Boolean(onNavigateToExpense);
+
+              return (
+                <div
+                  key={month.monthKey}
+                  onClick={() => onNavigateToExpense?.(expense)}
+                  role={isNavigable ? 'button' : undefined}
+                  tabIndex={isNavigable ? 0 : undefined}
+                  aria-label={'#' + rank + ', ' + expense.description + ', ' + monthLabel + ', ' + formatCurrency(expense.amount, currencyCode)}
+                  onKeyDown={(event) => {
+                    if (!onNavigateToExpense) return;
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      onNavigateToExpense(expense);
+                    }
+                  }}
+                  className={'min-h-[56px] flex flex-col min-[390px]:flex-row min-[390px]:items-center min-[390px]:justify-between gap-2.5 p-3 rounded-2xl border transition-all ' + rowTone + (isNavigable ? ' cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 active:scale-[0.99]' : '')}
+                >
+                  <div className="min-w-0 flex-1 flex items-start gap-2.5">
+                    <div className={'min-w-8 h-7 px-1.5 rounded-full flex items-center justify-center font-extrabold text-[11px] tabular-nums shrink-0 ' + rankTone}>
+                      {'#' + rank}
                     </div>
-                  )}
-                </div>
+                    <span className="text-xl shrink-0" aria-hidden="true">{categoryInfo.iconEmoji}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-sm text-slate-900 dark:text-white leading-tight break-words">
+                        {expense.description}
+                      </p>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                        <span className="break-words">{getLocalizedCategoryName(expense.category, language)}</span>
+                        <span aria-hidden="true">·</span>
+                        <span className="font-semibold text-slate-600 dark:text-slate-300 break-words">{monthLabel}</span>
+                      </div>
+                    </div>
+                  </div>
 
-                <div className="min-w-0 max-w-[45%] text-right rtl:text-left">
-                  <div dir="ltr" className={`font-extrabold tabular-nums text-sm sm:text-base [overflow-wrap:anywhere] leading-tight ${worthNoticing ? 'text-amber-700 dark:text-amber-400' : 'text-slate-900 dark:text-white'}`}>
-                    {exp ? formatCurrency(exp.amount, currencyCode) : '—'}
+                  <div
+                    dir="ltr"
+                    className={'min-w-0 max-w-full min-[390px]:max-w-[42%] font-extrabold tabular-nums text-sm sm:text-base [overflow-wrap:anywhere] leading-tight text-left min-[390px]:text-right rtl:min-[390px]:text-left ' + (rank === 1 ? 'text-amber-700 dark:text-amber-400' : 'text-slate-900 dark:text-white')}
+                  >
+                    {formatCurrency(expense.amount, currencyCode)}
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

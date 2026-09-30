@@ -21,6 +21,7 @@
     "test:wp18": "tsx --test tests/wp18-first-run-security.test.ts",
     "test:wp20": "tsx --test tests/wp20-history-undo-overlay.test.ts",
     "test:wp21": "tsx --test tests/wp21-statistics-density.test.ts",
+    "test:wp22": "tsx --test tests/wp22-statistics-category-ranking.test.ts",
     "test:wp23": "tsx --test tests/wp23-settings-progressive-disclosure.test.ts"
   },
   "dependencies": {

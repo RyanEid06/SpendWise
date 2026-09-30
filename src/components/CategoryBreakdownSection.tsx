@@ -1,8 +1,8 @@
 import React from 'react';
 import { PieChart } from 'lucide-react';
 import { CategorySpend, Language } from '../types';
-import { formatCurrency } from '../utils/currency';
 import { getLocalizedCategoryName, t } from '../utils/translations';
+import { CategorySpendRow } from './CategorySpendRow';
 
 interface CategoryBreakdownSectionProps {
   categoryBreakdown: CategorySpend[];
@@ -45,7 +45,6 @@ export const CategoryBreakdownSection: React.FC<CategoryBreakdownSectionProps> =
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Multi-color distribution bar */}
           <div
             className="w-full h-3 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden flex"
             role="progressbar"
@@ -55,49 +54,27 @@ export const CategoryBreakdownSection: React.FC<CategoryBreakdownSectionProps> =
               <div
                 key={item.categoryName}
                 style={{
-                  width: `${Math.min(100, Math.max(0, item.percentage))}%`,
+                  width: Math.min(100, Math.max(0, item.percentage)) + '%',
                   backgroundColor: item.color,
                 }}
                 className="h-full transition-all duration-500 ease-out"
-                title={`${getLocalizedCategoryName(item.categoryName, language)}: ${item.percentage.toFixed(1)}%`}
+                title={getLocalizedCategoryName(item.categoryName, language) + ': ' + item.percentage.toFixed(1) + '%'}
               />
             ))}
           </div>
 
-          {/* Detailed category rows */}
           <div className="space-y-3 pt-1">
             {categoryBreakdown.map((item) => (
-              <div key={item.categoryName} className="space-y-1.5">
-                <div className="flex items-start justify-between gap-2 text-xs sm:text-sm">
-                  <div className="flex items-center space-x-2 rtl:space-x-reverse min-w-0">
-                    <span className="text-base shrink-0" aria-hidden="true">{item.iconEmoji}</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">
-                      {getLocalizedCategoryName(item.categoryName, language)}
-                    </span>
-                    <span
-                      style={{ color: item.color, backgroundColor: `${item.color}15` }}
-                      className="text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0 border border-current/20"
-                    >
-                      {item.percentage.toFixed(1)}%
-                    </span>
-                  </div>
-
-                  <span dir="ltr" className="min-w-0 max-w-[48%] font-bold tabular-nums text-slate-900 dark:text-white text-right rtl:text-left [overflow-wrap:anywhere] leading-tight">
-                    {formatCurrency(item.amount, currencyCode)}
-                  </span>
-                </div>
-
-                {/* Progress bar */}
-                <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-500 ease-out"
-                    style={{
-                      width: `${Math.min(100, Math.max(0, item.percentage))}%`,
-                      backgroundColor: item.color,
-                    }}
-                  />
-                </div>
-              </div>
+              <CategorySpendRow
+                key={item.categoryName}
+                categoryName={item.categoryName}
+                amount={item.amount}
+                percentage={item.percentage}
+                iconEmoji={item.iconEmoji}
+                color={item.color}
+                currencyCode={currencyCode}
+                language={language}
+              />
             ))}
           </div>
         </div>
