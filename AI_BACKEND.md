@@ -39,7 +39,7 @@ When the installed-user upgrade window is over:
 2. remove any obsolete `VITE_API_ACCESS_TOKEN` GitHub secret;
 3. optionally delete the compatibility branch in a later maintenance WP.
 
-`SPENDWISE_LEGACY_AUTH_UNTIL` may be set to an HTTP-date value so legacy responses advertise a Sunset header.
+`SPENDWISE_LEGACY_AUTH_UNTIL` is required for the compatibility path to function. It must parse as a concrete future timestamp (for example `2026-11-30T23:59:59Z`). Once that instant is reached, the server rejects the old bearer automatically even if `SPENDWISE_API_TOKEN` was accidentally left configured. Legacy responses advertise the same value through a Sunset header.
 
 ## Abuse resistance
 
