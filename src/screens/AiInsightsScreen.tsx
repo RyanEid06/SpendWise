@@ -1,11 +1,8 @@
 import React from 'react';
 import {
   Sparkles,
-  TrendingUp,
-  RotateCw,
-  Search,
-  Repeat,
-  AlertTriangle,
+    RotateCw,
+      AlertTriangle,
   Brain,
   Info,
   CheckCircle,
