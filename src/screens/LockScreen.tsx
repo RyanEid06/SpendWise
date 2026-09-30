@@ -133,6 +133,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({
       result.code === 'unrecoverable_key'
     ) return copy.keyProblem;
     if (result.code === 'repair_required') return copy.repairRequired;
+    if (result.code === 'migration_pending') return copy.migrationPending;
     return copy.generic;
   };
 
