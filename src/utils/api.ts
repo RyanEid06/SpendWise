@@ -1,13 +1,19 @@
-import { SpendWiseApiError, apiErrorFromResponse, normalizeApiException } from './apiErrors';
+import { AuthenticatedApiClient } from '../security/AuthenticatedApiClient';
+import {
+  SpendWiseApiError,
+  apiErrorFromResponse,
+  normalizeApiException,
+} from './apiErrors';
 
-const rawBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() || '';
+const rawBaseUrl =
+  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() || '';
 const baseUrl = rawBaseUrl.replace(/\/$/, '');
-const apiAccessToken =
-  (import.meta.env.VITE_API_ACCESS_TOKEN as string | undefined)?.trim() || '';
+
+const authenticatedApiClient = new AuthenticatedApiClient(baseUrl);
 
 export function apiUrl(path: string): string {
-  const normalized = path.startsWith('/') ? path : `/${path}`;
-  return `${baseUrl}${normalized}`;
+  const normalized = path.startsWith('/') ? path : '/' + path;
+  return baseUrl + normalized;
 }
 
 export async function fetchWithTimeout(
@@ -17,7 +23,6 @@ export async function fetchWithTimeout(
 ): Promise<Response> {
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), timeoutMs);
-
   try {
     return await fetch(input, { ...init, signal: controller.signal });
   } finally {
@@ -30,26 +35,8 @@ export async function apiFetch(
   init: RequestInit = {},
   timeoutMs = 15000
 ): Promise<Response> {
-  const headers = new Headers(init.headers);
-
-  if (init.body != null && !headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json');
-  }
-
-  if (apiAccessToken) {
-    headers.set('X-SpendWise-Token', apiAccessToken);
-  }
-
-  return fetchWithTimeout(
-    apiUrl(path),
-    {
-      ...init,
-      headers,
-    },
-    timeoutMs
-  );
+  return authenticatedApiClient.fetch(path, init, timeoutMs);
 }
-
 
 export async function apiFetchJson<T>(
   path: string,
