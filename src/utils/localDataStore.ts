@@ -191,16 +191,24 @@ export class LocalDataStoreImpl {
     });
   }
 
-  async deleteExpense(id: number): Promise<ExpenseAttachment[]> {
+  async deleteExpenses(ids: number[]): Promise<ExpenseAttachment[]> {
+    const uniqueIds = [...new Set(ids.filter((id) => Number.isInteger(id) && id > 0))];
+    if (uniqueIds.length === 0) return [];
+
     return this.enqueueWrite(async () => {
-      const detached = this.state.attachments.filter((item) => item.expenseId === id).map((item) => ({ ...item }));
+      const idSet = new Set(uniqueIds);
+      const detached = this.state.attachments
+        .filter((item) => idSet.has(item.expenseId))
+        .map((item) => ({ ...item }));
       const next = cloneFinancialState(this.state);
-      next.expenses = next.expenses.filter((item) => item.id !== id);
-      next.attachments = next.attachments.filter((item) => item.expenseId !== id);
+      next.expenses = next.expenses.filter((item) => !idSet.has(item.id));
+      next.attachments = next.attachments.filter((item) => !idSet.has(item.expenseId));
+      validateFinancialState(next);
 
       if (this.native) {
         await this.withNativeTransaction(async (db) => {
-          await db.run('DELETE FROM expenses WHERE id = ?', [id], false);
+          const placeholders = uniqueIds.map(() => '?').join(', ');
+          await db.run(`DELETE FROM expenses WHERE id IN (${placeholders})`, uniqueIds, false);
         });
       } else {
         this.persistWeb(next);
@@ -208,6 +216,10 @@ export class LocalDataStoreImpl {
       this.state = next;
       return detached;
     });
+  }
+
+  async deleteExpense(id: number): Promise<ExpenseAttachment[]> {
+    return this.deleteExpenses([id]);
   }
 
   async upsertBudget(monthKey: string, startingAmount: number, updatedAt: number): Promise<void> {
