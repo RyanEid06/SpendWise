@@ -63,9 +63,13 @@ export function requireInstallationAccess(
   // Transitional compatibility only for already-installed pre-WP31 clients.
   // New clients never send or depend on this APK-extractable credential.
   const legacy = serverConfig.legacyApiToken;
+  const legacyUntilMs = serverConfig.legacyCompatibilityUntilMs;
+  const legacyWindowOpen =
+    legacyUntilMs != null && Date.now() < legacyUntilMs;
   const suppliedLegacy = req.header('x-spendwise-token')?.trim() || '';
   if (
     legacy &&
+    legacyWindowOpen &&
     suppliedLegacy &&
     tokenMatches(suppliedLegacy, legacy)
   ) {
