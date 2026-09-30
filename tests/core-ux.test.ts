@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const addEdit = readFileSync('src/components/AddEditExpenseModal.tsx', 'utf8');
-const app = readFileSync('src/App.tsx', 'utf8');
+const app = readFileSync('src/app/AppShell.tsx', 'utf8');
 const history = readFileSync('src/screens/HistoryScreen.tsx', 'utf8');
 const stats = readFileSync('src/screens/StatisticsScreen.tsx', 'utf8');
 const detail = readFileSync('src/components/ExpenseDetailModal.tsx', 'utf8');
@@ -32,9 +32,9 @@ test('only the selected optional tool is rendered', () => {
 });
 
 test('History and Statistics route to read-only detail while Dashboard retains editing', () => {
-  assert.match(app, /DashboardScreen[\s\S]*onExpenseClick=\{\(expense\) => setEditingExpense\(expense\)\}/);
-  assert.match(app, /HistoryScreen[\s\S]*onExpenseClick=\{\(expense\) => setViewingExpense\(expense\)\}/);
-  assert.match(app, /StatisticsScreen[\s\S]*onNavigateToExpense=\{\(expense\) => setViewingExpense\(expense\)\}/);
+  assert.match(app, /DashboardScreen[\s\S]*onExpenseClick=\{overlays\.openEditExpense\}/);
+  assert.match(app, /HistoryScreen[\s\S]*onExpenseClick=\{overlays\.openExpenseDetail\}/);
+  assert.match(app, /StatisticsScreen[\s\S]*onNavigateToExpense=\{overlays\.openExpenseDetail\}/);
   assert.match(app, /<ExpenseDetailModal/);
 });
 
