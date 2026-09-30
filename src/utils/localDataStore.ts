@@ -8,6 +8,7 @@ import {
   FinancialState,
   financialStatesEqual,
   KeyValueStore,
+  LEGACY_FINANCIAL_KEYS,
   persistWebFinancialState,
   readLegacyFinancialState,
   recoverWebFinancialTransaction,
@@ -17,6 +18,23 @@ import {
 const LEGACY_MIGRATION_KEY = 'legacy_localstorage_migration_v1';
 const LEGACY_MIGRATION_LOCAL_FLAG = 'spendwise_sqlite_migration_v1_complete';
 const LEDGER_CURRENCY_KEY = 'ledger_currency';
+
+function clearLegacyFinancialSnapshot(storage: KeyValueStore): void {
+  for (const key of [
+    LEGACY_FINANCIAL_KEYS.EXPENSES,
+    LEGACY_FINANCIAL_KEYS.BUDGETS,
+    LEGACY_FINANCIAL_KEYS.ATTACHMENTS,
+    LEGACY_FINANCIAL_KEYS.CURRENCY,
+    LEGACY_FINANCIAL_KEYS.WEB_TXN,
+  ]) {
+    try {
+      storage.removeItem(key);
+    } catch {
+      // The encrypted database is already authoritative. A storage backend
+      // refusing cleanup must not corrupt or roll back verified SQLCipher data.
+    }
+  }
+}
 
 function emptyState(): FinancialState {
   return { expenses: [], budgets: [], attachments: [], currencyCode: 'USD' };
@@ -295,6 +313,7 @@ export class LocalDataStoreImpl {
     const marker = await this.getMeta(db, LEGACY_MIGRATION_KEY);
     if (marker === 'complete') {
       try { storage.setItem(LEGACY_MIGRATION_LOCAL_FLAG, 'complete'); } catch {}
+      clearLegacyFinancialSnapshot(storage);
       return;
     }
 
@@ -312,6 +331,7 @@ export class LocalDataStoreImpl {
       await this.withNativeTransaction((connection) =>
         this.setMeta(connection, LEGACY_MIGRATION_KEY, 'complete')
       );
+      clearLegacyFinancialSnapshot(storage);
       return;
     }
 
@@ -334,6 +354,7 @@ export class LocalDataStoreImpl {
     });
 
     try { storage.setItem(LEGACY_MIGRATION_LOCAL_FLAG, 'complete'); } catch {}
+    clearLegacyFinancialSnapshot(storage);
   }
 
   private async loadNativeState(allowMissingCurrency = false): Promise<FinancialState> {
