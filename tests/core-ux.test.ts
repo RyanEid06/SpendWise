@@ -53,7 +53,7 @@ test('read-only expense detail has photos and no edit or delete control', () => 
 test('Statistics expense rows support keyboard activation', () => {
   assert.match(stats, /onKeyDown=\{\(event\) => \{/);
   assert.match(stats, /event\.key === 'Enter' \|\| event\.key === ' '/);
-  assert.match(stats, /onNavigateToExpense\(exp\)/);
+  assert.match(stats, /onNavigateToExpense\(expense\)/);
 });
 
 test('Add/Edit consumes Escape and native Back without switching tools mid-photo work', () => {
