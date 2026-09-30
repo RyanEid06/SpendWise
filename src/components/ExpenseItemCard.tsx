@@ -139,7 +139,7 @@ export const ExpenseItemCard: React.FC<ExpenseItemCardProps> = ({
       {showActions && (
         <div
           role="menu"
-          className="absolute z-20 right-2 rtl:right-auto rtl:left-2 top-[52px] min-w-[11rem] p-1.5 rounded-xl bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-700 shadow-lg"
+          className="mx-2 mb-2 p-1.5 rounded-xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200 dark:border-slate-700"
         >
           <button
             type="button"
