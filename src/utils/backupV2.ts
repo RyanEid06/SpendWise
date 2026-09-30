@@ -650,7 +650,7 @@ export async function restoreBackupV2WithAdapters(
   const plan = planBackupV2Restore(manifest, oldState, replaceExisting);
   const staged: ExpenseAttachment[] = [];
   let photosSkipped = 0;
-  let stateCommitted = false;
+  let mutationAttempted = false;
   let settingsApplied = false;
 
   try {
@@ -678,8 +678,8 @@ export async function restoreBackupV2WithAdapters(
       currencyCode: plan.currencyCode,
     });
 
+    mutationAttempted = true;
     await adapters.replaceState(nextState);
-    stateCommitted = true;
 
     if (replaceExisting) {
       await adapters.setSettings({
@@ -711,8 +711,8 @@ export async function restoreBackupV2WithAdapters(
       warnings,
     };
   } catch (error) {
-    let rollbackSucceeded = !stateCommitted;
-    if (stateCommitted) {
+    let rollbackSucceeded = true;
+    if (mutationAttempted) {
       try {
         await adapters.replaceState(oldState);
         rollbackSucceeded = true;
