@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Language, ThemeMode } from '../../types';
 import { preferencesRepository } from '../../data/PreferencesRepository';
+import { analysisCacheService } from '../../services/AnalysisCacheService';
 
 export function resolveDarkMode(mode: ThemeMode, systemPrefersDark: boolean): boolean {
   if (mode === 'DARK') return true;
@@ -42,7 +43,7 @@ export function useThemeLanguage() {
 
   const setLanguage = useCallback((nextLanguage: Language) => {
     preferencesRepository.setLanguage(nextLanguage);
-    StorageManager.clearAnalysisCache();
+    analysisCacheService.clear();
     setLanguageState(nextLanguage);
   }, []);
 
