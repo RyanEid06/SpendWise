@@ -117,9 +117,9 @@ test('History metadata is positive-only and attachment counts are derived once p
   assert.doesNotMatch(cardSource, /No photos|No note/);
 });
 
-test('History deletion remains confirmation-protected and detail remains read-only', () => {
-  assert.match(historySource, /<ConfirmationModal/);
-  assert.match(historySource, /onRequestDelete=\{\(\) => setExpenseToDelete\(expense\)\}/);
+test('approved WP20 Undo policy supersedes routine confirmation while detail remains read-only', () => {
+  assert.doesNotMatch(historySource, /<ConfirmationModal|expenseToDelete/);
+  assert.match(historySource, /onRequestDelete=\{\(\) => onDeleteExpense\(expense\)\}/);
   assert.doesNotMatch(detailSource, /onEdit|Edit2|Trash2|onDelete/);
 });
 
