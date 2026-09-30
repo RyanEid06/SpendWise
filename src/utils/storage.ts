@@ -17,7 +17,7 @@ import {
 } from './currency';
 import { APP_VERSION_NAME } from './appVersion';
 import { AttachmentEditPayload, AttachmentStorage } from './attachmentStorage';
-import { LEGACY_FINANCIAL_KEYS } from './financialState';
+import { LEGACY_FINANCIAL_KEYS, MAX_SAFE_FINANCIAL_VALUE } from './financialState';
 import { LocalDataStore } from './localDataStore';
 import { SetupState } from './setupState';
 import {
@@ -356,7 +356,7 @@ export class StorageManager {
     for (const expense of backup.expenses) {
       if (
         !Number.isInteger(expense.id) || expense.id <= 0 || expenseIds.has(expense.id) ||
-        !Number.isFinite(expense.amount) || expense.amount <= 0 ||
+        !Number.isFinite(expense.amount) || expense.amount <= 0 || expense.amount > MAX_SAFE_FINANCIAL_VALUE ||
         typeof expense.description !== 'string' || !expense.description.trim() ||
         typeof expense.category !== 'string' || !expense.category.trim() ||
         !Number.isFinite(expense.date) || expense.date <= 0 ||
@@ -370,7 +370,7 @@ export class StorageManager {
     for (const budget of backup.monthlyBudgets) {
       if (
         !/^\d{4}-(0[1-9]|1[0-2])$/.test(budget.monthKey) || budgetMonths.has(budget.monthKey) ||
-        !Number.isFinite(budget.startingAmount) || budget.startingAmount <= 0 ||
+        !Number.isFinite(budget.startingAmount) || budget.startingAmount <= 0 || budget.startingAmount > MAX_SAFE_FINANCIAL_VALUE ||
         !Number.isFinite(budget.updatedAt) || budget.updatedAt <= 0
       ) throw new Error('Backup contains an invalid or duplicate monthly budget.');
       budgetMonths.add(budget.monthKey);
