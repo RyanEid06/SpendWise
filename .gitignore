@@ -24,3 +24,6 @@ debug.keystore
 *.jks
 *.keystore
 /android/keystore.properties
+
+# WP31 backend installation registry (server runtime state)
+/.spendwise-security/

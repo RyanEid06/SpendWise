@@ -24,7 +24,7 @@ export async function startServer() {
   }
 
   app.listen(serverConfig.port, '0.0.0.0', () => {
-    console.log('SpendWise server listening on http://0.0.0.0:' + serverConfig.port);
+    console.log('SpendWise server listening on port ' + serverConfig.port);
     console.log('Gemini model: ' + serverConfig.geminiModel);
   });
 }
