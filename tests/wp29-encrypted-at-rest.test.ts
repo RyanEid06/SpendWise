@@ -167,11 +167,12 @@ test('WP29 SQLCipher configuration and staged migration preserve the plaintext s
   assert.doesNotMatch(localStore, /createConnection\([^\n]*no-encryption/);
 
   const db = source('src/data/NativeEncryptedDatabaseService.ts');
+  const schema = source('src/data/databaseSchema.ts');
   assert.match(db, /spendwise_secure_v1/);
   assert.match(db, /spendwise\.db\.v1/);
   assert.match(db, /createConnection\([\s\S]*encrypted[\s\S]*'secret'/);
-  assert.match(db, /PRAGMA integrity_check/);
-  assert.match(db, /PRAGMA foreign_key_check/);
+  assert.match(schema, /PRAGMA integrity_check/);
+  assert.match(schema, /PRAGMA foreign_key_check/);
   assert.match(db, /DATABASE_MIGRATION_COUNT_MISMATCH/);
   assert.match(db, /closeConnection\(sqlite, ENCRYPTED_DATABASE_NAME\)/);
   assert.match(db, /writeMigration\([\s\S]*'active'/);
@@ -284,7 +285,7 @@ test('WP29 bootstraps the WP28 key hierarchy before opening encrypted storage', 
   const storage = source('src/utils/storage.ts');
   assert.ok(
     main.indexOf('secureSessionService.initialize()') <
-      main.indexOf('openProtectedStorage()')
+      main.lastIndexOf('await openProtectedStorage()')
   );
   assert.match(storage, /LocalDataStore\.init\(localStorage\)[\s\S]*AttachmentStorage\.ensureNativeEncryption\(\)/);
 });
