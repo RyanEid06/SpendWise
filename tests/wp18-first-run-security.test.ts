@@ -211,7 +211,7 @@ test('WP17 product shape remains frozen', () => {
   assert.match(statisticsSource, /CategoryStatisticsSection/);
 });
 
-test('v1.3 Android update identity and release metadata stay aligned', () => {
+test('v1.4 Android update identity and release metadata stay aligned', () => {
   const version = JSON.parse(readFileSync('version.json', 'utf8')) as {
     versionName: string;
     versionCode: number;
@@ -226,8 +226,8 @@ test('v1.3 Android update identity and release metadata stay aligned', () => {
   const manifest = readFileSync('android/app/src/main/AndroidManifest.xml', 'utf8');
   const workflow = readFileSync('.github/workflows/android-build.yml', 'utf8');
 
-  assert.equal(version.versionName, '1.3.0');
-  assert.equal(version.versionCode, 4);
+  assert.equal(version.versionName, '1.4.0');
+  assert.equal(version.versionCode, 5);
   assert.equal(packageJson.version, version.versionName);
   assert.equal(packageLock.version, version.versionName);
   assert.equal(packageLock.packages?.['']?.version, version.versionName);
