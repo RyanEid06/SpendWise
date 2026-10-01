@@ -92,6 +92,7 @@ jobs:
           git worktree add --detach "$fixture" c0d7522192af7e07cbb1f46c3a00145e8b94a988
           pushd "$fixture"
           npm ci
+          npm run build
           npm run android:sync
           chmod +x android/gradlew
           (cd android && ./gradlew assembleDebug)
