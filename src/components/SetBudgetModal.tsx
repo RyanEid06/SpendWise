@@ -91,6 +91,7 @@ export const SetBudgetModal: React.FC<SetBudgetModalProps> = ({
               </div>
               <input
                 type="number"
+                aria-label={t(language, 'startingBudgetLabel')}
                 step={currency.code === 'LBP' || currency.code === 'JPY' ? '1' : '0.01'}
                 placeholder={currency.code === 'LBP' || currency.code === 'JPY' ? '0' : '0.00'}
                 dir="ltr"
