@@ -154,7 +154,7 @@ jobs:
 
           for attempt in 1 2 3; do
             echo "Installing $package (attempt $attempt/3)"
-            if sdkmanager --install "$package"; then
+            if "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --install "$package"; then
               break
             fi
 
