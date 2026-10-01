@@ -33,10 +33,11 @@
     "test:wp32:components": "playwright test --config=playwright.component.config.ts",
     "test:wp32:browser": "playwright test --config=playwright.config.ts tests/e2e/browser",
     "test:wp32:visual": "playwright test --config=playwright.config.ts tests/e2e/visual",
-    "test:wp32": "npm run test:wp32:failures && npm run test:wp32:components && npm run test:wp32:playwright",
+    "test:wp32": "npm run test:wp32:failure && npm run test:wp32:components && npm run test:wp32:browser && npm run test:wp32:accessibility && npm run test:wp32:visual",
     "test:wp32:failures": "tsx --test tests/wp32-failure-injection.test.ts",
     "test:wp32:accessibility": "playwright test --config=playwright.config.ts tests/e2e/accessibility",
-    "test:wp32:playwright": "playwright test --config=playwright.config.ts"
+    "test:wp32:playwright": "playwright test --config=playwright.config.ts",
+    "test:wp32:failure": "tsx --test tests/wp32-failure-injection.test.ts"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",
