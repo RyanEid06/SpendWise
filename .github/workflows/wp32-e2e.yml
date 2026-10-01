@@ -132,10 +132,43 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          echo "Disk before cleanup:"
+          df -h /
           rm -rf node_modules dist
           rm -rf android/.gradle android/build android/app/build
           rm -rf "$HOME/.gradle/caches" "$HOME/.gradle/wrapper/dists"
           npm cache clean --force || true
+
+          # APK construction is complete. The hosted image carries several large
+          # NDK/CMake installations that the emulator/Maestro phase does not use.
+          sudo rm -rf "$ANDROID_SDK_ROOT/ndk" "$ANDROID_SDK_ROOT/cmake"
+
+          echo "Disk after cleanup:"
+          df -h /
+
+      - name: Preinstall Android emulator system image
+        shell: bash
+        run: |
+          set -euo pipefail
+          package="system-images;android-34;google_apis;x86_64"
+
+          for attempt in 1 2 3; do
+            echo "Installing $package (attempt $attempt/3)"
+            if sdkmanager --install "$package"; then
+              break
+            fi
+
+            if [ "$attempt" -eq 3 ]; then
+              echo "Failed to install $package after 3 attempts" >&2
+              exit 1
+            fi
+
+            rm -rf "$ANDROID_SDK_ROOT/.temp"
+            rm -rf "$ANDROID_SDK_ROOT/system-images/android-34/google_apis/x86_64"
+            sleep 5
+          done
+
+          test -f "$ANDROID_SDK_ROOT/system-images/android-34/google_apis/x86_64/package.xml"
           df -h /
 
       - name: Run Android black-box suite
