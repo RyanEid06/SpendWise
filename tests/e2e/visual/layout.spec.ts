@@ -32,6 +32,7 @@ for (const width of [320, 360, 390, 412]) {
 
 for (const [language, theme] of [
   ['en', 'LIGHT'],
+  ['en', 'SYSTEM'],
   ['fr', 'DARK'],
   ['ar', 'LIGHT'],
 ] as const) {
@@ -44,7 +45,9 @@ for (const [language, theme] of [
     await page.getByText(appearance, { exact: true }).click();
     const themeLabel = theme === 'DARK'
       ? (language === 'fr' ? 'Sombre' : language === 'ar' ? 'داكن' : 'Dark')
-      : (language === 'fr' ? 'Clair' : language === 'ar' ? 'فاتح' : 'Light');
+      : theme === 'SYSTEM'
+        ? (language === 'fr' ? 'Système' : language === 'ar' ? 'النظام' : 'System')
+        : (language === 'fr' ? 'Clair' : language === 'ar' ? 'فاتح' : 'Light');
     await page.getByRole('button', { name: themeLabel }).click();
     await assertNoHorizontalOverflow(page);
     if (language === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
