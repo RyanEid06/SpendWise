@@ -135,11 +135,9 @@ jobs:
           profile: pixel_6
           disable-animations: true
           pre-emulator-launch-script: |
-            set -eu
-            avd_config="$ANDROID_AVD_HOME/test.avd/config.ini"
-            sed -i '/^disk.dataPartition.size=/d' "$avd_config"
-            printf 'disk.dataPartition.size=3G\n' >> "$avd_config"
-            grep '^disk.dataPartition.size=' "$avd_config"
+            sed -i '/^disk.dataPartition.size=/d' "$ANDROID_AVD_HOME/test.avd/config.ini"
+            printf 'disk.dataPartition.size=3G\n' >> "$ANDROID_AVD_HOME/test.avd/config.ini"
+            grep '^disk.dataPartition.size=' "$ANDROID_AVD_HOME/test.avd/config.ini"
           emulator-options: >-
             -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
             -no-snapshot-save -camera-back none
