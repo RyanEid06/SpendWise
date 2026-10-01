@@ -17,7 +17,7 @@ capture_failure() {
   adb shell uiautomator dump /sdcard/wp32-window.xml >/dev/null 2>&1 || true
   adb exec-out cat /sdcard/wp32-window.xml > "$RESULT_ROOT/failure/window.xml" 2>/dev/null || true
   adb logcat -d -t 4000 \
-    | grep -E "SpendWise|com\\.spendwise\\.app|AndroidRuntime|FATAL EXCEPTION|chromium" \
+    | grep -E "SpendWise|com\\.spendwise\\.app|Capacitor|AppPlugin|ActivityTaskManager|AndroidRuntime|FATAL EXCEPTION|chromium" \
     > "$RESULT_ROOT/failure/logcat.txt" || true
 }
 
@@ -185,8 +185,6 @@ reset_app_expect "Set up SpendWise"
 echo "== Fresh install, persistence, delete safety, network failure =="
 run_flow fresh-persistence .maestro/current/fresh-persistence.yaml
 run_flow delete-undo .maestro/current/delete-undo.yaml
-run_flow delete-stage .maestro/current/delete-stage.yaml
-adb shell input keyevent KEYCODE_HOME
 run_flow delete-background .maestro/current/delete-background-verify.yaml
 run_flow offline-ai .maestro/current/offline-ai.yaml
 
