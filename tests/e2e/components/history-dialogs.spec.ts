@@ -26,7 +26,14 @@ test('destructive confirmation exposes alertdialog semantics and both paths', as
   const dialog = page.getByRole('alertdialog', { name: 'Erase fixture?' });
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText('destructive WP32 test');
-  await page.getByRole('button', { name: 'Cancel' }).click();
+  const cancel = page.getByRole('button', { name: 'Cancel' });
+  const erase = page.getByRole('button', { name: 'Erase' });
+  await expect(cancel).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(erase).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(cancel).toBeFocused();
+  await page.keyboard.press('Escape');
   await expect.poll(() => page.evaluate(() => window.__WP32_EVENTS__)).toContain('cancel');
 });
 
