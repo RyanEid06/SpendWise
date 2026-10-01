@@ -36,6 +36,7 @@ test('Backup v3 data-only survives clear and replace restore', async ({ page }) 
   await preview.getByRole('button', { name: 'Replace', exact: true }).last().click();
 
   await page.getByRole('button', { name: 'Back', exact: true }).click();
+  await page.getByRole('button', { name: 'Back to previous screen', exact: true }).click();
   await page.getByRole('button', { name: 'History' }).click();
   await expect(page.getByText('WP32 Disaster Recovery')).toBeVisible();
   await page.reload();
@@ -65,6 +66,7 @@ test('wrong Backup v3 passphrase is surfaced without mutating ledger', async ({ 
   await modal.getByRole('button', { name: 'Cancel' }).first().click();
 
   await page.getByRole('button', { name: 'Back', exact: true }).click();
+  await page.getByRole('button', { name: 'Back to previous screen', exact: true }).click();
   await page.getByRole('button', { name: 'History' }).click();
   await expect(page.getByText('WP32 Protected Ledger')).toBeVisible();
 });
