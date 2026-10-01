@@ -50,7 +50,8 @@ test('delete -> Undo restores the expense', async ({ page }) => {
   await page.getByRole('button', { name: 'History' }).click();
   const deleteButton = page.getByRole('button', { name: /Delete.*WP32 Undo/i });
   await deleteButton.focus();
-  await deleteButton.click();
+  await expect(deleteButton).toBeVisible();
+  await deleteButton.press('Enter');
   const undo = page.getByRole('button', { name: 'Undo', exact: true });
   await expect(undo).toBeVisible();
   await undo.click();
