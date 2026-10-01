@@ -19,7 +19,7 @@ for (const width of [320, 360, 390, 412]) {
     await page.getByRole('button', { name: 'Add Expense' }).first().click();
     await expect(page.getByRole('dialog', { name: 'Add Expense' })).toBeVisible();
     await assertNoHorizontalOverflow(page);
-    await page.getByRole('button', { name: 'Cancel' }).click();
+    await page.getByLabel('Cancel', { exact: true }).click();
 
     await page.getByRole('button', { name: 'History' }).click();
     await assertNoHorizontalOverflow(page);
@@ -51,7 +51,7 @@ for (const [language, theme] of [
       : theme === 'SYSTEM'
         ? (language === 'fr' ? 'Système' : language === 'ar' ? 'النظام' : 'System')
         : (language === 'fr' ? 'Clair' : language === 'ar' ? 'فاتح' : 'Light');
-    await page.getByRole('button', { name: themeLabel }).click();
+    await page.getByRole('button', { name: themeLabel, exact: true }).click();
     await assertNoHorizontalOverflow(page);
     if (language === 'ar') await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
   });
