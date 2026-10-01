@@ -29,7 +29,11 @@
     "test:wp28": "tsx --test tests/wp28-secure-auth-keystore.test.ts",
     "test:wp29": "tsx --test tests/wp29-encrypted-at-rest.test.ts",
     "test:wp30": "tsx --test tests/wp30-secure-backup-v3.test.ts",
-    "test:wp31": "tsx --test tests/wp31-backend-security.test.ts"
+    "test:wp31": "tsx --test tests/wp31-backend-security.test.ts",
+    "test:wp32:components": "playwright test --config=playwright.component.config.ts",
+    "test:wp32:browser": "playwright test --config=playwright.config.ts tests/e2e/browser",
+    "test:wp32:visual": "playwright test --config=playwright.config.ts tests/e2e/visual",
+    "test:wp32": "npm run test:wp32:components && npm run test:wp32:browser && npm run test:wp32:visual"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",
@@ -60,7 +64,8 @@
     "@vitejs/plugin-react": "^4.7.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
-    "vite": "^6.4.3"
+    "vite": "^6.4.3",
+    "@playwright/test": "1.63.0"
   },
   "engines": {
     "node": ">=22 <23"
