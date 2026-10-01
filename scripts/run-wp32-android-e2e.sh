@@ -19,6 +19,7 @@ capture_failure() {
 cleanup() {
   adb shell cmd connectivity airplane-mode disable >/dev/null 2>&1 || true
   adb shell locksettings clear --old 2468 >/dev/null 2>&1 || true
+  adb shell settings delete global hide_error_dialogs >/dev/null 2>&1 || true
 }
 
 on_exit() {
@@ -83,6 +84,25 @@ adb wait-for-device
 adb shell settings put system screen_off_timeout 2147483647 || true
 adb shell svc power stayon true || true
 adb shell cmd connectivity airplane-mode disable >/dev/null 2>&1 || true
+
+# Fresh hosted emulators can briefly ANR System UI after cold boot. That OS
+# dialog obscures Maestro even when SpendWise itself is healthy. Suppress only
+# system error dialogs for this disposable E2E device; app failures still make
+# the Maestro assertions fail and are captured from logcat.
+adb shell settings put global hide_error_dialogs 1 || true
+adb shell input keyevent KEYCODE_HOME >/dev/null 2>&1 || true
+for attempt in {1..10}; do
+  if adb shell uiautomator dump /sdcard/wp32-window.xml >/dev/null 2>&1; then
+    break
+  fi
+  if [ "$attempt" -eq 10 ]; then
+    echo "::error::Android UI automation did not become ready after cold boot."
+    exit 1
+  fi
+  sleep 2
+done
+sleep 5
+
 adb uninstall "$APP_ID" >/dev/null 2>&1 || true
 adb install "$NEW_APK" >/dev/null
 
