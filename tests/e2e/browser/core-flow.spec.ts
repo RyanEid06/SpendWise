@@ -14,6 +14,36 @@ test('fresh onboarding -> budget -> expense -> reload persists', async ({ page }
   await expect(page.getByText(/1,250|1250/).first()).toBeVisible();
 });
 
+
+test('expense create -> read -> update remains durable', async ({ page }) => {
+  await startFresh(page);
+  await addExpense(page, 'WP32 CRUD Original', '15.00');
+  await page.getByRole('button', { name: 'History' }).click();
+
+  const card = page.getByRole('button', { name: /WP32 CRUD Original,/ });
+  await card.focus();
+  await card.press('Enter');
+  await expect(page.getByRole('dialog', { name: 'Expense Details' })).toBeVisible();
+  await page.getByRole('button', { name: 'Close details' }).first().click();
+
+  await page.getByRole('button', { name: 'Home' }).click();
+  const homeCard = page.getByRole('button', { name: /WP32 CRUD Original,/ });
+  await homeCard.focus();
+  await homeCard.press('Enter');
+
+  const editor = page.getByRole('dialog', { name: 'Edit Expense' });
+  await expect(editor).toBeVisible();
+  await editor.getByRole('spinbutton', { name: /Amount/ }).fill('27.50');
+  await editor.getByRole('textbox', { name: /Description/ }).fill('WP32 CRUD Updated');
+  await editor.getByRole('button', { name: 'Update Expense' }).click();
+  await expect(editor).toBeHidden();
+
+  await page.getByRole('button', { name: 'History' }).click();
+  await expect(page.getByText('WP32 CRUD Updated')).toBeVisible();
+  await page.reload();
+  await expect(page.getByText('WP32 CRUD Updated')).toBeVisible();
+});
+
 test('delete -> Undo restores the expense', async ({ page }) => {
   await startFresh(page);
   await addExpense(page, 'WP32 Undo', '9.25');
