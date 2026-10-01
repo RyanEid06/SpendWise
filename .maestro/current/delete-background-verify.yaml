@@ -4,3 +4,13 @@ appId: com.spendwise.app
     stopApp: false
 - tapOn: "History"
 - assertVisible: "WP32 Android Persistence.*"
+- swipe:
+    start: 90%, 46%
+    end: 10%, 46%
+    duration: 600
+- assertVisible: "Undo"
+- pressKey: home
+- launchApp:
+    stopApp: false
+- tapOn: "History"
+- assertVisible: "WP32 Android Persistence.*"
