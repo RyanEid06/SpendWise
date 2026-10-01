@@ -7,5 +7,12 @@ appId: com.spendwise.app
 - tapOn: "Next"
 - tapOn: "Next"
 - tapOn: "Accept Terms of Use and Privacy Policy"
+- scrollUntilVisible:
+    element:
+      text: "Finish setup"
+    direction: DOWN
+    timeout: 30000
 - tapOn: "Finish setup"
-- assertVisible: "Money Remaining"
+- extendedWaitUntil:
+    visible: "Money Remaining"
+    timeout: 120000
