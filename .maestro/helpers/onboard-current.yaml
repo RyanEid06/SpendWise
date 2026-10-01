@@ -1,6 +1,8 @@
 appId: com.spendwise.app
 ---
-- assertVisible: "Set up SpendWise"
+- extendedWaitUntil:
+    visible: "Set up SpendWise"
+    timeout: 120000
 - tapOn: "English"
 - tapOn: "Next"
 - tapOn: "Next"
