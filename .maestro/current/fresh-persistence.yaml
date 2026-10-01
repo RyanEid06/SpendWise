@@ -15,6 +15,13 @@ appId: com.spendwise.app
 - inputText: "18.75"
 - tapOn: "Description / Merchant .*"
 - inputText: "WP32 Android Persistence"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      text: "Optional Note / Breakdown"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 80
 - tapOn: "Optional Note / Breakdown"
 - inputText: "survives restart"
 - hideKeyboard
