@@ -47,3 +47,18 @@ for (const [language, dir, settingsLabel] of [
     await expect(page.getByText(settingsLabel, { exact: false }).first()).toBeAttached();
   });
 }
+
+
+test('AI backend interruption falls back locally without crashing or mutating the ledger', async ({ page }) => {
+  await startFresh(page);
+  await addExpense(page, 'WP32 Offline AI', '22.40');
+  await page.route('**/api/gemini/analyze', (route) => route.abort('failed'));
+  await page.getByRole('button', { name: 'AI Insights' }).click();
+  await page.getByRole('button', { name: 'Analyze My Spending' }).click();
+
+  await expect(page.getByText(/AI is unavailable right now.*local statistical analysis/i)).toBeVisible();
+  await expect(page.getByText('Local analysis', { exact: false }).first()).toBeAttached();
+
+  await page.getByRole('button', { name: 'History' }).click();
+  await expect(page.getByText('WP32 Offline AI')).toBeVisible();
+});
