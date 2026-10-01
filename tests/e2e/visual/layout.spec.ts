@@ -38,7 +38,10 @@ for (const [language, theme] of [
 ] as const) {
   test(`${language}/${theme} representative layout remains usable`, async ({ page }) => {
     await startFresh(page, language);
-    const settingsName = language === 'fr' ? 'Paramètres' : language === 'ar' ? 'الإعدادات' : 'Settings';
+    const settingsName =
+      language === 'fr' ? 'Ouvrir les paramètres' :
+      language === 'ar' ? 'فتح الإعدادات' :
+      'Open Settings';
     await page.getByRole('button', { name: settingsName }).click();
 
     const appearance = language === 'fr' ? 'Apparence' : language === 'ar' ? 'المظهر' : 'Appearance';

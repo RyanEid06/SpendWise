@@ -44,7 +44,11 @@ for (const [language, dir, settingsLabel] of [
   test(`representative first-run flow works in ${language}`, async ({ page }) => {
     await startFresh(page, language);
     await expect(page.locator('html')).toHaveAttribute('dir', dir);
-    await expect(page.getByText(settingsLabel, { exact: false }).first()).toBeAttached();
+    const openSettingsName =
+      language === 'fr' ? 'Ouvrir les paramètres' :
+      language === 'ar' ? 'فتح الإعدادات' :
+      'Open Settings';
+    await expect(page.getByRole('button', { name: openSettingsName })).toBeVisible();
   });
 }
 
