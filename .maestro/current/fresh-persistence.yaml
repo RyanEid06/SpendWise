@@ -5,7 +5,7 @@ appId: com.spendwise.app
     permissions:
       all: allow
 - runFlow: ../helpers/onboard-current.yaml
-- tapOn: "Set Budget"
+- tapOn: "Set Monthly Budget"
 - tapOn: "Monthly Budget .*"
 - inputText: "1250"
 - hideKeyboard
