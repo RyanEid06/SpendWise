@@ -102,6 +102,7 @@ jobs:
           (cd android && ./gradlew assembleDebug)
           popd
           cp "$fixture/android/app/build/outputs/apk/debug/app-debug.apk"             artifacts/android-e2e/apks/v14-debug.apk
+          git worktree remove "$fixture" --force
 
       - name: Install pinned Maestro CLI
         shell: bash
@@ -118,6 +119,7 @@ jobs:
           chmod +x "$maestro_bin"
           echo "$(dirname "$maestro_bin")" >> "$GITHUB_PATH"
           "$maestro_bin" --version
+          rm -f "$archive"
 
       - name: Enable KVM
         shell: bash
@@ -125,6 +127,16 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"'             | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+
+      - name: Free disk for emulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf node_modules dist
+          rm -rf android/.gradle android/build android/app/build
+          rm -rf "$HOME/.gradle/caches" "$HOME/.gradle/wrapper/dists"
+          npm cache clean --force || true
+          df -h /
 
       - name: Run Android black-box suite
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
