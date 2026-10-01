@@ -13,8 +13,9 @@ test('critical navigation and forms expose accessible names', async ({ page }) =
   await expect(dialog.getByRole('spinbutton', { name: 'Amount *' })).toBeAttached();
   await expect(dialog.getByRole('textbox', { name: 'Description / Merchant *' })).toBeAttached();
   await expect(dialog.getByRole('textbox', { name: 'Optional Note / Breakdown' })).toBeAttached();
-  await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeAttached();
-  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  const closeButton = dialog.getByLabel('Cancel', { exact: true });
+  await expect(closeButton).toBeAttached();
+  await closeButton.click();
 
   await openSettings(page);
   await page.getByText('Backup & Restore', { exact: true }).click();
