@@ -46,7 +46,7 @@ export function useAppLockLifecycle({
   }, [onLock, refresh]);
 
   useAppLifecycle({
-    enabled: snapshot.appLockEnabled,
+    enabled: true,
     onBackground: handleBackground,
     onForeground: handleForeground,
   });
