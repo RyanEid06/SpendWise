@@ -84,10 +84,11 @@ export const BackupPassphraseModal: React.FC<{
         className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs p-4 flex items-center justify-center"
         role="dialog"
         aria-modal="true"
+        aria-labelledby="backup-passphrase-title"
       >
         <div className="w-full max-w-md rounded-3xl bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-800 overflow-hidden">
           <div className="p-4 flex justify-between items-center border-b border-slate-200 dark:border-slate-800">
-            <div className="flex items-center gap-2 font-bold">
+            <div id="backup-passphrase-title" className="flex items-center gap-2 font-bold">
               <KeyRound className="w-5 h-5" />
               {mode === 'create' ? text.createTitle : text.restoreTitle}
             </div>
