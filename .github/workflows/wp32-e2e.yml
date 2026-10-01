@@ -103,10 +103,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          export MAESTRO_VERSION="2.11.0"
-          curl -Ls "https://get.maestro.mobile.dev" | bash
-          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
-          "$HOME/.maestro/bin/maestro" --version
+          archive="$RUNNER_TEMP/maestro-2.11.0.zip"
+          install_root="$RUNNER_TEMP/maestro-2.11.0"
+          curl --fail --location --retry 3             "https://github.com/mobile-dev-inc/Maestro/releases/download/cli-2.11.0/maestro.zip"             --output "$archive"
+          echo "5384593cb4e7a106489e75a821d157dd43f4e438df6bc308b72e82c685e1283a  $archive"             | sha256sum --check
+          mkdir -p "$install_root"
+          unzip -q "$archive" -d "$install_root"
+          maestro_bin="$(find "$install_root" -type f -path '*/bin/maestro' -print -quit)"
+          test -n "$maestro_bin"
+          chmod +x "$maestro_bin"
+          echo "$(dirname "$maestro_bin")" >> "$GITHUB_PATH"
+          "$maestro_bin" --version
 
       - name: Enable KVM
         shell: bash
