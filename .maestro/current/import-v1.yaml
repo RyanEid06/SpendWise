@@ -17,5 +17,5 @@ appId: com.spendwise.app
 - tapOn: "Back"
 - tapOn: "Back to previous screen"
 - tapOn: "History"
-- assertVisible: "WP32 Legacy Coffee"
-- assertVisible: "WP32 Legacy Transit"
+- assertVisible: "WP32 Legacy Coffee.*"
+- assertVisible: "WP32 Legacy Transit.*"

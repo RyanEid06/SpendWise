@@ -2,7 +2,7 @@ appId: com.spendwise.app
 ---
 - launchApp
 - tapOn: "History"
-- tapOn: "WP32 Eight Photos"
+- tapOn: "WP32 Eight Photos.*"
 - assertVisible: "Attached photos"
 - assertVisible: "Photo file is unavailable"
 - assertVisible: "View photos"

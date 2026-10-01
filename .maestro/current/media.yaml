@@ -48,14 +48,14 @@ appId: com.spendwise.app
     timeout: 15000
 - tapOn: "Save Expense"
 - tapOn: "History"
-- tapOn: "WP32 One Photo"
+- tapOn: "WP32 One Photo.*"
 - assertVisible: "Attached photos"
 - assertVisible: "View photos"
 - tapOn: "Close details"
 - stopApp
 - launchApp
 - tapOn: "History"
-- tapOn: "WP32 One Photo"
+- tapOn: "WP32 One Photo.*"
 - assertVisible: "View photos"
 - tapOn: "Close details"
 - tapOn: "Home"
@@ -109,7 +109,7 @@ appId: com.spendwise.app
     enabled: false
 - tapOn: "Save Expense"
 - tapOn: "History"
-- tapOn: "WP32 Eight Photos"
+- tapOn: "WP32 Eight Photos.*"
 - assertVisible: "Attached photos"
 - assertVisible:
     text: "View photos"
@@ -118,7 +118,7 @@ appId: com.spendwise.app
 - stopApp
 - launchApp
 - tapOn: "History"
-- tapOn: "WP32 Eight Photos"
+- tapOn: "WP32 Eight Photos.*"
 - assertVisible:
     text: "View photos"
     index: 7

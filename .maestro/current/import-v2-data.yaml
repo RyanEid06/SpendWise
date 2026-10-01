@@ -19,4 +19,4 @@ appId: com.spendwise.app
 - tapOn: "Back"
 - tapOn: "Back to previous screen"
 - tapOn: "History"
-- assertVisible: "WP32 V2 Data"
+- assertVisible: "WP32 V2 Data.*"

@@ -25,9 +25,9 @@ appId: com.spendwise.app
 - tapOn: "Back"
 - tapOn: "Back to previous screen"
 - tapOn: "History"
-- assertVisible: "WP32 One Photo"
-- assertVisible: "WP32 Eight Photos"
-- tapOn: "WP32 Eight Photos"
+- assertVisible: "WP32 One Photo.*"
+- assertVisible: "WP32 Eight Photos.*"
+- tapOn: "WP32 Eight Photos.*"
 - assertVisible:
     text: "View photos"
     index: 7
@@ -35,4 +35,4 @@ appId: com.spendwise.app
 - stopApp
 - launchApp
 - tapOn: "History"
-- assertVisible: "WP32 Eight Photos"
+- assertVisible: "WP32 Eight Photos.*"

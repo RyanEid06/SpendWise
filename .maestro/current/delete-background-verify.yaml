@@ -3,4 +3,4 @@ appId: com.spendwise.app
 - launchApp:
     stopApp: false
 - tapOn: "History"
-- assertVisible: "WP32 Android Persistence"
+- assertVisible: "WP32 Android Persistence.*"

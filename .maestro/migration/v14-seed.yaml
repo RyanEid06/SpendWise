@@ -57,7 +57,7 @@ appId: com.spendwise.app
     visible: "1/8"
     timeout: 15000
 - tapOn: "Save Expense"
-- assertVisible: "WP32 Upgrade Ledger"
+- assertVisible: "WP32 Upgrade Ledger.*"
 - stopApp
 - launchApp
 - assertVisible: "SpendWise is Locked"
@@ -65,5 +65,5 @@ appId: com.spendwise.app
 - inputText: "2468"
 - pressKey: enter
 - extendedWaitUntil:
-    visible: "WP32 Upgrade Ledger"
+    visible: "WP32 Upgrade Ledger.*"
     timeout: 30000

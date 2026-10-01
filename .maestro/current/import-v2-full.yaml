@@ -19,5 +19,5 @@ appId: com.spendwise.app
 - tapOn: "Back"
 - tapOn: "Back to previous screen"
 - tapOn: "History"
-- tapOn: "WP32 V2 Full"
+- tapOn: "WP32 V2 Full.*"
 - assertVisible: "View photos"

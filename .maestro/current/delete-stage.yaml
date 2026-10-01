@@ -2,6 +2,6 @@ appId: com.spendwise.app
 ---
 - launchApp
 - tapOn: "History"
-- assertVisible: "WP32 Android Persistence"
-- tapOn: "Delete: WP32 Android Persistence"
+- assertVisible: "WP32 Android Persistence.*"
+- tapOn: "Delete expense: WP32 Android Persistence"
 - assertVisible: "Undo"

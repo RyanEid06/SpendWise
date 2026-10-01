@@ -9,10 +9,10 @@ appId: com.spendwise.app
 - pressKey: enter
 - runFlow: ../helpers/android-device-pin.yaml
 - extendedWaitUntil:
-    visible: "WP32 Upgrade Ledger"
+    visible: "WP32 Upgrade Ledger.*"
     timeout: 30000
 - assertVisible: ".*1,250.*"
-- tapOn: "WP32 Upgrade Ledger"
+- tapOn: "WP32 Upgrade Ledger.*"
 - assertVisible: "Edit Expense"
 - tapOn: "Attach Photos.*"
 - assertVisible: "1/8"
@@ -22,8 +22,8 @@ appId: com.spendwise.app
 - launchApp
 - runFlow: ../helpers/android-device-pin.yaml
 - extendedWaitUntil:
-    visible: "WP32 Upgrade Ledger"
+    visible: "WP32 Upgrade Ledger.*"
     timeout: 30000
 - tapOn: "History"
-- tapOn: "WP32 Upgrade Ledger"
+- tapOn: "WP32 Upgrade Ledger.*"
 - assertVisible: "View photos"

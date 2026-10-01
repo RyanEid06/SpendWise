@@ -20,12 +20,12 @@ appId: com.spendwise.app
 - tapOn: "Save Expense"
 - tapOn: "History"
 - extendedWaitUntil:
-    visible: "WP32 Android Persistence"
+    visible: "WP32 Android Persistence.*"
     timeout: 15000
 - stopApp
 - launchApp
 - extendedWaitUntil:
-    visible: "WP32 Android Persistence"
+    visible: "WP32 Android Persistence.*"
     timeout: 30000
 - tapOn: "Home"
 - assertVisible: ".*1,250.*"
