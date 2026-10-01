@@ -1,0 +1,9 @@
+appId: com.spendwise.app
+---
+- assertVisible: "Set up SpendWise"
+- tapOn: "English"
+- tapOn: "Next"
+- tapOn: "Next"
+- tapOn: "Accept Terms of Use and Privacy Policy"
+- tapOn: "Finish setup"
+- assertVisible: "Money Remaining"
