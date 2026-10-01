@@ -3,7 +3,7 @@ import { openSettings, startFresh } from '../browser/helpers';
 
 test('critical navigation and forms expose accessible names', async ({ page }) => {
   await startFresh(page);
-  for (const name of ['Home', 'History', 'AI Insights', 'Statistics', 'Settings', 'Add Expense']) {
+  for (const name of ['Home', 'History', 'AI Insights', 'Statistics', 'Open Settings', 'Add Expense']) {
     await expect(page.getByRole('button', { name }).first()).toBeAttached();
   }
 
