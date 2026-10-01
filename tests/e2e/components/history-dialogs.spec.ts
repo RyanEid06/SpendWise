@@ -8,7 +8,10 @@ test('History renders rows, filtering, details, and an accessible delete alterna
   await expect(page.getByText('WP32 Coffee')).toBeHidden();
   await page.getByPlaceholder(/Search description/).fill('');
 
-  await page.getByRole('button', { name: /WP32 Coffee, .*Food/i }).click();
+  const coffeeCard = page.getByRole('button', { name: /WP32 Coffee, .*Food/i });
+  await coffeeCard.focus();
+  await expect(coffeeCard).toBeFocused();
+  await coffeeCard.press('Enter');
   await expect(page.getByRole('dialog', { name: 'Expense Details' })).toBeVisible();
   await expect(page.getByText('Rendered details fixture')).toBeVisible();
   await page.getByRole('button', { name: 'Close details' }).first().click();
