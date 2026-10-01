@@ -10,6 +10,7 @@ import { BackupPassphraseModal } from '../../../src/components/BackupPassphraseM
 import { BackupV2ImportModal } from '../../../src/components/BackupV2ImportModal';
 import { UndoSnackbar } from '../../../src/components/UndoSnackbar';
 import { ExpenseDetailModal } from '../../../src/components/ExpenseDetailModal';
+import { LockScreen } from '../../../src/screens/LockScreen';
 import { StorageManager } from '../../../src/utils/storage';
 
 declare global {
@@ -103,6 +104,30 @@ const HistoryHarness = () => {
   );
 };
 
+const LockHarness = () => {
+  applyLanguage(initialLanguage);
+  const [attempt, setAttempt] = useState(0);
+  const mode = testCase === 'lock-native' ? 'native' : 'web';
+  return (
+    <LockScreen
+      unlockMode={mode}
+      migrationIssue={null}
+      language={initialLanguage}
+      onUnlock={async (credential) => {
+        setAttempt((value) => value + 1);
+        record('unlock:' + mode + ':' + String(credential ?? 'native'));
+        if (mode === 'native' && attempt === 0) {
+          return { ok: false, code: 'cancelled' };
+        }
+        if (mode === 'web' && credential !== '2468') {
+          return { ok: false, code: 'invalid_credential' };
+        }
+        return { ok: true, code: 'success' };
+      }}
+    />
+  );
+};
+
 const DialogHarness = () => {
   applyLanguage(initialLanguage);
   if (testCase === 'confirm') {
@@ -184,6 +209,7 @@ async function render() {
     <React.StrictMode>
       {testCase === 'settings' ? <SettingsHarness /> :
        testCase === 'history' ? <HistoryHarness /> :
+       testCase.startsWith('lock-') ? <LockHarness /> :
        <DialogHarness />}
     </React.StrictMode>
   );
