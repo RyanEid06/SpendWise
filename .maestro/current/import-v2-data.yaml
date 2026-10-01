@@ -1,0 +1,20 @@
+appId: com.spendwise.app
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- runFlow: ../helpers/onboard-current.yaml
+- tapOn: "Open Settings"
+- tapOn: "Backup & Restore"
+- tapOn: "Import Data"
+- tapOn: "wp32-v2-data.zip"
+- assertVisible: "Backup restore v2"
+- tapOn:
+    text: "Merge"
+    index: 1
+- assertVisible: "Backup restored"
+- tapOn: "Back"
+- tapOn: "Back to previous screen"
+- tapOn: "History"
+- assertVisible: "WP32 V2 Data"
