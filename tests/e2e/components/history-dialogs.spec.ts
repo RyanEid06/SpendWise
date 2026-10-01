@@ -71,3 +71,24 @@ test('grouped Undo is a live region with a keyboard-accessible action', async ({
   await undo.press('Enter');
   await expect.poll(() => page.evaluate(() => window.__WP32_EVENTS__)).toContain('undo');
 });
+
+test('web lock rejects an incorrect PIN and accepts the correct credential', async ({ page }) => {
+  await page.goto('/wp32.component.html?case=lock-web');
+  await expect(page.getByRole('heading', { name: 'SpendWise is Locked' })).toBeVisible();
+  const pin = page.getByPlaceholder('Enter PIN');
+  await pin.fill('9999');
+  await page.getByRole('button', { name: 'Unlock SpendWise' }).click();
+  await expect(page.getByText('Incorrect passcode.')).toBeVisible();
+  await pin.fill('2468');
+  await page.getByRole('button', { name: 'Unlock SpendWise' }).click();
+  await expect.poll(() => page.evaluate(() => window.__WP32_EVENTS__)).toContain('unlock:web:2468');
+});
+
+test('native lock exposes cancellation without pretending the session unlocked', async ({ page }) => {
+  await page.goto('/wp32.component.html?case=lock-native');
+  await expect(page.getByText(/Android screen lock|strong biometric/)).toBeVisible();
+  const unlock = page.getByRole('button', { name: 'Authenticate & Unlock' });
+  await unlock.click();
+  await expect(page.getByText('Authentication was cancelled.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'SpendWise is Locked' })).toBeVisible();
+});
