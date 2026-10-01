@@ -1,0 +1,19 @@
+appId: com.spendwise.app
+---
+- runFlow:
+    when:
+      visible: "Use PIN"
+    commands:
+      - tapOn: "Use PIN"
+- extendedWaitUntil:
+    visible: ".*PIN.*"
+    timeout: 15000
+- tapOn:
+    text: "^2$"
+- tapOn:
+    text: "^4$"
+- tapOn:
+    text: "^6$"
+- tapOn:
+    text: "^8$"
+- pressKey: enter

@@ -1,0 +1,20 @@
+appId: com.spendwise.app
+---
+- launchApp:
+    stopApp: false
+- assertVisible: "Money Remaining"
+- pressKey: home
+- launchApp:
+    stopApp: false
+- assertVisible: "SpendWise is Locked"
+- tapOn: "Authenticate & Unlock"
+- extendedWaitUntil:
+    visible: "Unlock SpendWise"
+    timeout: 15000
+- pressKey: back
+- assertVisible: "Authentication was cancelled."
+- tapOn: "Authenticate & Unlock"
+- runFlow: ../helpers/android-device-pin.yaml
+- extendedWaitUntil:
+    visible: "Money Remaining"
+    timeout: 20000

@@ -1,0 +1,55 @@
+appId: com.spendwise.app
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- addMedia:
+    - "../../tests/fixtures/media/wp32-photo-01.jpg"
+- assertVisible: "Set up SpendWise"
+- tapOn: "English"
+- tapOn: "Next"
+- tapOn: "Next"
+- tapOn:
+    text: "^PIN$"
+- inputText: "2468"
+- tapOn: "Confirm PIN"
+- inputText: "2468"
+- tapOn: "I agree to the"
+- tapOn: "Finish setup"
+- assertVisible: "Money Remaining"
+- tapOn: "Set Budget"
+- tapOn: "0.00"
+- inputText: "1250"
+- hideKeyboard
+- tapOn: "Save Budget"
+- tapOn: "Add Expense"
+- tapOn: "0.00"
+- inputText: "55.50"
+- tapOn: "e.g. Supermarket, Coffee Shop, Rent"
+- inputText: "WP32 Upgrade Ledger"
+- tapOn: "Optional Note / Breakdown"
+- inputText: "v1.4 migration fixture"
+- hideKeyboard
+- tapOn: "Photos"
+- tapOn: "Choose Photo"
+- tapOn:
+    id: "com.google.android.providers.media.module:id/icon_thumbnail"
+    index: 0
+- tapOn:
+    id: "com.google.android.providers.media.module:id/add_button"
+    optional: true
+- tapOn:
+    text: "Add"
+    optional: true
+- assertVisible: "1/8"
+- tapOn: "Save Expense"
+- assertVisible: "WP32 Upgrade Ledger"
+- stopApp
+- launchApp
+- assertVisible: "SpendWise is Locked"
+- tapOn: "Enter PIN"
+- inputText: "2468"
+- hideKeyboard
+- tapOn: "Unlock SpendWise"
+- assertVisible: "WP32 Upgrade Ledger"
