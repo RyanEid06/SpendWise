@@ -289,6 +289,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
               </div>
               <input
                 type="number"
+                aria-label={t(language, 'amountLabel')}
                 step={currency.code === 'LBP' || currency.code === 'JPY' ? '1' : '0.01'}
                 placeholder={currency.code === 'LBP' || currency.code === 'JPY' ? '0' : '0.00'}
                 dir="ltr"
@@ -319,6 +320,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
             </label>
             <input
               type="text"
+              aria-label={t(language, 'descriptionLabel')}
               placeholder={t(language, 'descriptionPlaceholder')}
               value={descriptionText}
               onChange={(e) => {
@@ -374,6 +376,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
             </label>
             <input
               type="date"
+              aria-label={t(language, 'dateLabel')}
               value={toInputDateFormat(selectedDateMillis)}
               onChange={(e) => {
                 if (e.target.value) setSelectedDateMillis(fromInputDateFormat(e.target.value));
@@ -388,6 +391,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
             </label>
             <textarea
               rows={3}
+              aria-label={t(language, 'optionalNoteLabel')}
               placeholder={t(language, 'notePlaceholder')}
               value={noteText}
               onChange={(e) => setNoteText(e.target.value)}
