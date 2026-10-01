@@ -20,7 +20,7 @@ test('History renders rows, filtering, details, and an accessible delete alterna
   await expect(deleteButton).toBeAttached();
   await deleteButton.focus();
   await expect(deleteButton).toBeVisible();
-  await deleteButton.click();
+  await deleteButton.press('Enter');
   await expect(page.getByText('WP32 Coffee')).toBeHidden();
 });
 
