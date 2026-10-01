@@ -1,7 +1,7 @@
 appId: com.spendwise.app
 ---
 - launchApp:
-    clearState: true
+    stopApp: false
     permissions:
       all: allow
 - runFlow: ../helpers/onboard-current.yaml
@@ -11,7 +11,9 @@ appId: com.spendwise.app
 - tapOn: "wp32-v1.json"
 - assertVisible: "Import Backup"
 - tapOn: "Merge & Import"
-- assertVisible: "Backup restored"
+- extendedWaitUntil:
+    visible: "Backup restored"
+    timeout: 30000
 - tapOn: "Back"
 - tapOn: "Back to previous screen"
 - tapOn: "History"

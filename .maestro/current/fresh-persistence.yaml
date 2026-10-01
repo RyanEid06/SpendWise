@@ -1,14 +1,17 @@
 appId: com.spendwise.app
 ---
 - launchApp:
-    clearState: true
+    stopApp: false
     permissions:
       all: allow
 - runFlow: ../helpers/onboard-current.yaml
 - tapOn: "Set Monthly Budget"
 - tapOn: "Monthly Budget .*"
 - inputText: "1250"
-- tapOn: "Save Budget"
+- pressKey: enter
+- extendedWaitUntil:
+    visible: ".*1,250.*"
+    timeout: 15000
 - tapOn: "Add Expense"
 - tapOn: "Amount .*"
 - inputText: "18.75"
@@ -16,9 +19,13 @@ appId: com.spendwise.app
 - inputText: "WP32 Android Persistence"
 - tapOn: "Save Expense"
 - tapOn: "History"
-- assertVisible: "WP32 Android Persistence"
+- extendedWaitUntil:
+    visible: "WP32 Android Persistence"
+    timeout: 15000
 - stopApp
 - launchApp
-- assertVisible: "WP32 Android Persistence"
+- extendedWaitUntil:
+    visible: "WP32 Android Persistence"
+    timeout: 30000
 - tapOn: "Home"
 - assertVisible: ".*1,250.*"

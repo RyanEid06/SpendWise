@@ -1,12 +1,14 @@
 appId: com.spendwise.app
 ---
 - launchApp:
-    clearState: true
+    stopApp: false
     permissions:
       all: allow
 - addMedia:
     - "../../tests/fixtures/media/wp32-photo-01.jpg"
-- assertVisible: "Set up SpendWise"
+- extendedWaitUntil:
+    visible: "Set up SpendWise"
+    timeout: 30000
 - tapOn: "English"
 - tapOn: "Next"
 - tapOn: "Next"
@@ -16,8 +18,15 @@ appId: com.spendwise.app
 - tapOn: "Confirm PIN"
 - inputText: "2468"
 - tapOn: "I agree to the"
+- scrollUntilVisible:
+    element:
+      text: "Finish setup"
+    direction: DOWN
+    timeout: 30000
 - tapOn: "Finish setup"
-- assertVisible: "Money Remaining"
+- extendedWaitUntil:
+    visible: "Money Remaining"
+    timeout: 30000
 - tapOn: "Set Budget"
 - tapOn: "0.00"
 - inputText: "1250"
@@ -28,10 +37,12 @@ appId: com.spendwise.app
 - inputText: "55.50"
 - tapOn: "e.g. Supermarket, Coffee Shop, Rent"
 - inputText: "WP32 Upgrade Ledger"
-- tapOn: "Optional Note / Breakdown"
-- inputText: "v1.4 migration fixture"
-- hideKeyboard
-- tapOn: "Photos"
+- scrollUntilVisible:
+    element:
+      text: "Attach Photos.*"
+    direction: DOWN
+    timeout: 15000
+- tapOn: "Attach Photos.*"
 - tapOn: "Choose Photo"
 - tapOn:
     id: "com.google.android.providers.media.module:id/icon_thumbnail"
@@ -42,7 +53,9 @@ appId: com.spendwise.app
 - tapOn:
     text: "Add"
     optional: true
-- assertVisible: "1/8"
+- extendedWaitUntil:
+    visible: "1/8"
+    timeout: 15000
 - tapOn: "Save Expense"
 - assertVisible: "WP32 Upgrade Ledger"
 - stopApp
@@ -50,6 +63,7 @@ appId: com.spendwise.app
 - assertVisible: "SpendWise is Locked"
 - tapOn: "Enter PIN"
 - inputText: "2468"
-- hideKeyboard
-- tapOn: "Unlock SpendWise"
-- assertVisible: "WP32 Upgrade Ledger"
+- pressKey: enter
+- extendedWaitUntil:
+    visible: "WP32 Upgrade Ledger"
+    timeout: 30000

@@ -12,5 +12,4 @@ appId: com.spendwise.app
     text: "At least 8 characters"
     index: 1
 - inputText: "wp32-public-fixture-passphrase"
-- hideKeyboard
-- tapOn: "Create secure backup"
+- pressKey: enter

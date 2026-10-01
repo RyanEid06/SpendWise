@@ -6,3 +6,4 @@ appId: com.spendwise.app
 - assertVisible: "Attached photos"
 - assertVisible: "Photo file is unavailable"
 - assertVisible: "View photos"
+- tapOn: "Close details"

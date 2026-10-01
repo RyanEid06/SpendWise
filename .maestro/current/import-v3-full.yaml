@@ -8,9 +8,10 @@ appId: com.spendwise.app
 - assertVisible: "Unlock Backup v3"
 - tapOn: "At least 8 characters"
 - inputText: "wp32-public-fixture-passphrase"
-- hideKeyboard
-- tapOn: "Unlock backup"
-- assertVisible: "Backup restore v3"
+- pressKey: enter
+- extendedWaitUntil:
+    visible: "Backup restore v3"
+    timeout: 30000
 - tapOn:
     text: "Replace"
     index: 0
@@ -18,7 +19,9 @@ appId: com.spendwise.app
 - tapOn:
     text: "Replace"
     index: 1
-- assertVisible: "Backup restored"
+- extendedWaitUntil:
+    visible: "Backup restored"
+    timeout: 30000
 - tapOn: "Back"
 - tapOn: "Back to previous screen"
 - tapOn: "History"

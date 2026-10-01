@@ -1,12 +1,12 @@
 appId: com.spendwise.app
 ---
-- launchApp
+- launchApp:
+    stopApp: false
 - assertVisible: "SpendWise is Locked"
 - assertVisible: "Enter your existing SpendWise PIN once.*"
 - tapOn: "Enter PIN"
 - inputText: "2468"
-- hideKeyboard
-- tapOn: "Upgrade & Unlock"
+- pressKey: enter
 - runFlow: ../helpers/android-device-pin.yaml
 - extendedWaitUntil:
     visible: "WP32 Upgrade Ledger"

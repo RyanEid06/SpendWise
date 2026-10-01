@@ -100,6 +100,11 @@ export const SetBudgetModal: React.FC<SetBudgetModalProps> = ({
                   setAmountText(e.target.value);
                   setError(null);
                 }}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter') return;
+                  event.preventDefault();
+                  void handleSave();
+                }}
                 className={`w-full ${currency.symbolPrefix === false ? 'pl-4 pr-14' : 'pl-14 pr-4'} py-3 rounded-2xl border text-lg font-bold tabular-nums bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-white focus:outline-none focus:ring-2 transition-all ${
                   error
                     ? 'border-rose-500 focus:ring-rose-500'

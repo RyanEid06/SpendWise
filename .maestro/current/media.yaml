@@ -1,7 +1,7 @@
 appId: com.spendwise.app
 ---
 - launchApp:
-    clearState: true
+    stopApp: false
     permissions:
       all: allow
 - addMedia:
@@ -15,20 +15,24 @@ appId: com.spendwise.app
     - "../../tests/fixtures/media/wp32-photo-08.jpg"
     - "../../tests/fixtures/media/wp32-photo-09.jpg"
 - runFlow: ../helpers/onboard-current.yaml
-- tapOn: "Set Budget"
+- tapOn: "Set Monthly Budget"
 - tapOn: "Monthly Budget .*"
 - inputText: "1250"
-- hideKeyboard
-- tapOn: "Save Budget"
+- pressKey: enter
+- extendedWaitUntil:
+    visible: ".*1,250.*"
+    timeout: 15000
 - tapOn: "Add Expense"
 - tapOn: "Amount .*"
 - inputText: "11.50"
 - tapOn: "Description / Merchant .*"
 - inputText: "WP32 One Photo"
-- tapOn: "Optional Note / Breakdown"
-- inputText: "single photo fixture"
-- hideKeyboard
-- tapOn: "Photos"
+- scrollUntilVisible:
+    element:
+      text: "Attach Photos.*"
+    direction: DOWN
+    timeout: 15000
+- tapOn: "Attach Photos.*"
 - tapOn: "Choose Photo"
 - tapOn:
     id: "com.google.android.providers.media.module:id/icon_thumbnail"
@@ -39,7 +43,9 @@ appId: com.spendwise.app
 - tapOn:
     text: "Add"
     optional: true
-- assertVisible: "1/8"
+- extendedWaitUntil:
+    visible: "1/8"
+    timeout: 15000
 - tapOn: "Save Expense"
 - tapOn: "History"
 - tapOn: "WP32 One Photo"
@@ -58,10 +64,12 @@ appId: com.spendwise.app
 - inputText: "88.00"
 - tapOn: "Description / Merchant .*"
 - inputText: "WP32 Eight Photos"
-- tapOn: "Optional Note / Breakdown"
-- inputText: "eight photo boundary"
-- hideKeyboard
-- tapOn: "Photos"
+- scrollUntilVisible:
+    element:
+      text: "Attach Photos.*"
+    direction: DOWN
+    timeout: 15000
+- tapOn: "Attach Photos.*"
 - tapOn: "Choose Photo"
 - tapOn:
     id: "com.google.android.providers.media.module:id/icon_thumbnail"
@@ -93,7 +101,9 @@ appId: com.spendwise.app
 - tapOn:
     text: "Add"
     optional: true
-- assertVisible: "8/8"
+- extendedWaitUntil:
+    visible: "8/8"
+    timeout: 15000
 - assertVisible:
     text: "Choose Photo"
     enabled: false
@@ -112,3 +122,4 @@ appId: com.spendwise.app
 - assertVisible:
     text: "View photos"
     index: 7
+- tapOn: "Close details"

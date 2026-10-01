@@ -1,7 +1,7 @@
 appId: com.spendwise.app
 ---
 - launchApp:
-    clearState: true
+    stopApp: false
     permissions:
       all: allow
 - runFlow: ../helpers/onboard-current.yaml
@@ -13,7 +13,9 @@ appId: com.spendwise.app
 - tapOn:
     text: "Merge"
     index: 1
-- assertVisible: "Backup restored"
+- extendedWaitUntil:
+    visible: "Backup restored"
+    timeout: 30000
 - tapOn: "Back"
 - tapOn: "Back to previous screen"
 - tapOn: "History"

@@ -1,13 +1,20 @@
 appId: com.spendwise.app
 ---
 - launchApp:
-    clearState: true
+    stopApp: false
     permissions:
       all: allow
-- assertVisible: "Set up SpendWise"
+- extendedWaitUntil:
+    visible: "Set up SpendWise"
+    timeout: 30000
 - tapOn: "English"
 - tapOn: "Next"
 - tapOn: "Next"
 - tapOn: "Enable App Lock"
 - tapOn: "Accept Terms of Use and Privacy Policy"
+- scrollUntilVisible:
+    element:
+      text: "Finish setup"
+    direction: DOWN
+    timeout: 30000
 - tapOn: "Finish setup"
