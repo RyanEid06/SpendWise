@@ -9,10 +9,15 @@ export async function clearBrowserState(page: Page) {
 }
 
 export async function completeOnboarding(page: Page, language: 'en' | 'fr' | 'ar' = 'en') {
-  const title = language === 'fr' ? 'Configurer SpendWise' : language === 'ar' ? 'إعداد SpendWise' : 'Set up SpendWise';
-  await expect(page.getByRole('heading', { name: title })).toBeVisible();
-  if (language === 'fr') await page.getByRole('button', { name: 'Français' }).click();
-  if (language === 'ar') await page.getByRole('button', { name: 'العربية' }).click();
+  await expect(page.getByRole('heading', { name: 'Set up SpendWise' })).toBeVisible();
+  if (language === 'fr') {
+    await page.getByRole('button', { name: 'Français' }).click();
+    await expect(page.getByRole('heading', { name: 'Configurer SpendWise' })).toBeVisible();
+  }
+  if (language === 'ar') {
+    await page.getByRole('button', { name: 'العربية' }).click();
+    await expect(page.getByRole('heading', { name: 'إعداد SpendWise' })).toBeVisible();
+  }
   const next = language === 'fr' ? 'Suivant' : language === 'ar' ? 'التالي' : 'Next';
   await page.getByRole('button', { name: next }).click();
   await page.getByRole('button', { name: next }).click();
