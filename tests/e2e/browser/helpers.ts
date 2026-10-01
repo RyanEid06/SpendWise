@@ -51,6 +51,6 @@ export async function setBudget(page: Page, amount = '1250') {
 }
 
 export async function openSettings(page: Page) {
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('button', { name: 'Open Settings' }).click();
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
 }
