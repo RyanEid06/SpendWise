@@ -135,7 +135,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           pre-emulator-launch-script: |
-            set -euo pipefail
+            set -eu
             avd_config="$ANDROID_AVD_HOME/test.avd/config.ini"
             sed -i '/^disk.dataPartition.size=/d' "$avd_config"
             printf 'disk.dataPartition.size=3G\n' >> "$avd_config"
