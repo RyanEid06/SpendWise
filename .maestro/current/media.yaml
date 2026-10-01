@@ -1,0 +1,114 @@
+appId: com.spendwise.app
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- addMedia:
+    - "../../tests/fixtures/media/wp32-photo-01.jpg"
+    - "../../tests/fixtures/media/wp32-photo-02.jpg"
+    - "../../tests/fixtures/media/wp32-photo-03.jpg"
+    - "../../tests/fixtures/media/wp32-photo-04.jpg"
+    - "../../tests/fixtures/media/wp32-photo-05.jpg"
+    - "../../tests/fixtures/media/wp32-photo-06.jpg"
+    - "../../tests/fixtures/media/wp32-photo-07.jpg"
+    - "../../tests/fixtures/media/wp32-photo-08.jpg"
+    - "../../tests/fixtures/media/wp32-photo-09.jpg"
+- runFlow: ../helpers/onboard-current.yaml
+- tapOn: "Set Budget"
+- tapOn: "Monthly Budget .*"
+- inputText: "1250"
+- hideKeyboard
+- tapOn: "Save Budget"
+- tapOn: "Add Expense"
+- tapOn: "Amount .*"
+- inputText: "11.50"
+- tapOn: "Description / Merchant .*"
+- inputText: "WP32 One Photo"
+- tapOn: "Optional Note / Breakdown"
+- inputText: "single photo fixture"
+- hideKeyboard
+- tapOn: "Photos"
+- tapOn: "Choose Photo"
+- tapOn:
+    id: "com.google.android.providers.media.module:id/icon_thumbnail"
+    index: 0
+- tapOn:
+    id: "com.google.android.providers.media.module:id/add_button"
+    optional: true
+- tapOn:
+    text: "Add"
+    optional: true
+- assertVisible: "1/8"
+- tapOn: "Save Expense"
+- tapOn: "History"
+- tapOn: "WP32 One Photo"
+- assertVisible: "Attached photos"
+- assertVisible: "View photos"
+- tapOn: "Close details"
+- stopApp
+- launchApp
+- tapOn: "History"
+- tapOn: "WP32 One Photo"
+- assertVisible: "View photos"
+- tapOn: "Close details"
+- tapOn: "Home"
+- tapOn: "Add Expense"
+- tapOn: "Amount .*"
+- inputText: "88.00"
+- tapOn: "Description / Merchant .*"
+- inputText: "WP32 Eight Photos"
+- tapOn: "Optional Note / Breakdown"
+- inputText: "eight photo boundary"
+- hideKeyboard
+- tapOn: "Photos"
+- tapOn: "Choose Photo"
+- tapOn:
+    id: "com.google.android.providers.media.module:id/icon_thumbnail"
+    index: 0
+- tapOn:
+    id: "com.google.android.providers.media.module:id/icon_thumbnail"
+    index: 1
+- tapOn:
+    id: "com.google.android.providers.media.module:id/icon_thumbnail"
+    index: 2
+- tapOn:
+    id: "com.google.android.providers.media.module:id/icon_thumbnail"
+    index: 3
+- tapOn:
+    id: "com.google.android.providers.media.module:id/icon_thumbnail"
+    index: 4
+- tapOn:
+    id: "com.google.android.providers.media.module:id/icon_thumbnail"
+    index: 5
+- tapOn:
+    id: "com.google.android.providers.media.module:id/icon_thumbnail"
+    index: 6
+- tapOn:
+    id: "com.google.android.providers.media.module:id/icon_thumbnail"
+    index: 7
+- tapOn:
+    id: "com.google.android.providers.media.module:id/add_button"
+    optional: true
+- tapOn:
+    text: "Add"
+    optional: true
+- assertVisible: "8/8"
+- assertVisible:
+    text: "Choose Photo"
+    enabled: false
+- tapOn: "Save Expense"
+- tapOn: "History"
+- tapOn: "WP32 Eight Photos"
+- assertVisible: "Attached photos"
+- assertVisible:
+    text: "View photos"
+    index: 7
+- tapOn: "Close details"
+- stopApp
+- launchApp
+- tapOn: "History"
+- tapOn: "WP32 Eight Photos"
+- assertVisible:
+    text: "View photos"
+    index: 7
