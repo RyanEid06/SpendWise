@@ -1,0 +1,13 @@
+appId: com.spendwise.app
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- assertVisible: "Set up SpendWise"
+- tapOn: "English"
+- tapOn: "Next"
+- tapOn: "Next"
+- tapOn: "Enable App Lock"
+- tapOn: "Accept Terms of Use and Privacy Policy"
+- tapOn: "Finish setup"
