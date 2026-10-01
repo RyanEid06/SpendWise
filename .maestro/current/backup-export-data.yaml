@@ -1,0 +1,16 @@
+appId: com.spendwise.app
+---
+- launchApp
+- tapOn: "Open Settings"
+- tapOn: "Backup & Restore"
+- tapOn: "Backup v3 · Data only"
+- tapOn:
+    text: "At least 8 characters"
+    index: 0
+- inputText: "wp32-public-fixture-passphrase"
+- tapOn:
+    text: "At least 8 characters"
+    index: 1
+- inputText: "wp32-public-fixture-passphrase"
+- hideKeyboard
+- tapOn: "Create secure backup"
