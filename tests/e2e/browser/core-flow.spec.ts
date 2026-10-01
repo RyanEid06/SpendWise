@@ -51,7 +51,7 @@ test('delete -> Undo restores the expense', async ({ page }) => {
   const deleteButton = page.getByRole('button', { name: /Delete.*WP32 Undo/i });
   await deleteButton.focus();
   await deleteButton.click();
-  const undo = page.getByRole('button', { name: 'Undo' });
+  const undo = page.getByRole('button', { name: 'Undo', exact: true });
   await expect(undo).toBeVisible();
   await undo.click();
   await expect(page.getByText('WP32 Undo')).toBeVisible();
@@ -62,7 +62,7 @@ test('Settings subpage back returns to Settings overview', async ({ page }) => {
   await openSettings(page);
   await page.getByText('Backup & Restore', { exact: true }).click();
   await expect(page.getByText('Backup v3 · Data only')).toBeVisible();
-  await page.getByRole('button', { name: 'Back' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(page.getByText('Backup & Restore', { exact: true })).toBeVisible();
 });
 
@@ -91,7 +91,7 @@ test('AI backend interruption falls back locally without crashing or mutating th
   await page.getByRole('button', { name: 'Analyze My Spending' }).click();
 
   await expect(page.getByText(/AI is unavailable right now.*local statistical analysis/i)).toBeVisible();
-  await expect(page.getByText('Local analysis', { exact: false }).first()).toBeAttached();
+  await expect(page.getByText('Local Statistical', { exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: 'History' }).click();
   await expect(page.getByText('WP32 Offline AI')).toBeVisible();
