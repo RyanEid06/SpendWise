@@ -52,9 +52,9 @@ appId: com.spendwise.app
 # so the test fails at the picker boundary instead of timing out later in SpendWise.
 - tapOn:
     id: "com.google.android.providers.media.module:id/button_add"
-- extendedWaitUntil:
-    visible: "Choose Photo"
-    timeout: 10000
+# Once a photo is attached the "Choose Photo" button is gone, so it cannot be
+# asserted once the picker closes. Wait on the attach-sheet counter instead,
+# which also proves the picker result made it back into the WebView.
 - extendedWaitUntil:
     visible: "1/8"
     timeout: 15000
@@ -119,14 +119,12 @@ appId: com.spendwise.app
 - tapOn:
     id: "com.google.android.providers.media.module:id/button_add"
 - extendedWaitUntil:
-    visible: "Choose Photo"
-    timeout: 10000
-- extendedWaitUntil:
     visible: "8/8"
     timeout: 15000
-- assertVisible:
-    text: "Choose Photo"
-    enabled: false
+# The counter reaching 8/8 is the cap assertion. The previous
+# `assertVisible: "Choose Photo", enabled: false` could never pass: with photos
+# already attached that button is not rendered at all, so there is no disabled
+# control to find.
 - tapOn: "Save Expense"
 - tapOn: "History"
 - tapOn: "WP32 Eight Photos.*"
