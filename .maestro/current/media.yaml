@@ -27,9 +27,14 @@ appId: com.spendwise.app
 - inputText: "11.50"
 - tapOn: "Description / Merchant .*"
 - inputText: "WP32 One Photo"
-# Maestro can expose below-viewport WebView nodes as visible. Dismiss the IME
-# and move the modal content physically before interacting with optional tools.
+# WebView accessibility can report nodes that are below the physical modal viewport.
+# Dismiss the IME, then use two deterministic scroll gestures so Attach Photos is
+# physically above the fixed action footer before Maestro taps its semantic node.
 - tapOn: "Food"
+- swipe:
+    start: 50%, 74%
+    end: 50%, 34%
+    duration: 600
 - swipe:
     start: 50%, 74%
     end: 50%, 34%
@@ -44,10 +49,10 @@ appId: com.spendwise.app
     id: "com.google.android.providers.media.module:id/icon_thumbnail"
     index: 0
 - tapOn:
-    id: "com.google.android.providers.media.module:id/add_button"
+    id: "com.google.android.providers.media.module:id/button_add"
     optional: true
 - tapOn:
-    text: "Add"
+    text: "Add.*"
     optional: true
 - extendedWaitUntil:
     visible: "1/8"
@@ -71,6 +76,10 @@ appId: com.spendwise.app
 - tapOn: "Description / Merchant .*"
 - inputText: "WP32 Eight Photos"
 - tapOn: "Food"
+- swipe:
+    start: 50%, 74%
+    end: 50%, 34%
+    duration: 600
 - swipe:
     start: 50%, 74%
     end: 50%, 34%
@@ -106,10 +115,10 @@ appId: com.spendwise.app
     id: "com.google.android.providers.media.module:id/icon_thumbnail"
     index: 7
 - tapOn:
-    id: "com.google.android.providers.media.module:id/add_button"
+    id: "com.google.android.providers.media.module:id/button_add"
     optional: true
 - tapOn:
-    text: "Add"
+    text: "Add.*"
     optional: true
 - extendedWaitUntil:
     visible: "8/8"
