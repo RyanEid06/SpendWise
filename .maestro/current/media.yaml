@@ -27,12 +27,18 @@ appId: com.spendwise.app
 - inputText: "11.50"
 - tapOn: "Description / Merchant .*"
 - inputText: "WP32 One Photo"
-- scrollUntilVisible:
-    element:
-      text: "Attach Photos.*"
-    direction: DOWN
-    timeout: 15000
+# Maestro can expose below-viewport WebView nodes as visible. Dismiss the IME
+# and move the modal content physically before interacting with optional tools.
+- tapOn: "Food"
+- swipe:
+    start: 50%, 74%
+    end: 50%, 34%
+    duration: 600
 - tapOn: "Attach Photos.*"
+- swipe:
+    start: 50%, 76%
+    end: 50%, 45%
+    duration: 500
 - tapOn: "Choose Photo"
 - tapOn:
     id: "com.google.android.providers.media.module:id/icon_thumbnail"
@@ -64,12 +70,16 @@ appId: com.spendwise.app
 - inputText: "88.00"
 - tapOn: "Description / Merchant .*"
 - inputText: "WP32 Eight Photos"
-- scrollUntilVisible:
-    element:
-      text: "Attach Photos.*"
-    direction: DOWN
-    timeout: 15000
+- tapOn: "Food"
+- swipe:
+    start: 50%, 74%
+    end: 50%, 34%
+    duration: 600
 - tapOn: "Attach Photos.*"
+- swipe:
+    start: 50%, 76%
+    end: 50%, 45%
+    duration: 500
 - tapOn: "Choose Photo"
 - tapOn:
     id: "com.google.android.providers.media.module:id/icon_thumbnail"
