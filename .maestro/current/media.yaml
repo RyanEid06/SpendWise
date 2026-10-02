@@ -48,12 +48,13 @@ appId: com.spendwise.app
 - tapOn:
     id: "com.google.android.providers.media.module:id/icon_thumbnail"
     index: 0
+# Multi-select Photo Picker requires explicit confirmation. Keep this mandatory
+# so the test fails at the picker boundary instead of timing out later in SpendWise.
 - tapOn:
     id: "com.google.android.providers.media.module:id/button_add"
-    optional: true
-- tapOn:
-    text: "Add.*"
-    optional: true
+- extendedWaitUntil:
+    visible: "Choose Photo"
+    timeout: 10000
 - extendedWaitUntil:
     visible: "1/8"
     timeout: 15000
@@ -114,12 +115,12 @@ appId: com.spendwise.app
 - tapOn:
     id: "com.google.android.providers.media.module:id/icon_thumbnail"
     index: 7
+# Multi-select Photo Picker requires explicit confirmation.
 - tapOn:
     id: "com.google.android.providers.media.module:id/button_add"
-    optional: true
-- tapOn:
-    text: "Add.*"
-    optional: true
+- extendedWaitUntil:
+    visible: "Choose Photo"
+    timeout: 10000
 - extendedWaitUntil:
     visible: "8/8"
     timeout: 15000
