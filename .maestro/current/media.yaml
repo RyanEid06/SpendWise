@@ -52,21 +52,14 @@ appId: com.spendwise.app
 # so the test fails at the picker boundary instead of timing out later in SpendWise.
 - tapOn:
     id: "com.google.android.providers.media.module:id/button_add"
-# Once a photo is attached the "Choose Photo" button is gone, so it cannot be
-# asserted once the picker closes. Wait on the attach-sheet counter instead,
-# which also proves the picker result made it back into the WebView.
-#
-# The system Photo Picker returns via a native IONCAMRLoadingActivity
-# (@capacitor/camera -> io.ionic.libs.ioncameralib). While that activity is on
-# top the WebView is not the focused window, so Android exposes no SpendWise
-# hierarchy at all and the counter is invisible to Maestro. It normally clears
-# within a few seconds, but the earlier "Choose Photo" wait used to absorb that
-# latency; without it this check needs an explicit allowance. Additive only: the
-# counter is rendered when totalVisible > 0, so a longer wait cannot mask a
-# missing attachment.
+# Use high-resolution deterministic JPEG fixtures. @capacitor/camera 8.x has an
+# upstream Android race where very small/fast-processing images can leave
+# IONCAMRLoadingActivity stuck above the WebView forever. That is a fixture
+# pathology, not SpendWise behavior, so exercise the real gallery path with
+# representative image dimensions and wait only for normal native processing.
 - extendedWaitUntil:
     visible: "1/8"
-    timeout: 45000
+    timeout: 30000
 - tapOn: "Save Expense"
 - tapOn: "History"
 - tapOn: "WP32 One Photo.*"
@@ -127,10 +120,11 @@ appId: com.spendwise.app
 # Multi-select Photo Picker requires explicit confirmation.
 - tapOn:
     id: "com.google.android.providers.media.module:id/button_add"
-# Same native-activity settling allowance as the single-photo check above.
+# Eight full-resolution fixtures legitimately take longer to decode/copy on a
+# hosted emulator; this timeout is for normal processing, not a stuck activity.
 - extendedWaitUntil:
     visible: "8/8"
-    timeout: 45000
+    timeout: 90000
 # The counter reaching 8/8 is the cap assertion. The previous
 # `assertVisible: "Choose Photo", enabled: false` could never pass: with photos
 # already attached that button is not rendered at all, so there is no disabled

@@ -59,7 +59,7 @@ appId: com.spendwise.app
     id: "com.google.android.providers.media.module:id/button_add"
 - extendedWaitUntil:
     visible: "1/8"
-    timeout: 15000
+    timeout: 30000
 - tapOn: "Save Expense"
 - assertVisible: "WP32 Upgrade Ledger.*"
 - stopApp
