@@ -5,8 +5,11 @@ appId: com.spendwise.app
     permissions:
       all: allow
 - extendedWaitUntil:
-    visible: "Set up SpendWise"
+    visible: "Language"
     timeout: 30000
+- assertVisible:
+    text: "Set up SpendWise"
+    optional: true
 - tapOn: "English"
 - tapOn: "Next"
 - tapOn: "Next"

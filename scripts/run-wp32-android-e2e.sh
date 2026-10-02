@@ -8,6 +8,13 @@ V14_APK="${V14_APK:-artifacts/android-e2e/apks/v14-debug.apk}"
 RESULT_ROOT="${RESULT_ROOT:-artifacts/android-e2e/results}"
 FIXTURE_ROOT="${FIXTURE_ROOT:-artifacts/android-e2e/fixtures}"
 
+# The wizard's <h1> ("Set up SpendWise") is never exposed through Android
+# accessibility: neither `uiautomator dump` nor Maestro's hierarchy contains it,
+# even while it is plainly rendered (verified against capture_failure artifacts).
+# The step heading "Language" is exposed by both, so it is the readiness gate.
+# Keep this in sync with `.maestro/helpers/onboard-current.yaml`.
+ONBOARD_READY_TEXT="Language"
+
 mkdir -p "$RESULT_ROOT" "$FIXTURE_ROOT"
 
 capture_failure() {
@@ -180,7 +187,7 @@ done
 
 adb uninstall "$APP_ID" >/dev/null 2>&1 || true
 adb install "$NEW_APK" >/dev/null
-reset_app_expect "Set up SpendWise"
+reset_app_expect "$ONBOARD_READY_TEXT"
 
 echo "== Fresh install, persistence, delete safety, network failure =="
 run_flow fresh-persistence .maestro/current/fresh-persistence.yaml
@@ -189,7 +196,7 @@ run_flow delete-background .maestro/current/delete-background-verify.yaml
 run_flow offline-ai .maestro/current/offline-ai.yaml
 
 echo "== Media boundaries and restart durability =="
-reset_app_expect "Set up SpendWise"
+reset_app_expect "$ONBOARD_READY_TEXT"
 run_flow media .maestro/current/media.yaml
 
 echo "== Secure Backup v3 exports =="
@@ -218,16 +225,16 @@ push_download tests/fixtures/backup-v1.json wp32-v1.json
 push_download "$FIXTURE_ROOT/wp32-v2-data.zip" wp32-v2-data.zip
 push_download "$FIXTURE_ROOT/wp32-v2-full.zip" wp32-v2-full.zip
 
-reset_app_expect "Set up SpendWise"
+reset_app_expect "$ONBOARD_READY_TEXT"
 run_flow import-v1 .maestro/current/import-v1.yaml
-reset_app_expect "Set up SpendWise"
+reset_app_expect "$ONBOARD_READY_TEXT"
 run_flow import-v2-data .maestro/current/import-v2-data.yaml
-reset_app_expect "Set up SpendWise"
+reset_app_expect "$ONBOARD_READY_TEXT"
 run_flow import-v2-full .maestro/current/import-v2-full.yaml
 
 echo "== Native App Lock cancellation and retry =="
 adb shell locksettings set-pin 2468 >/dev/null
-reset_app_expect "Set up SpendWise"
+reset_app_expect "$ONBOARD_READY_TEXT"
 run_flow app-lock-setup .maestro/current/app-lock-setup-start.yaml
 run_flow app-lock-setup-auth .maestro/helpers/android-device-pin.yaml
 run_flow app-lock-timeout .maestro/current/app-lock-configure-timeout.yaml
@@ -236,7 +243,7 @@ run_flow app-lock-cancel-retry .maestro/current/app-lock-background-cancel-retry
 echo "== v1.4 in-place upgrade migration =="
 adb uninstall "$APP_ID" >/dev/null
 adb install "$V14_APK" >/dev/null
-start_app_expect "Set up SpendWise"
+start_app_expect "$ONBOARD_READY_TEXT"
 run_flow v14-seed .maestro/migration/v14-seed.yaml
 adb install -r "$NEW_APK" >/dev/null
 start_app_expect "SpendWise is Locked"
