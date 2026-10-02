@@ -2,8 +2,8 @@ appId: com.spendwise.app
 ---
 - launchApp
 - tapOn: "Open Settings"
-- tapOn: "Backup & Restore"
-- tapOn: "Import Data"
+- tapOn: "Backup & Restore.*"
+- tapOn: "Import Data.*"
 - tapOn: "wp32-full.swb3"
 - assertVisible: "Unlock Backup v3"
 - tapOn: "At least 8 characters"

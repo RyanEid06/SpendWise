@@ -4,7 +4,7 @@ appId: com.spendwise.app
     stopApp: false
 - assertVisible: "Money Remaining"
 - tapOn: "Open Settings"
-- tapOn: "App Lock"
+- tapOn: "App Lock.*"
 - assertVisible: "Enabled"
 - tapOn: "Immediately"
 - tapOn: "Back"

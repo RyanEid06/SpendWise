@@ -2,7 +2,7 @@ appId: com.spendwise.app
 ---
 - launchApp
 - tapOn: "Open Settings"
-- tapOn: "Clear App Data"
+- tapOn: "Clear App Data.*"
 - assertVisible: "Clear Financial Data?"
 - tapOn: "Erase Financial Data"
 - assertVisible: "Financial data has been erased."
