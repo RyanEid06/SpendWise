@@ -4,12 +4,10 @@ appId: com.spendwise.app
 - tapOn: "Open Settings"
 - tapOn: "Backup & Restore.*"
 - tapOn: "Backup v3 · Data.*photos.*"
-- tapOn:
-    text: "At least 8 characters"
-    index: 0
+# Android WebView accessibility does not expose password placeholder text.
+# Tapping the visible wrapped label focuses the corresponding input.
+- tapOn: "Backup passphrase"
 - inputText: "wp32-public-fixture-passphrase"
-- tapOn:
-    text: "At least 8 characters"
-    index: 1
+- tapOn: "Confirm passphrase"
 - inputText: "wp32-public-fixture-passphrase"
 - pressKey: enter

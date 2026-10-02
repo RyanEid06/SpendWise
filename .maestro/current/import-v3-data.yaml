@@ -6,7 +6,7 @@ appId: com.spendwise.app
 - tapOn: "Import Data.*"
 - tapOn: "wp32-data.swb3"
 - assertVisible: "Unlock Backup v3"
-- tapOn: "At least 8 characters"
+- tapOn: "Backup passphrase"
 - inputText: "wp32-public-fixture-passphrase"
 - pressKey: enter
 - extendedWaitUntil:
