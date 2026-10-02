@@ -52,13 +52,13 @@ appId: com.spendwise.app
     index: 0
 # Multi-select Photo Picker confirmation. The picker's confirm control is
 # button_add; "add_button" does not exist, so the previous optional:true taps
-# silently no-opped and the "1/8" wait below could never succeed. The control
+# silently no-opped and attachment verification could never succeed. The control
 # label is dynamic ("Add (1)"), so match the stable resource id and let a
 # missing control fail here rather than mask the problem.
 - tapOn:
     id: "com.google.android.providers.media.module:id/button_add"
 - extendedWaitUntil:
-    visible: "1/8"
+    visible: "Attach Photos · 1"
     timeout: 30000
 - tapOn: "Save Expense"
 - assertVisible: "WP32 Upgrade Ledger.*"

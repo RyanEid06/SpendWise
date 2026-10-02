@@ -57,8 +57,11 @@ appId: com.spendwise.app
 # IONCAMRLoadingActivity stuck above the WebView forever. That is a fixture
 # pathology, not SpendWise behavior, so exercise the real gallery path with
 # representative image dimensions and wait only for normal native processing.
+# Android/WebView accessibility exposes the visual "1/8" counter as three
+# separate nodes ("1", "/", "8"). The tool button exposes one stable semantic
+# label that carries the same state, so assert that instead.
 - extendedWaitUntil:
-    visible: "1/8"
+    visible: "Attach Photos · 1"
     timeout: 30000
 - tapOn: "Save Expense"
 - tapOn: "History"
@@ -123,12 +126,11 @@ appId: com.spendwise.app
 # Eight full-resolution fixtures legitimately take longer to decode/copy on a
 # hosted emulator; this timeout is for normal processing, not a stuck activity.
 - extendedWaitUntil:
-    visible: "8/8"
+    visible: "Attach Photos · 8"
     timeout: 90000
-# The counter reaching 8/8 is the cap assertion. The previous
-# `assertVisible: "Choose Photo", enabled: false` could never pass: with photos
-# already attached that button is not rendered at all, so there is no disabled
-# control to find.
+# The semantic tool label reaching 8 proves the cap state. The visual "8/8"
+# counter is split into separate accessibility nodes on Android, so it is not a
+# reliable Maestro selector.
 - tapOn: "Save Expense"
 - tapOn: "History"
 - tapOn: "WP32 Eight Photos.*"

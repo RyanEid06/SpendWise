@@ -15,7 +15,7 @@ appId: com.spendwise.app
 - tapOn: "WP32 Upgrade Ledger.*"
 - assertVisible: "Edit Expense"
 - tapOn: "Attach Photos.*"
-- assertVisible: "1/8"
+- assertVisible: "Attach Photos · 1"
 - assertVisible: "View photos"
 - tapOn: "Cancel"
 - stopApp
