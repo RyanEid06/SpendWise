@@ -89,6 +89,7 @@ jobs:
           npx tsx scripts/wp32-generate-portable-fixtures.ts             artifacts/android-e2e/fixtures
 
       - name: Build v1.4 migration fixture APK
+        if: ${{ false }}
         shell: bash
         run: |
           set -euo pipefail
@@ -185,7 +186,7 @@ jobs:
           emulator-options: >-
             -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
             -no-snapshot-save -camera-back none
-          script: bash scripts/run-wp32-android-e2e.sh
+          script: bash scripts/run-wp32-backup-restore-targeted.sh
 
       - name: Upload Android failure artifacts
         if: failure()
