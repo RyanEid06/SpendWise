@@ -46,7 +46,7 @@ const OPTIONAL_COPY = {
   },
   fr: {
     title: 'Outils facultatifs',
-    sub: 'La saisie manuelle reste simple. Ouvrez uniquement l\'outil nécessaire.',
+    sub: 'La saisie manuelle reste simple. Ouvrez uniquement l’outil nécessaire.',
     smart: 'Capture intelligente',
     receipt: 'Scanner un reçu',
     photos: 'Joindre des photos',
@@ -245,7 +245,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
         aria-labelledby="modal-title"
         data-native-back-layer="true"
       >
-        <div className="bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden my-6 max-h-[90vh] flex flex-col transition-colors">
+        <div className="bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden my-6 max-h-[90vh] flex flex-col transition-all">
           <div className="flex items-start justify-between gap-2 px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-slate-800">
             <div className="min-w-0">
               <h2
@@ -259,7 +259,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
                   {language === 'ar'
                     ? 'أدخل التفاصيل الأساسية أولاً، ثم استخدم أداة اختيارية عند الحاجة.'
                     : language === 'fr'
-                      ? 'Saisissez d\'abord les détails essentiels, puis utilisez un outil facultatif si nécessaire.'
+                      ? 'Saisissez d’abord les détails essentiels, puis utilisez un outil facultatif si nécessaire.'
                       : 'Enter the essentials first, then use an optional tool only when needed.'}
                 </p>
               )}
@@ -267,7 +267,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
             <button
               onClick={onClose}
               disabled={isSaving || isPhotoPreparing}
-              className="min-w-[48px] min-h-[48px] flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="min-w-[48px] min-h-[48px] flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               aria-label={t(language, 'cancelBtn')}
             >
               <X className="w-5 h-5" />
@@ -381,7 +381,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
                 onChange={(e) => {
                   if (e.target.value) setSelectedDateMillis(fromInputDateFormat(e.target.value));
                 }}
-                className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-white text-sm font-medium focus:outline-none focus:ring-2 transition-all focus:ring-emerald-500"
+                className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
               />
             </div>
 
@@ -395,7 +395,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
                 placeholder={t(language, 'notePlaceholder')}
                 value={noteText}
                 onChange={(e) => setNoteText(e.target.value)}
-                className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 transition-all focus:ring-emerald-500"
+                className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
               />
             </div>
 
@@ -422,7 +422,9 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
                       type="button"
                       disabled={isSaving || isPhotoPreparing}
                       onClick={() => toggleTool(tool)}
+                      aria-label={label}
                       aria-expanded={selected}
+                      aria-pressed={selected}
                       data-testid={`tool-${tool}-button`}
                       className={`min-h-[48px] px-3 py-2.5 rounded-2xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
                         selected
@@ -479,7 +481,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
             </div>
           )}
 
-          <div className="p-4 bg-slate-50 dark:bg-[#0B0F19]/60 border-t border-slate-200/80 dark:border-slate-800 flex flex-col-reverse min-[360px]:flex-row items-stretch min-[360px]:items-center justify-between gap-2">
+          <div className="p-4 bg-slate-50 dark:bg-[#0B0F19]/60 border-t border-slate-200/80 dark:border-slate-800 flex flex-col-reverse min-[360px]:flex-row items-stretch min-[360px]:items-center justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
