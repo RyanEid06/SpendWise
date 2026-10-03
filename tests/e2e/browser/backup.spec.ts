@@ -40,7 +40,12 @@ test('Backup v3 data-only survives clear and replace restore', async ({ page }) 
   await unlock.getByRole('button', { name: 'Unlock backup' }).click();
 
   const preview = page.getByRole('dialog', { name: 'Backup restore v3', exact: true });
-  await expect(preview.getByRole('button', { name: 'Cancel', exact: true }).first()).toBeFocused();
+  const previewCancel = preview.getByRole('button', { name: 'Cancel', exact: true }).first();
+  await expect(previewCancel).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(preview.getByRole('button', { name: 'Merge', exact: true }).last()).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(previewCancel).toBeFocused();
   await preview.getByRole('button', { name: 'Replace', exact: true }).first().click();
   await preview.getByRole('button', { name: 'Replace', exact: true }).last().click();
 
@@ -76,12 +81,16 @@ test('wrong Backup v3 passphrase is surfaced without mutating ledger', async ({ 
   await modal.getByRole('button', { name: 'Create secure backup' }).click();
   const backupPath = await (await downloadPromise).path();
 
+  const importButton = page.getByRole('button', { name: /^Import Data/ });
+  await importButton.focus();
   await page.locator('input[type="file"]').setInputFiles(backupPath!);
   modal = page.getByRole('dialog');
+  await expect(modal.locator('input[type="password"]')).toBeFocused();
   await modal.locator('input[type="password"]').fill('definitely-wrong');
   await modal.getByRole('button', { name: 'Unlock backup' }).click();
   await expect(modal).toContainText(/Wrong passphrase|tampered backup|invalid Backup v3/i);
   await modal.getByRole('button', { name: 'Cancel' }).first().click();
+  await expect(importButton).toBeFocused();
 
   await page.getByRole('button', { name: 'Back', exact: true }).click();
   await page.getByRole('button', { name: 'Back to previous screen', exact: true }).click();

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { KeyRound, ShieldCheck, X } from 'lucide-react';
 import type { Language } from '../types';
 import { ViewportPortal } from './ViewportPortal';
+import { useModalFocus } from './useModalFocus';
 
 const labels = {
   en: {
@@ -60,6 +61,7 @@ export const BackupPassphraseModal: React.FC<{
   const [passphrase, setPassphrase] = useState('');
   const [confirm, setConfirm] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
+  const dialogRef = useModalFocus('input[type="password"]');
 
   useEffect(() => {
     return () => {
@@ -85,6 +87,8 @@ export const BackupPassphraseModal: React.FC<{
         role="dialog"
         aria-modal="true"
         aria-labelledby="backup-passphrase-title"
+        ref={dialogRef}
+        tabIndex={-1}
       >
         <div className="w-full max-w-md rounded-3xl bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-800 overflow-hidden">
           <div className="p-4 flex justify-between items-center border-b border-slate-200 dark:border-slate-800">
@@ -116,7 +120,6 @@ export const BackupPassphraseModal: React.FC<{
             <label className="block space-y-1.5">
               <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{text.passphrase}</span>
               <input
-                autoFocus
                 type="password"
                 autoComplete="new-password"
                 value={passphrase}

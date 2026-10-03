@@ -1,6 +1,6 @@
 # WP32 active repair checkpoint
 
-Updated 2026-10-03 11:45 UTC. This is an unfinished repair checkpoint, not a
+Updated 2026-10-03 12:01 UTC. This is an unfinished repair checkpoint, not a
 passing release candidate. Resume WP32; do not start WP33/WP34 or merge/release.
 
 ## Repository and access
@@ -52,38 +52,40 @@ There are two distinct issues:
    corrected v3 data selector. See tests/e2e/browser/backup.spec.ts.
 2. Backup modal transitions lose focus. The browser regression now explicitly
    requires focus in the restore preview and return to the Import Data trigger.
-   **This test is intentionally RED until the focus implementation is repaired.**
-   No speculative production modal change has been made yet.
+   The regression failed before repair and now passes. Shared useModalFocus
+   gives the passphrase field/preview safe initial focus, traps Tab, and restores
+   the connected trigger or main landmark on closure. React autoFocus is removed
+   so it cannot overwrite the saved trigger before capture. v1 preview shares
+   this lifecycle. Wrong-passphrase cancellation and preview Tab wrap also pass.
 
-## Active diagnostic run — preserve it
+## Completed diagnostic evidence
 
-Diagnostic commit 525a690ceea3e4a7042559ce7e9c133bbf710220 is running WP32 E2E:
+Diagnostic commit 525a690ceea3e4a7042559ce7e9c133bbf710220 completed WP32 E2E:
 https://github.com/RyanEid06/SpendWise/actions/runs/37119658098
 Native job: 111193147940. Web job: 111193148026 (passed).
 
-It preserves the original failed screenshot/native tree, then captures CDP
-layout/full AX tree and probes main focus and disabled screen animation. Review
-failure/webview/original-*, focus-main-*, no-animation-* and version.json.
+The original pre-probe native tree already contains both Back and the complete
+`Backup restored: 2 expenses, 9 photos` result. CDP AX/layout also show visible
+content, no aria-hidden/inert and opacity 1. All three probe native trees contain
+the result. This run proves the incorrect exact text selector caused its failure;
+it does NOT establish that focus or animation caused run 68's missing subtree.
+Review run69/failure/window.xml and failure/webview/original-*, focus-main-*,
+no-animation-* and version.json. Modal focus is a separately reproduced defect.
 The diagnostic only runs after a failed flow on the disposable synthetic test
 emulator. It does not change release code or mask the failing exit status.
 
-This checkpoint uses [skip ci] only to preserve that in-progress diagnostic run
-while saving the intentionally failing regression. The next implementation
-commit must run normal CI and the complete Android suite. A skipped checkpoint
-is not green acceptance evidence.
+Commit 85cca18 used [skip ci] only to preserve that then-active diagnostic run
+while saving the failing regression. The current implementation commit runs
+normal CI and the complete Android suite. The skipped checkpoint is not green
+acceptance evidence. Local Chrome passed 21 browser/accessibility/layout checks
+and 11 component checks after repair; native acceptance is still pending.
 
 ## Next work
 
-1. Inspect diagnostic job logs and failure artifact through GitHub plugin.
-2. Establish whether focus changes restore the hidden native Settings subtree,
-   or whether animation/native visibility is the cause. Avoid timing retries or
-   further portal/CSS guesses without evidence.
-3. Repair modal lifecycle and make the focused browser regression pass. Check
-   cancel and passphrase→preview→restore transitions.
-4. Publish/synchronize; run the complete native gate through v3 recovery,
+1. Publish/synchronize the selector/focus repair; run the complete native gate through v3 recovery,
    corruption, v1/v2 imports, App Lock, and v1.4 migration. Fix each actual failure
    from artifacts; do not hide/skip unexecuted gates.
-5. Update PR validation and this checkpoint. Keep PR draft until CI passes.
+2. Update PR validation and this checkpoint. Keep PR draft until CI passes.
 
 ## Local environment and artifacts
 
@@ -93,7 +95,7 @@ is not green acceptance evidence.
 - Local Playwright configs under artifacts/investigation use installed Chrome
   with video disabled because bundled Playwright browser/ffmpeg is unavailable.
   CI uses pinned Playwright Chromium normally.
-- Artifacts: artifacts/investigation/run63, run64, run65, run67, run68.
+- Artifacts: artifacts/investigation/run63, run64, run65, run67, run68, run69.
   WP32-repair-evidence.md records reproductions/results. These are ignored local
   artifacts; GitHub failure artifacts remain downloadable for seven days.
 - Debug APK from 2686596: artifacts/investigation/apk-2686596/app-debug.apk.
