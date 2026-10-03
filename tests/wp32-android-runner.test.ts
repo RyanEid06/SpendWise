@@ -226,3 +226,36 @@ corrupt_secure_media_files
     }
   });
 }
+
+test('upgrade seeds the legacy fixture before enabling Android device credentials', () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'wp32-upgrade-order-'));
+  try {
+    const result = spawnSync(bash, ['-c', `
+set -euo pipefail
+pin=0
+seeded=0
+adb() {
+  if [[ "$*" == 'shell locksettings set-pin 2468' ]]; then pin=1; fi
+  if [[ "$*" == 'shell locksettings clear --old 2468' ]]; then pin=0; fi
+  if [[ "$1" == install && "$2" == -r ]]; then
+    [[ "$pin" == 1 && "$seeded" == 1 ]] || return 34
+  fi
+}
+maestro() {
+  if [[ "\${@: -1}" == .maestro/migration/v14-seed.yaml ]]; then
+    [[ "$pin" == 0 ]] || { echo 'Device keyguard can obscure the legacy seed' >&2; return 33; }
+    seeded=1
+  else
+    [[ "$pin" == 1 && "$seeded" == 1 ]] || return 35
+  fi
+}
+source scripts/run-wp32-isolated-gate.sh
+`], { encoding: 'utf8', env: { ...process.env, WP32_TARGET: 'hardened-upgrade',
+      RESULT_ROOT: shellPath(directory).replace(/^([A-Za-z]):/, (_, drive) => `/${drive.toLowerCase()}`),
+    } });
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /isolated target passed: hardened-upgrade/);
+  } finally {
+    rmSync(directory, {recursive: true, force: true});
+  }
+});
