@@ -24,7 +24,7 @@ appId: com.spendwise.app
     text: "Replace"
     index: 1
 - extendedWaitUntil:
-    visible: "Backup restored"
+    visible: "Backup restored: 2 expenses, 9 photos"
     timeout: 30000
 - tapOn: "Back"
 - tapOn: "Back to previous screen"

@@ -1,10 +1,12 @@
 import { expect, test } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 import { addExpense, BACKUP_PASSPHRASE, openSettings, setBudget, startFresh } from './helpers';
 
 test('Backup v3 data-only survives clear and replace restore', async ({ page }) => {
   await startFresh(page);
   await setBudget(page, '1250');
   await addExpense(page, 'WP32 Disaster Recovery', '73.40');
+  await addExpense(page, 'WP32 Second Recovery', '11.50');
   await openSettings(page);
   await page.getByText('Backup & Restore', { exact: true }).click();
 
@@ -30,19 +32,31 @@ test('Backup v3 data-only survives clear and replace restore', async ({ page }) 
 
   await openSettings(page);
   await page.getByText('Backup & Restore', { exact: true }).click();
+  const importButton = page.getByRole('button', { name: /^Import Data/ });
+  await importButton.focus();
   await page.locator('input[type="file"]').setInputFiles(backupPath!);
   const unlock = page.getByRole('dialog');
   await unlock.locator('input[type="password"]').fill(BACKUP_PASSPHRASE);
   await unlock.getByRole('button', { name: 'Unlock backup' }).click();
 
-  const preview = page.getByRole('dialog');
+  const preview = page.getByRole('dialog', { name: 'Backup restore v3', exact: true });
+  await expect(preview.getByRole('button', { name: 'Cancel', exact: true }).first()).toBeFocused();
   await preview.getByRole('button', { name: 'Replace', exact: true }).first().click();
   await preview.getByRole('button', { name: 'Replace', exact: true }).last().click();
+
+  // Maestro's native selector matches the entire visible label. Exercise that
+  // same selector against a real two-expense restore, including summary counts.
+  const nativeFlow = readFileSync('.maestro/current/import-v3-data.yaml', 'utf8');
+  const summaryPattern = nativeFlow.match(/visible: "(Backup restored[^"]*)"/)?.[1];
+  expect(summaryPattern).toBeTruthy();
+  await expect(page.getByText(new RegExp(`^(?:${summaryPattern})$`))).toBeVisible();
+  await expect(importButton).toBeFocused();
 
   await page.getByRole('button', { name: 'Back', exact: true }).click();
   await page.getByRole('button', { name: 'Back to previous screen', exact: true }).click();
   await page.getByRole('button', { name: 'History' }).click();
   await expect(page.getByText('WP32 Disaster Recovery')).toBeVisible();
+  await expect(page.getByText('WP32 Second Recovery')).toBeVisible();
   await page.reload();
   await expect(page.getByText('WP32 Disaster Recovery')).toBeVisible();
 });
