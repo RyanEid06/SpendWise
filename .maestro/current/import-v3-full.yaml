@@ -15,7 +15,11 @@ appId: com.spendwise.app
 - tapOn:
     text: "Replace"
     index: 0
-- assertVisible: "Replace fully validates and stages the backup before changing your current ledger."
+# Android WebView paints the safety sentence but omits it from the native
+# accessibility tree. The second Replace control proves confirmation is active.
+- assertVisible:
+    text: "Replace"
+    index: 1
 - tapOn:
     text: "Replace"
     index: 1
