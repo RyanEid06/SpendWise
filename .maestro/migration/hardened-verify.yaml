@@ -20,6 +20,8 @@ appId: com.spendwise.app
 - tapOn: "Cancel"
 - stopApp
 - launchApp
+- assertVisible: "SpendWise is Locked"
+- tapOn: "Authenticate & Unlock"
 - runFlow: ../helpers/android-device-pin.yaml
 - extendedWaitUntil:
     visible: "WP32 Upgrade Ledger.*"
