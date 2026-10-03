@@ -10,6 +10,7 @@ import {
 } from '../utils/date';
 import { SetupState } from '../utils/setupState';
 import { Navigation } from '../components/Navigation';
+import { ViewportPortal } from '../components/ViewportPortal';
 import { AppTopBar } from '../components/AppTopBar';
 import { UndoSnackbar } from '../components/UndoSnackbar';
 import { AddEditExpenseModal } from '../components/AddEditExpenseModal';
@@ -173,33 +174,6 @@ export const AppShell: React.FC = () => {
         onCloseSettings={navigation.closeSettings}
       />
 
-      {/* Keep fixed controls before scrollable content: Android WebView can omit
-          trailing fixed siblings from its native accessibility tree on remount. */}
-      {(navigation.currentScreen === 'home' || navigation.currentScreen === 'history') && (
-        <button
-          onClick={overlays.openAddExpense}
-          className="fixed right-4 rtl:right-auto rtl:left-4 z-30 min-w-[52px] min-h-[52px] w-13 h-13 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-lg shadow-emerald-500/30 flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
-          style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}
-          aria-label={
-            preferences.language === 'ar'
-              ? 'إضافة مصروف'
-              : preferences.language === 'fr'
-                ? 'Ajouter une dépense'
-                : 'Add Expense'
-          }
-        >
-          <Plus className="w-6 h-6 stroke-[2.75]" />
-        </button>
-      )}
-
-      {navigation.currentScreen !== 'settings' && (
-        <Navigation
-          currentScreen={navigation.currentScreen}
-          language={preferences.language}
-          onSelectScreen={navigation.selectPrimaryScreen}
-        />
-      )}
-
       <main
         id="main-content"
         tabIndex={-1}
@@ -294,6 +268,36 @@ export const AppShell: React.FC = () => {
           />
         )}
       </main>
+
+      {/* Viewport controls belong outside the scrolling app container. Android
+          WebView can omit its fixed descendants from native accessibility after
+          Settings remounts them, even though their pixels remain visible. */}
+      <ViewportPortal>
+        {(navigation.currentScreen === 'home' || navigation.currentScreen === 'history') && (
+          <button
+            onClick={overlays.openAddExpense}
+            className="fixed right-4 rtl:right-auto rtl:left-4 z-30 min-w-[52px] min-h-[52px] w-13 h-13 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-lg shadow-emerald-500/30 flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
+            style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}
+            aria-label={
+              preferences.language === 'ar'
+                ? 'إضافة مصروف'
+                : preferences.language === 'fr'
+                  ? 'Ajouter une dépense'
+                  : 'Add Expense'
+            }
+          >
+            <Plus className="w-6 h-6 stroke-[2.75]" />
+          </button>
+        )}
+  
+        {navigation.currentScreen !== 'settings' && (
+          <Navigation
+            currentScreen={navigation.currentScreen}
+            language={preferences.language}
+            onSelectScreen={navigation.selectPrimaryScreen}
+          />
+        )}
+      </ViewportPortal>
 
       <UndoSnackbar
         count={deleteUndo.pendingCount}
