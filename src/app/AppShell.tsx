@@ -289,7 +289,7 @@ export const AppShell: React.FC = () => {
             <Plus className="w-6 h-6 stroke-[2.75]" />
           </button>
         )}
-  
+
         {navigation.currentScreen !== 'settings' && (
           <Navigation
             currentScreen={navigation.currentScreen}

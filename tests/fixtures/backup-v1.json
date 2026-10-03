@@ -2,7 +2,7 @@
   "metadata": {
     "appVersion": "1.4.0-wp32-fixture",
     "schemaVersion": 1,
-    "exportedAt": 1780339200000,
+    "exportedAt": 1790856000000,
     "exportedAtFormatted": "2026-10-01 12:00:00",
     "totalExpenses": 2,
     "totalBudgets": 1
@@ -18,27 +18,27 @@
       "amount": 14.25,
       "description": "WP32 Legacy Coffee",
       "category": "Food & Dining",
-      "date": 1780339200000,
+      "date": 1790856000000,
       "dateFormatted": "2026-10-01",
       "note": "Synthetic legacy fixture",
-      "createdAt": 1780339200000
+      "createdAt": 1790856000000
     },
     {
       "id": 102,
       "amount": 32.5,
       "description": "WP32 Legacy Transit",
       "category": "Transportation",
-      "date": 1780342800000,
+      "date": 1790859600000,
       "dateFormatted": "2026-10-01",
       "note": null,
-      "createdAt": 1780342800000
+      "createdAt": 1790859600000
     }
   ],
   "monthlyBudgets": [
     {
       "monthKey": "2026-10",
       "startingAmount": 1250,
-      "updatedAt": 1780339200000
+      "updatedAt": 1790856000000
     }
   ]
 }

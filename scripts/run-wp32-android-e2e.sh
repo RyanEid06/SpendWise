@@ -210,7 +210,7 @@ run_flow clear-before-v3-data .maestro/current/clear-financial-data.yaml
 run_flow import-v3-data .maestro/current/import-v3-data.yaml
 
 echo "== Backward-compatible v1/v2 restore =="
-push_download tests/fixtures/backup-v1.json wp32-v1.json
+push_download "$FIXTURE_ROOT/wp32-v1.json" wp32-v1.json
 push_download "$FIXTURE_ROOT/wp32-v2-data.zip" wp32-v2-data.zip
 push_download "$FIXTURE_ROOT/wp32-v2-full.zip" wp32-v2-full.zip
 

@@ -23,6 +23,24 @@ No production security bypass is added. Fixed test passphrases protect only synt
 6. `tests/wp32-failure-injection.test.ts` injects storage, restore, media and key failures.
 7. `.maestro/` contains Android emulator black-box flows.
 
+## Android gate and regression safeguards
+
+`run-wp32-android-e2e.sh` runs the entire native suite, including the v1.4 upgrade
+fixture. The targeted backup runner is a debugging aid and does not satisfy WP32.
+CI checks both shell entrypoints before emulator work and tests their shared backup
+extraction and encrypted-media fault injection against a fake adb boundary.
+
+Portable v1/v2 fixtures use the current emulator month so History verifies the
+restored rows without a stale-date mismatch. `WP32_FIXTURE_MONTH=YYYY-MM` allows
+reproducible fixture checks. The full v2 fixture includes a valid 1024px JPEG.
+Backup v3 recovery checks amounts, budget, and photos again after restart.
+
+The empty-navigation flow verifies that returning from Settings exposes all four
+tabs and the Home floating Add Expense action to native accessibility. Viewport
+controls use the same body portal as dialogs and Undo: fixed descendants of the
+scrolling app container can be painted but absent from Android WebView's native
+accessibility tree after remount. DOM-order changes alone did not fix that case.
+
 ## Failure artifacts
 
 CI keeps Playwright traces/screenshots/report and sanitized Android screenshots/logs only on failure.
