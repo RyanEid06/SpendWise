@@ -1,7 +1,35 @@
 # WP32 active repair checkpoint
 
-Updated 2026-10-03 12:01 UTC. This is an unfinished repair checkpoint, not a
+Updated 2026-10-04. This is an unfinished repair checkpoint, not a
 passing release candidate. Resume WP32; do not start WP33/WP34 or merge/release.
+
+## Latest checkpoint
+
+- Read `WP32_ISOLATED_DIAGNOSTIC_REPORT.md` first; its latest checkpoint and
+  second repair batch supersede the older failure descriptions below.
+- Published source head `4bd98fbc7d5eacfa342d233c79439f67ec1dfe05`; local and
+  tracking/live branch match with 0/0 ahead/behind. Every changed remote blob
+  matches the locally verified bytes.
+- First repaired matrix run `37159757487` proved import-v1, App Lock setup/auth,
+  and timeout green. Native confirmed count is **18/22**.
+- Four targets remain in the matrix: corruption, cancellation/retry, legacy
+  v1.4 seed, and hardened upgrade. Artifacts justified one narrow product repair
+  for completed-media migration corruption; other repairs are test/bootstrap.
+- Corrected-head isolated run `37161873538`, Build `37161873533`, and web
+  `37161873506` fail before any job steps. One web-job retry does the same.
+  Logs are absent; connector cannot fetch annotations. Await the annotation
+  message requested from the user, then restore runner availability before
+  retrying those four targets. Do not infer a product failure or keep retrying.
+- Local **237 Node checks**, **11 component checks**, and **21 published browser/
+  accessibility/layout checks** pass, plus build/shell checks. CI acceptance on
+  this source head is pending. Existing uncommitted light-theme contrast test
+  fails; it remains preserved and unpublished, outside this repair.
+- Only after all remaining isolated targets pass, add `wp32-final-native` to
+  PR #30 for the ONE final full sequential native 22/22 gate. Do not launch it
+  while any isolated target lacks proof. Android Build/web must then pass too.
+- Final native suite not launched. Real-device/TalkBack remains separate.
+- Preserve `tests/e2e/browser/backup.spec.ts` local edit and
+  `SpendWise-v1.3.0-release/`. No merge, release, WP33, or WP34.
 
 ## Repository and access
 

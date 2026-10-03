@@ -1,12 +1,61 @@
 # WP32 Isolated Native Diagnostic Report
 
-Date: 2026-10-03
+Date: 2026-10-04
 Branch: `wp32/e2e-hardening`
 PR: #30
 Primary isolated runs: `37123283989`, `37123314002`
-Current head before this report: `30147beef70ad9556799bbc421b368d713492f61`
+Original diagnostic head: `30147beef70ad9556799bbc421b368d713492f61`
 
 ## Executive status
+
+### Current checkpoint: native CI cannot start jobs
+
+Published repair head: `4bd98fbc7d5eacfa342d233c79439f67ec1dfe05`.
+Local HEAD, origin tracking ref, and live branch match; ahead/behind is **0/0**.
+All ten second-batch changed-file blob SHAs were independently matched to local
+bytes. Publication initially transferred a truncated source payload in commit
+`89777777a81857221c11a18eaa095ab0fdcd4567`; the published head corrects it and
+includes the runner regression. That intermediate commit is not acceptance evidence.
+
+GitHub runs on the corrected head failed before executing any job steps:
+
+- isolated native run `37161873538`: all four jobs have zero steps;
+- Android Build run `37161873533`: `verify-debug` has zero steps;
+- WP32 web run `37161873506`: `web-e2e` has zero steps, including one narrow
+  infrastructure retry (job `111317165609`).
+
+No runner logs exist (GitHub log storage returns `BlobNotFound`). Check records
+show failure annotations, but the GitHub connector does not support reading that
+endpoint. The user has been asked for the annotation message; its cause has not
+been established. No application assertion executed in these runs. Do not
+repeat jobs until the runner/account condition is identified and corrected.
+
+Confirmed native coverage remains **18/22**, comprising the protected 15 and
+the three green targets on `7399b6d6ec473d93b1c90456f1ae89809b47a4b9`.
+The four repaired targets below remain **pending native proof**. The final
+sequential 22-flow suite has **not been launched**; its label is still withheld
+until all isolated targets pass. WP32 remains incomplete; no merge or WP33/WP34.
+
+Local corrected-source validation: **237/237 Node checks** (including 11 runner
+and 11 failure-injection checks), **11/11 components**, and the published 21
+browser/accessibility/layout checks pass in installed Chrome. TypeScript/Vite
+and shell syntax pass. These do not replace native or Android APK acceptance.
+The pre-existing uncommitted browser test adds two contrast checks: its light
+theme check fails (observed ratio 1.0955 versus required 4.5), while dark passes.
+That edit is preserved, excluded from publication, and outside this repair scope.
+Latest actual CI greens remain the first batch's Android Build and web runs
+listed below, rather than current-head acceptance.
+
+Changed implementation/automation files since the objective's starting commit:
+`.github/workflows/wp32-e2e.yml`, `.github/workflows/wp32-isolated-gates.yml`,
+`.maestro/current/import-v1.yaml`, `.maestro/helpers/android-device-pin.yaml`,
+`.maestro/current/app-lock-background-cancel-retry.yaml`,
+`.maestro/current/corrupt-media.yaml`, `.maestro/migration/v14-seed.yaml`,
+`scripts/wp32-android-helpers.sh`, `scripts/run-wp32-isolated-gate.sh`,
+`scripts/run-wp32-android-e2e.sh`, `src/utils/attachmentStorage.ts`,
+`tests/wp32-android-runner.test.ts`, and `tests/wp32-failure-injection.test.ts`.
+This report and `WP32_HANDOFF.md` record the checkpoint. User's browser edit and
+untracked release folder are preserved. Real-device/TalkBack checks remain open.
 
 ### Second repair batch, 2026-10-04
 
