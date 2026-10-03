@@ -80,6 +80,17 @@ normal CI and the complete Android suite. The skipped checkpoint is not green
 acceptance evidence. Local Chrome passed 21 browser/accessibility/layout checks
 and 11 component checks after repair; native acceptance is still pending.
 
+## Isolated downstream diagnostic matrix
+
+The branch now contains `.github/workflows/wp32-isolated-gates.yml` and
+`scripts/run-wp32-isolated-gate.sh`. It fans the 13 native gates that were not
+yet independently proven into separate clean-emulator jobs with fail-fast off.
+Each job stops after its named target and uses only the minimum bootstrap state
+required by that target. Portable v1/v2/v3 fixtures are generated directly from
+the backup implementation, so v3 restore diagnostics do not need to replay the
+earlier media/export chain. This matrix is diagnostic evidence only; the full
+sequential WP32 Android suite remains the final acceptance gate.
+
 ## Next work
 
 1. Publish/synchronize the selector/focus repair; run the complete native gate through v3 recovery,
