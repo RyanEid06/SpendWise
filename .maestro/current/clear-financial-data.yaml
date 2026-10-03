@@ -6,3 +6,10 @@ appId: com.spendwise.app
 - assertVisible: "Clear Financial Data?"
 - tapOn: "Erase Financial Data"
 - assertVisible: "Financial data has been erased."
+
+# Prove the destructive operation actually emptied the ledger before a Replace
+# restore can mask a broken clear implementation.
+- tapOn: "Back to previous screen"
+- tapOn: "History"
+- assertNotVisible: "WP32 One Photo.*"
+- assertNotVisible: "WP32 Eight Photos.*"
