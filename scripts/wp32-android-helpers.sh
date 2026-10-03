@@ -25,15 +25,34 @@ extract_backup_prefix() {
 }
 
 corrupt_secure_media_files() {
-  local found=0 media_file
+  local found=0 media_file media_paths injected
+  # Finish enumeration before opening another adb session. Bound both the
+  # remote operation and a stuck adb transport; no stdin/tee stream is needed.
+  if ! media_paths="$(timeout --kill-after=2s 15s adb shell run-as "$APP_ID" find files -type f)"; then
+    echo "::error::Could not enumerate encrypted fixture attachments."
+    return 1
+  fi
   while IFS= read -r media_file; do
     media_file="${media_file//$'\r'/}"
     [[ "$media_file" == files/expense-attachments/secure/* ]] || continue
-    # Avoid adb's extra remote-shell parsing: tee receives both the path and
-    # corruption bytes directly under the app's UID.
-    printf 'WP32_CORRUPTED_CIPHERTEXT' | adb exec-out run-as "$APP_ID" tee "$media_file" >/dev/null
+    # Secure attachment names are generated IDs. Reject shell metacharacters
+    # before the remote shell interprets the overwrite command.
+    if [[ ! "$media_file" =~ ^[a-zA-Z0-9._/-]+$ ]]; then
+      echo "::error::Unsafe encrypted fixture path: $media_file"
+      return 1
+    fi
+    if ! timeout --kill-after=2s 15s adb shell run-as "$APP_ID" sh -c \
+      "'printf WP32_CORRUPTED_CIPHERTEXT > \"$media_file\"'" </dev/null; then
+      echo "::error::Could not corrupt encrypted fixture: $media_file"
+      return 1
+    fi
+    if ! injected="$(timeout --kill-after=2s 15s adb exec-out run-as "$APP_ID" cat "$media_file")" \
+      || [[ "$injected" != WP32_CORRUPTED_CIPHERTEXT ]]; then
+      echo "::error::Encrypted fixture corruption was not verified: $media_file"
+      return 1
+    fi
     found=$((found + 1))
-  done < <(adb shell run-as "$APP_ID" find files -type f)
+  done <<< "$media_paths"
   if [ "$found" -eq 0 ]; then
     echo "::error::No encrypted attachment file was found to corrupt."
     return 1

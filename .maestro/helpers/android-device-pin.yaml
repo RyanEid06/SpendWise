@@ -6,14 +6,14 @@ appId: com.spendwise.app
     commands:
       - tapOn: "Use PIN"
 - extendedWaitUntil:
-    visible: ".*PIN.*"
+    visible:
+      id: "com.android.systemui:id/lockPassword"
     timeout: 15000
 - tapOn:
-    text: "^2$"
-- tapOn:
-    text: "^4$"
-- tapOn:
-    text: "^6$"
-- tapOn:
-    text: "^8$"
+    id: "com.android.systemui:id/lockPassword"
+- inputText: "2468"
 - pressKey: enter
+- extendedWaitUntil:
+    notVisible:
+      id: "com.android.systemui:id/lockPassword"
+    timeout: 15000

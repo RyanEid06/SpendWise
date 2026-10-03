@@ -3,6 +3,7 @@ name: WP32 E2E
 on:
   workflow_dispatch:
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
     branches:
       - main
 
@@ -56,6 +57,8 @@ jobs:
           retention-days: 7
 
   android-e2e:
+    # Run the full native acceptance suite only after isolated repairs pass.
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'wp32-final-native')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:

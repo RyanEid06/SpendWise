@@ -30,7 +30,7 @@ appId: com.spendwise.app
 - extendedWaitUntil:
     visible: "Money Remaining"
     timeout: 30000
-- tapOn: "Set Budget"
+- tapOn: "Set Monthly Budget"
 - tapOn: "0.00"
 - inputText: "1250"
 - hideKeyboard

@@ -8,6 +8,46 @@ Current head before this report: `30147beef70ad9556799bbc421b368d713492f61`
 
 ## Executive status
 
+### Repair batch, 2026-10-04
+
+Starting commit: `43e87e33bb45cadf4caa39570add4ffbf270b252`.
+The four artifact-backed repairs below change only test automation:
+
+- v1 preview selector uses `Import Backup Preview`.
+- v1.4 budget selector uses `Set Monthly Budget`.
+- Shared Android credential helper targets SystemUI `lockPassword`, enters the
+  synthetic device credential, submits it, and requires the field to disappear.
+- Media injection finishes path enumeration before writes, uses a remote
+  non-streaming overwrite, bounds each adb operation to 15 seconds with a
+  2-second kill grace, and verifies the injected bytes. Enumeration, missing
+  media, timeout, or unsuccessful overwrite fail explicitly.
+
+The local regression reproduced nested adb during unfinished enumeration before
+the repair. Native verification is pending. No production defect is established
+by this batch, and no app code, security behavior, or assertion is weakened.
+The isolated matrix now contains only the seven remaining targets, with
+fail-fast disabled. Full native acceptance is gated by workflow dispatch or
+the PR label `wp32-final-native`, applied only after isolated acceptance.
+The pre-existing local browser contrast test edit remains outside this batch.
+
+Local verification: **10/10 Android harness regressions**, **6/6 failure
+injection checks**, TypeScript/Vite build, shared/isolated shell syntax, and
+`git diff --check` pass. The injected write-hang regression fails explicitly
+after approximately 15 seconds instead of hanging until CI's job timeout.
+Git Bash/esbuild needed execution outside the Windows sandbox because its
+ancestor-directory checks otherwise fail with access denied.
+
+Live starting-commit CI was checked: Android Build run `37125758075`
+(`verify-debug`) is green, and WP32 run `37125757939` has green `web-e2e`.
+Its native job was canceled; that is not full-suite acceptance.
+
+The user explicitly approved publication of the eight-file repair batch to
+`RyanEid06/SpendWise`, branch `wp32/e2e-hardening`, and execution of WP32 CI.
+Post-repair native verification is pending. No merge is authorized.
+
+Final full sequential 22/22 acceptance has not been executed after these repairs.
+Manual real-device/TalkBack validation remains outstanding.
+
 WP32 is **not blocked by 7 confirmed product bugs**.
 
 The isolated matrix proved **15 of the 22 native Android acceptance flows green**. The remaining 7 are **unproven**, and the available artifacts point primarily to test-harness/emulator problems rather than production SpendWise defects.

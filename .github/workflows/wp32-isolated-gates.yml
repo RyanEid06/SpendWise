@@ -16,17 +16,11 @@ jobs:
     timeout-minutes: 35
     strategy:
       fail-fast: false
-      max-parallel: 13
+      max-parallel: 7
       matrix:
         target:
-          - import-v3-full
           - corrupt-encrypted-media
-          - clear-before-v3-data
-          - import-v3-data
           - import-v1
-          - import-v2-data
-          - import-v2-full
-          - app-lock-setup
           - app-lock-setup-auth
           - app-lock-timeout
           - app-lock-cancel-retry

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -130,35 +130,99 @@ extract_backup_prefix spendwise_backup_v3_full_ "$WP32_FULL"
   }
 });
 
-test('corruption injection touches every encrypted fixture file and no plaintext media', () => {
+test('corruption injection completes enumeration before bounded writes to every encrypted fixture', () => {
   const directory = mkdtempSync(path.join(tmpdir(), 'wp32-corruption-'));
   const calls = path.join(directory, 'calls.txt');
   writeFileSync(calls, '');
   try {
+    const fakeAdb = path.join(directory, 'adb');
+    writeFileSync(fakeAdb, `#!/usr/bin/env bash
+set -euo pipefail
+if [[ "$*" == 'shell run-as com.spendwise.app find files -type f' ]]; then
+  touch "$WP32_CORRUPT_DIR/enumerating"
+  printf 'files/expense-attachments/secure/one.swm1\\r\\nfiles/expense-attachments/secure/eight.swm1\\r\\nfiles/expense-attachments/plain.jpg\\r\\n'
+  sleep 0.2
+  rm "$WP32_CORRUPT_DIR/enumerating"
+elif [[ "$*" == 'exec-out run-as com.spendwise.app tee '* ]]; then
+  [[ ! -f "$WP32_CORRUPT_DIR/enumerating" ]] || { echo 'Nested adb while enumeration is open' >&2; exit 70; }
+  cat > "$WP32_CORRUPT_DIR/\${5##*/}"
+elif [[ "$*" == 'shell run-as com.spendwise.app sh -c '* ]]; then
+  [[ ! -f "$WP32_CORRUPT_DIR/enumerating" ]] || { echo 'Nested adb while enumeration is open' >&2; exit 70; }
+  printf '%s\\n' "$*" >> "$WP32_CALLS"
+  mkdir -p "$WP32_CORRUPT_DIR/files/expense-attachments/secure"
+  (cd "$WP32_CORRUPT_DIR"; bash -c "sh -c \${*:6}")
+elif [[ "$*" == 'exec-out run-as com.spendwise.app cat '* ]]; then
+  cat "$WP32_CORRUPT_DIR/$5"
+else
+  echo "Unexpected adb operation: $*" >&2
+  exit 71
+fi
+`);
+    chmodSync(fakeAdb, 0o755);
     const result = spawnSync(bash, ['-c', `
 set -euo pipefail
 APP_ID=com.spendwise.app
+PATH="$(dirname "$WP32_FAKE_ADB"):$PATH"
 source scripts/wp32-android-helpers.sh
-adb() {
-  if [[ "$*" == 'shell run-as com.spendwise.app find files -type f' ]]; then
-    printf 'files/expense-attachments/secure/one.swm1\\r\\nfiles/expense-attachments/secure/eight.swm1\\r\\nfiles/expense-attachments/plain.jpg\\r\\n'
-  else
-    [[ "$1" == exec-out && "$2" == run-as && "$3" == com.spendwise.app && "$4" == tee ]] || return 1
-    printf '%s\\n' "$*" >> "$WP32_CALLS"
-    cat > "$WP32_CORRUPT_DIR/\${5##*/}"
-  fi
-}
 corrupt_secure_media_files
-`], { encoding: 'utf8', env: { ...process.env, WP32_CALLS: shellPath(calls), WP32_CORRUPT_DIR: shellPath(directory) } });
+`], { encoding: 'utf8', timeout: 5000, env: { ...process.env,
+      WP32_FAKE_ADB: shellPath(fakeAdb).replace(/^([A-Za-z]):/, (_, drive) => `/${drive.toLowerCase()}`),
+      WP32_CALLS: shellPath(calls), WP32_CORRUPT_DIR: shellPath(directory),
+    } });
     assert.equal(result.status, 0, result.stderr);
     const commands = readFileSync(calls, 'utf8');
     assert.match(commands, /one\.swm1/);
     assert.match(commands, /eight\.swm1/);
     assert.doesNotMatch(commands, /plain\.jpg|\r/);
     assert.equal(commands.trim().split('\n').length, 2);
-    assert.equal(readFileSync(path.join(directory, 'one.swm1'), 'utf8'), 'WP32_CORRUPTED_CIPHERTEXT');
-    assert.equal(readFileSync(path.join(directory, 'eight.swm1'), 'utf8'), 'WP32_CORRUPTED_CIPHERTEXT');
+    assert.equal(readFileSync(path.join(directory, 'files/expense-attachments/secure/one.swm1'), 'utf8'), 'WP32_CORRUPTED_CIPHERTEXT');
+    assert.equal(readFileSync(path.join(directory, 'files/expense-attachments/secure/eight.swm1'), 'utf8'), 'WP32_CORRUPTED_CIPHERTEXT');
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+for (const failure of ['enumeration', 'missing', 'write-hang', 'verification']) {
+  test(`corruption injection fails explicitly on ${failure}`, () => {
+    const directory = mkdtempSync(path.join(tmpdir(), 'wp32-corruption-failure-'));
+    try {
+      const fakeAdb = path.join(directory, 'adb');
+      writeFileSync(fakeAdb, `#!/usr/bin/env bash
+set -euo pipefail
+if [[ "$*" == 'shell run-as com.spendwise.app find files -type f' ]]; then
+  [[ "$WP32_FAILURE" != enumeration ]] || exit 9
+  [[ "$WP32_FAILURE" != missing ]] || exit 0
+  printf 'files/expense-attachments/secure/one.swm1\\n'
+elif [[ "$*" == 'shell run-as com.spendwise.app sh -c '* ]]; then
+  [[ "$WP32_FAILURE" != write-hang ]] || exec sleep 60
+elif [[ "$*" == 'exec-out run-as com.spendwise.app cat '* ]]; then
+  printf 'UNCHANGED_CIPHERTEXT'
+else
+  exit 71
+fi
+`);
+      chmodSync(fakeAdb, 0o755);
+      const result = spawnSync(bash, ['-c', `
+set -euo pipefail
+APP_ID=com.spendwise.app
+PATH="$(dirname "$WP32_FAKE_ADB"):$PATH"
+source scripts/wp32-android-helpers.sh
+corrupt_secure_media_files
+`], { encoding: 'utf8', timeout: 20000, env: { ...process.env,
+        WP32_FAILURE: failure,
+        WP32_FAKE_ADB: shellPath(fakeAdb).replace(/^([A-Za-z]):/, (_, drive) => `/${drive.toLowerCase()}`),
+      } });
+      assert.equal(result.error, undefined, 'helper must terminate before the outer test deadline');
+      assert.equal(result.status, 1, result.stderr);
+      const expected = {
+        enumeration: /Could not enumerate/,
+        missing: /No encrypted attachment/,
+        'write-hang': /Could not corrupt/,
+        verification: /corruption was not verified/,
+      }[failure];
+      assert.match(result.stdout, expected!);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+}
