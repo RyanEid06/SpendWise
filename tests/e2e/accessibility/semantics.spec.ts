@@ -1,6 +1,23 @@
 import { expect, test } from '@playwright/test';
 import { openSettings, startFresh } from '../browser/helpers';
 
+test('empty Home keeps viewport controls operable after returning from Settings', async ({ page }) => {
+  await startFresh(page);
+  await openSettings(page);
+  await page.getByRole('button', { name: 'Back to previous screen' }).click();
+  const navigation = page.getByRole('navigation', { name: 'Primary navigation' });
+  for (const name of ['History', 'AI Insights', 'Statistics', 'Home']) {
+    const tab = navigation.getByRole('button', { name, exact: true });
+    await tab.focus();
+    await tab.press('Enter');
+    await expect(tab).toHaveAttribute('aria-current', 'page');
+  }
+  const add = page.getByRole('button', { name: 'Add Expense', exact: true });
+  await add.focus();
+  await add.press('Enter');
+  await expect(page.getByRole('dialog', { name: 'Add Expense' })).toBeVisible();
+});
+
 test('critical navigation and forms expose accessible names', async ({ page }) => {
   await startFresh(page);
   for (const name of ['Home', 'History', 'AI Insights', 'Statistics', 'Open Settings', 'Add Expense']) {

@@ -110,6 +110,9 @@ jobs:
       - name: Run WP31 backend authentication and network hardening tests
         run: npm run test:wp31
 
+      - name: Run WP32 Android harness regression tests
+        run: npm run test:wp32:runner
+
       - name: Sync Capacitor Android
         run: npm run android:sync
 

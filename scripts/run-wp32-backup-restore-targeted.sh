@@ -9,6 +9,7 @@ FIXTURE_ROOT="${FIXTURE_ROOT:-artifacts/android-e2e/fixtures}"
 ONBOARD_READY_TEXT="Language"
 
 mkdir -p "$RESULT_ROOT" "$FIXTURE_ROOT"
+source scripts/wp32-android-helpers.sh
 
 capture_failure() {
   mkdir -p "$RESULT_ROOT/failure"
@@ -16,7 +17,6 @@ capture_failure() {
   adb shell dumpsys activity activities > "$RESULT_ROOT/failure/activity.txt" 2>/dev/null || true
   adb shell uiautomator dump /sdcard/wp32-window.xml >/dev/null 2>&1 || true
   adb exec-out cat /sdcard/wp32-window.xml > "$RESULT_ROOT/failure/window.xml" 2>/dev/null || true
-  timeout 120 node scripts/wp32-inspect-webview.mjs "$RESULT_ROOT/failure/webview" || true
   adb logcat -d -t 4000 \
     | grep -E "SpendWise|com\\.spendwise\\.app|Capacitor|AppPlugin|ActivityTaskManager|AndroidRuntime|FATAL EXCEPTION|chromium" \
     > "$RESULT_ROOT/failure/logcat.txt" || true
@@ -97,35 +97,6 @@ dismiss_share_sheet() {
     adb shell input keyevent KEYCODE_BACK >/dev/null 2>&1 || true
   fi
   adb shell am start -n "$APP_ACTIVITY" >/dev/null 2>&1 || true
-}
-
-extract_backup_prefix() {
-  local prefix="$1"
-  local target="$2"
-  local cache_file=""
-  local attempt
-
-  for attempt in {1..30}; do
-    cache_file="$(
-      adb shell run-as "$APP_ID" find cache -type f 2>/dev/null \
-        | tr -d '\r' \
-        | grep -F "/$prefix" \
-        | grep -F ".swb3" \
-        | sort \
-        | tail -n 1
-    )"
-    if [ -n "$cache_file" ]; then
-      adb exec-out run-as "$APP_ID" cat "$cache_file" > "$target"
-      if [ -s "$target" ]; then
-        echo "Extracted $cache_file -> $target ($(wc -c < "$target") bytes)"
-        return 0
-      fi
-    fi
-    sleep 1
-  done
-
-  echo "::error::Expected exported backup prefix $prefix was not found in app cache."
-  return 1
 }
 
 verify_swb3() {
