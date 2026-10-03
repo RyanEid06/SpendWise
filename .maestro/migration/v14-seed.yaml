@@ -65,7 +65,8 @@ appId: com.spendwise.app
 - stopApp
 - launchApp
 - assertVisible: "SpendWise is Locked"
-- tapOn: "Enter PIN"
+# The v1.4 PIN field is autofocus. Do not depend on placeholder text being
+# exported through Android WebView accessibility.
 - inputText: "2468"
 - pressKey: enter
 - extendedWaitUntil:
