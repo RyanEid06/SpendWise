@@ -211,6 +211,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({
                 autoFocus
                 disabled={isThrottled || busy}
                 placeholder={t(language, 'enterPinPlaceholder')}
+                aria-label={t(language, 'enterPinPlaceholder')}
                 value={pin}
                 onChange={(event) => {
                   setPin(event.target.value.replace(/\D/g, ''));
