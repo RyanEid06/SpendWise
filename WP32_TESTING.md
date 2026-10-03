@@ -29,6 +29,9 @@ No production security bypass is added. Fixed test passphrases protect only synt
 fixture. The targeted backup runner is a debugging aid and does not satisfy WP32.
 CI checks both shell entrypoints before emulator work and tests their shared backup
 extraction and encrypted-media fault injection against a fake adb boundary.
+Maestro owns app launch and readiness after each reset and upgrade. The host
+prepares Android and installs/clears the app, without launching its WebView or
+probing its accessibility tree before Maestro attaches.
 
 Portable v1/v2 fixtures use the current emulator month so History verifies the
 restored rows without a stale-date mismatch. `WP32_FIXTURE_MONTH=YYYY-MM` allows

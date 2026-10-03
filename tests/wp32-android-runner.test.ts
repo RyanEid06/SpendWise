@@ -63,6 +63,41 @@ test('both Android entrypoints parse before any emulator work begins', () => {
   }
 });
 
+test('Maestro owns app startup without a preceding host accessibility session', () => {
+  for (const file of ['scripts/run-wp32-android-e2e.sh', 'scripts/run-wp32-backup-restore-targeted.sh']) {
+    const directory = mkdtempSync(path.join(tmpdir(), 'wp32-launch-'));
+    try {
+      const result = spawnSync(bash, ['-c', `
+set -euo pipefail
+host_started=0
+adb() {
+  if [[ "$*" == 'shell am start '* ]]; then host_started=1; fi
+  if [[ "$*" == 'shell dumpsys activity activities' ]]; then
+    printf 'mResumedActivity com.spendwise.app/.MainActivity\\n'
+  fi
+}
+maestro() {
+  if [[ "$host_started" != 0 ]]; then
+    echo 'Host launched WebView before Maestro attached' >&2
+    return 13
+  fi
+  echo MAESTRO_COLD_LAUNCH_READY
+  return 12
+}
+source "$WP32_ENTRYPOINT"
+`], { encoding: 'utf8', env: {
+        ...process.env, WP32_ENTRYPOINT: file,
+        RESULT_ROOT: shellPath(path.join(directory, 'results')).replace(/^([A-Za-z]):/, (_, drive) => `/${drive.toLowerCase()}`),
+        FIXTURE_ROOT: shellPath(path.join(directory, 'fixtures')).replace(/^([A-Za-z]):/, (_, drive) => `/${drive.toLowerCase()}`),
+      } });
+      assert.equal(result.status, 12, `${file}: ${result.stderr}`);
+      assert.match(result.stdout, /MAESTRO_COLD_LAUNCH_READY/);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  }
+});
+
 test('backup extraction selects the exact export mode from CRLF adb paths', () => {
   const directory = mkdtempSync(path.join(tmpdir(), 'wp32-runner-'));
   const data = path.join(directory, 'data.swb3');

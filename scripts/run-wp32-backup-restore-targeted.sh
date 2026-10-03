@@ -6,7 +6,6 @@ APP_ACTIVITY="$APP_ID/.MainActivity"
 NEW_APK="${NEW_APK:-artifacts/android-e2e/apks/current-debug.apk}"
 RESULT_ROOT="${RESULT_ROOT:-artifacts/android-e2e/results}"
 FIXTURE_ROOT="${FIXTURE_ROOT:-artifacts/android-e2e/fixtures}"
-ONBOARD_READY_TEXT="Language"
 
 mkdir -p "$RESULT_ROOT" "$FIXTURE_ROOT"
 source scripts/wp32-android-helpers.sh
@@ -42,40 +41,11 @@ app_is_foreground() {
   [[ "$resumed" == *"$APP_ID"* ]]
 }
 
-wait_for_accessible_text() {
-  local needle="$1"
-  local attempts="${2:-60}"
-  local attempt
-  local stable_hits=0
-
-  for attempt in $(seq 1 "$attempts"); do
-    if ! app_is_foreground; then
-      adb shell am start -n "$APP_ACTIVITY" >/dev/null 2>&1 || true
-    fi
-    if adb shell uiautomator dump /sdcard/wp32-window.xml >/dev/null 2>&1 \
-      && adb shell grep -Fq "$needle" /sdcard/wp32-window.xml 2>/dev/null; then
-      stable_hits=$((stable_hits + 1))
-      if [ "$stable_hits" -ge 2 ]; then return 0; fi
-    else
-      stable_hits=0
-    fi
-    sleep 2
-  done
-
-  echo "::error::SpendWise never exposed '$needle' through Android accessibility."
-  return 1
-}
-
-start_app_expect() {
-  local needle="$1"
-  adb shell am start -W -n "$APP_ACTIVITY" >/dev/null
-  wait_for_accessible_text "$needle"
-}
-
-reset_app_expect() {
-  local needle="$1"
+# Maestro attaches its accessibility service before creating the WebView.
+# Host-side launch/uiautomator readiness probes hand an already-running WebView
+# between accessibility clients and can leave Maestro with a partial tree.
+reset_app() {
   adb shell pm clear "$APP_ID" >/dev/null
-  start_app_expect "$needle"
 }
 
 run_flow() {
@@ -152,11 +122,11 @@ done
 
 adb uninstall "$APP_ID" >/dev/null 2>&1 || true
 adb install "$NEW_APK" >/dev/null
-reset_app_expect "$ONBOARD_READY_TEXT"
+reset_app
 
 echo "== Empty Home navigation accessibility regression =="
 run_flow empty-navigation .maestro/current/empty-navigation.yaml
-reset_app_expect "$ONBOARD_READY_TEXT"
+reset_app
 
 echo "== Nearest safe prerequisite: representative media state =="
 run_flow media .maestro/current/media.yaml
