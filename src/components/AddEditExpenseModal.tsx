@@ -245,7 +245,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
         aria-labelledby="modal-title"
         data-native-back-layer="true"
       >
-        <div className="bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden my-6 max-h-[90vh] flex flex-col transition-all">
+        <div className="bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden my-6 max-h-[90vh] flex flex-col transition-colors">
           <div className="flex items-start justify-between gap-2 px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-slate-800">
             <div className="min-w-0">
               <h2
@@ -481,7 +481,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
             </div>
           )}
 
-          <div className="p-4 bg-slate-50 dark:bg-[#0B0F19]/60 border-t border-slate-200/80 dark:border-slate-800 flex flex-col-reverse min-[360px]:flex-row items-stretch min-[360px]:items-center justify-end gap-2">
+          <div className="p-4 bg-slate-50 dark:bg-[#0B0F19]/60 border-t border-slate-200/80 dark:border-slate-800 flex flex-col-reverse min-[360px]:flex-row items-stretch min-[360px]:items-center justify-end gap-2 min-[360px]:gap-3">
             <button
               type="button"
               onClick={onClose}
