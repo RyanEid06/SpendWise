@@ -9,7 +9,14 @@ appId: com.spendwise.app
 - assertVisible: "SpendWise is Locked"
 - tapOn: "Authenticate & Unlock"
 - extendedWaitUntil:
-    visible: "Unlock SpendWise"
+    visible:
+      id: "com.android.systemui:id/lockPassword"
+    timeout: 15000
+# Back first exits device-credential entry into the underlying authentication
+# prompt. Cancel that prompt too before asserting the application's result.
+- pressKey: back
+- extendedWaitUntil:
+    visible: "Tap to cancel authentication"
     timeout: 15000
 - pressKey: back
 - assertVisible: "Authentication was cancelled."

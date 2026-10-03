@@ -193,9 +193,13 @@ run_flow app-lock-timeout .maestro/current/app-lock-configure-timeout.yaml
 run_flow app-lock-cancel-retry .maestro/current/app-lock-background-cancel-retry.yaml
 
 echo "== v1.4 in-place upgrade migration =="
+adb shell locksettings clear --old 2468 >/dev/null
+adb shell input keyevent KEYCODE_WAKEUP >/dev/null
+adb shell wm dismiss-keyguard >/dev/null
 adb uninstall "$APP_ID" >/dev/null
 adb install "$V14_APK" >/dev/null
 run_flow v14-seed .maestro/migration/v14-seed.yaml
+adb shell locksettings set-pin 2468 >/dev/null
 adb install -r "$NEW_APK" >/dev/null
 adb shell am force-stop "$APP_ID"
 run_flow hardened-upgrade .maestro/migration/hardened-verify.yaml

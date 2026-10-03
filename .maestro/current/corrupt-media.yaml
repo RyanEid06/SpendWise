@@ -5,5 +5,15 @@ appId: com.spendwise.app
 - tapOn: "WP32 Eight Photos.*"
 - assertVisible: "Attached photos"
 - assertVisible: "Photo file is unavailable"
-- assertVisible: "View photos"
+# All injected files are corrupt. Require every unavailable thumbnail and
+# reject preview controls so unauthenticated bytes cannot be displayed.
+- assertVisible:
+    text: "Photo file is unavailable"
+    index: 7
+- assertNotVisible: "View photos"
+- assertVisible: "WP32 Eight Photos"
 - tapOn: "Close details"
+- assertVisible: "WP32 One Photo.*"
+- assertVisible: "WP32 Eight Photos.*"
+- tapOn: "Home"
+- assertVisible: ".*1,250.*"

@@ -183,10 +183,12 @@ case "$TARGET" in
     run_flow target-v14-seed .maestro/migration/v14-seed.yaml
     ;;
   hardened-upgrade)
-    adb shell locksettings set-pin 2468 >/dev/null
     adb uninstall "$APP_ID" >/dev/null 2>&1 || true
     adb install "$V14_APK" >/dev/null
     run_flow bootstrap-v14-seed .maestro/migration/v14-seed.yaml
+    # The legacy fixture uses its own PIN. Device credentials are needed only
+    # by the hardened upgrade; configuring them first can obscure seed setup.
+    adb shell locksettings set-pin 2468 >/dev/null
     adb install -r "$NEW_APK" >/dev/null
     adb shell am force-stop "$APP_ID"
     run_flow target-hardened-upgrade .maestro/migration/hardened-verify.yaml

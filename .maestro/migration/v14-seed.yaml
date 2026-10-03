@@ -40,12 +40,22 @@ appId: com.spendwise.app
 - inputText: "55.50"
 - tapOn: "e.g. Supermarket, Coffee Shop, Rent"
 - inputText: "WP32 Upgrade Ledger"
-- scrollUntilVisible:
-    element:
-      text: "Attach Photos.*"
-    direction: DOWN
-    timeout: 15000
+# Reuse the proven media flow: dismiss the IME and scroll inside the modal,
+# keeping the photo control above the fixed action footer before tapping.
+- tapOn: "Food"
+- swipe:
+    start: 50%, 74%
+    end: 50%, 34%
+    duration: 600
+- swipe:
+    start: 50%, 74%
+    end: 50%, 34%
+    duration: 600
 - tapOn: "Attach Photos.*"
+- swipe:
+    start: 50%, 76%
+    end: 50%, 45%
+    duration: 500
 - tapOn: "Choose Photo"
 - tapOn:
     id: "com.google.android.providers.media.module:id/icon_thumbnail"

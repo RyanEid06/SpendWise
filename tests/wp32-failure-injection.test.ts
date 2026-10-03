@@ -23,6 +23,92 @@ import {
   SecurityStateStore,
   type SecurityStateStorage,
 } from '../src/security/SecurityStateStore';
+import { Capacitor } from '@capacitor/core';
+import { secureKeyService } from '../src/security/SecureKeyService';
+import { LocalDataStore } from '../src/utils/localDataStore';
+
+test('completed native media migration isolates corruption while preserving the ledger and key failures', async (t) => {
+  const native = Capacitor as typeof Capacitor & {
+    PluginHeaders?: {name: string; methods: {name: string; rtype: string}[]}[];
+    nativePromise: (plugin: string, method: string, options: {path?: string}) => Promise<unknown>;
+  };
+  const oldHeaders = native.PluginHeaders;
+  const oldNativePromise = Object.getOwnPropertyDescriptor(native, 'nativePromise');
+  if (!oldNativePromise) native.nativePromise = async () => {throw new Error('Native boundary not configured');};
+  t.after(() => {
+    if (oldNativePromise) Object.defineProperty(native, 'nativePromise', oldNativePromise);
+    else Reflect.deleteProperty(native, 'nativePromise');
+  });
+  native.PluginHeaders = [...(oldHeaders ?? []), {name: 'Filesystem', methods:
+    ['readFile', 'readdir', 'deleteFile'].map(name => ({name, rtype: 'promise'})),
+  }];
+  // Register the actual Capacitor proxy only after defining its native boundary.
+  const { AttachmentStorage } = await import('../src/utils/attachmentStorage');
+  const { encryptMediaBytes } = await import('../src/security/EncryptedMediaCodec');
+  const ledger = stateWithMedia(1);
+  ledger.attachments[0].storageKey = 'expense-attachments/secure/photo-1.swm';
+  const before = structuredClone(ledger);
+  const key = new Uint8Array(32).fill(7);
+  let envelope = new TextEncoder().encode('WP32_CORRUPTED_CIPHERTEXT');
+  let unwrapFailure = false;
+  let wrappedPresent = true;
+  const deleted: string[] = [];
+  const storage = new FaultyStorage();
+  storage.setItem('spendwise_media_encryption_migration_v1', JSON.stringify({version: 1, phase: 'complete', attachmentCount: 1}));
+  const oldStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  Object.defineProperty(globalThis, 'localStorage', {value: storage, configurable: true});
+  t.mock.method(Capacitor, 'isNativePlatform', () => true);
+  t.mock.method(Capacitor, 'getPlatform', () => 'android');
+  t.mock.method(LocalDataStore, 'snapshot', () => ledger);
+  t.mock.method(secureKeyService, 'hasWrappedSecret', () => wrappedPresent);
+  t.mock.method(secureKeyService, 'withUnwrappedSecret', async (_purpose, consume) => {
+    if (unwrapFailure) return {ok: false, kind: 'invalidated', code: 'KEY_INVALIDATED'};
+    try { return {ok: true, value: await consume(key.slice())}; }
+    catch { return {ok: false, kind: 'error', code: 'SECRET_UNWRAP_FAILED'}; }
+  });
+  t.mock.method(native, 'nativePromise', async (plugin, method, options) => {
+    assert.equal(plugin, 'Filesystem');
+    if (method === 'readFile') return {data: Buffer.from(envelope).toString('base64')};
+    if (method === 'readdir') return {files: []};
+    if (method === 'deleteFile') {deleted.push(options.path!); return;}
+    assert.fail(`Unexpected filesystem operation ${method}`);
+  });
+  try {
+    await t.test('truncated media stays unavailable without blocking unrelated finances', async () => {
+      await AttachmentStorage.ensureNativeEncryption();
+      await assert.rejects(() => AttachmentStorage.readAttachmentBlob(ledger.attachments[0]));
+      assert.deepEqual(ledger, before);
+      assert.deepEqual(deleted, []);
+    });
+    await t.test('tampered authentication tag stays unavailable after successful key unwrap', async () => {
+      envelope = await encryptMediaBytes(new Uint8Array(4).fill(1), key);
+      envelope[envelope.length - 1] ^= 1;
+      await AttachmentStorage.ensureNativeEncryption();
+      await assert.rejects(() => AttachmentStorage.readAttachmentBlob(ledger.attachments[0]));
+      assert.deepEqual(ledger, before);
+      assert.deepEqual(deleted, []);
+    });
+    await t.test('invalidated or missing wrapped keys still block native storage', async () => {
+      unwrapFailure = true;
+      await assert.rejects(() => AttachmentStorage.ensureNativeEncryption(), /MEDIA_KEY_UNWRAP_KEY_INVALIDATED/);
+      wrappedPresent = false;
+      await assert.rejects(() => AttachmentStorage.ensureNativeEncryption(), /MEDIA_KEY_MISSING/);
+      assert.deepEqual(ledger, before);
+    });
+    await t.test('unfinished media migration remains strict on corrupted encrypted bytes', async () => {
+      unwrapFailure = false;
+      wrappedPresent = true;
+      storage.setItem('spendwise_media_encryption_migration_v1', JSON.stringify({version: 1, phase: 'metadata_committed', attachmentCount: 1}));
+      await assert.rejects(() => AttachmentStorage.ensureNativeEncryption());
+      assert.deepEqual(ledger, before);
+      assert.deepEqual(deleted, []);
+    });
+  } finally {
+    native.PluginHeaders = oldHeaders;
+    if (oldStorage) Object.defineProperty(globalThis, 'localStorage', oldStorage);
+    else Reflect.deleteProperty(globalThis, 'localStorage');
+  }
+});
 
 const NOW = 1_780_339_200_000;
 const settings = { currencyCode: 'USD', themeMode: 'LIGHT' as const, language: 'en' as const };

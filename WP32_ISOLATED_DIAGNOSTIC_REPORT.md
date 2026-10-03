@@ -8,6 +8,39 @@ Current head before this report: `30147beef70ad9556799bbc421b368d713492f61`
 
 ## Executive status
 
+### Second repair batch, 2026-10-04
+
+Native run `37159757487`, commit `7399b6d6ec473d93b1c90456f1ae89809b47a4b9`,
+confirmed `import-v1`, `app-lock-setup-auth`, and `app-lock-timeout` green.
+Together with the protected baseline, confirmed coverage is **18/22**. Only
+the following four red targets remain in the isolated matrix:
+
+| Target | Artifact evidence and classification | Minimal repair |
+| --- | --- | --- |
+| corrupt-encrypted-media | Injection verified all nine corrupt files in about three seconds; the target then reached the app's local-data safety screen. **Product defect:** completed-media startup verification blocked unrelated finances on an attachment integrity error. | Isolate known media-envelope/authentication failures after successful key unwrap in the completed migration fast path. Authenticated reads still reject corruption; missing/invalidated keys and unfinished migrations still fail closed. Assert all eight thumbnails unavailable, no preview, and retained ledger/budget. |
+| v14-seed | Budget selector passed; tapping Attach Photos during keyboard dismissal did not expand the editor. Accessibility state remained `expanded=false`. **Test gesture defect.** | Reuse the protected media gate's keyboard dismissal and modal scroll sequence. Old fixture APK unchanged. |
+| hardened-upgrade | Failure before legacy onboarding; SystemUI lockscreen visible and SpendWise process present but stopped with the device sleeping. **Device/bootstrap ordering defect.** | Configure the OS PIN after seeding the legacy app; clear the preceding suite's PIN before legacy seeding in the full runner. Legacy application PIN coverage remains required. |
+| app-lock-cancel-retry | Setup/authentication/timeout bootstraps passed. Back left SystemUI's authentication prompt open (`Tap to cancel authentication`). **Test cancellation sequence defect.** | Wait for the credential field, exit it, wait for the underlying prompt, then cancel that prompt. Require the application's cancellation message and successful retry. |
+
+Artifacts: `11287283475` (corruption), `11287232207` (seed), `11287128507`
+(upgrade), and `11286899785` (cancel). Corruption behavior follows
+`SECURITY_ARCHITECTURE.md`'s per-attachment integrity-failure requirement.
+Production changes are confined to completed media migration verification;
+there is no migration redesign or unauthenticated-byte fallback.
+
+Local checks: **11/11 runner checks**, **11/11 failure-injection checks**,
+**15/15 WP29**, **14/14 WP30**, and TypeScript/Vite verification. Native
+acceptance of this second batch remains pending. The native-boundary regression
+reproduced the product failure before the repair and checks truncated media,
+tampered authentication tags, missing/invalidated keys, unfinished migration,
+unchanged finances, and preservation of files.
+
+Broad CI on `7399b6d6ec473d93b1c90456f1ae89809b47a4b9`: Android Build run
+`37159757496` passed **225 Node checks** and uploaded debug APK artifact
+`11286723850`; WP32 run `37159757480` passed **48 web checks**. Full native
+acceptance was intentionally skipped pending isolated greens. No merge,
+WP33/WP34 work, or manual real-device/TalkBack acceptance has occurred.
+
 ### Repair batch, 2026-10-04
 
 Starting commit: `43e87e33bb45cadf4caa39570add4ffbf270b252`.
