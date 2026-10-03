@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createBackupV2Archive } from '../src/utils/backupV2';
+import { createBackupV3Envelope } from '../src/utils/backupV3';
 import type { ExpenseAttachment } from '../src/types';
 import type { FinancialState } from '../src/utils/financialState';
 
@@ -55,5 +56,37 @@ await save('wp32-v2-full.zip', {
   budgets: [{ monthKey, startingAmount: 1250, updatedAt: now }],
   attachments: [attachment('wp32-v2-photo', 202)], currencyCode: 'USD',
 }, true);
+
+const v3State: FinancialState = {
+  expenses: [
+    { id: 301, amount: 11.5, description: 'WP32 One Photo', category: 'Food & Dining', date: now, note: 'synthetic v3 one-photo fixture', createdAt: now },
+    { id: 302, amount: 88, description: 'WP32 Eight Photos', category: 'Food & Dining', date: now + 3_600_000, note: 'synthetic v3 eight-photo fixture', createdAt: now + 3_600_000 },
+  ],
+  budgets: [{ monthKey, startingAmount: 1250, updatedAt: now }],
+  attachments: [
+    attachment('wp32-v3-one-01', 301),
+    ...Array.from({ length: 8 }, (_, index) => attachment(`wp32-v3-eight-${String(index + 1).padStart(2, '0')}`, 302)),
+  ],
+  currencyCode: 'USD',
+};
+
+async function saveV3(name: string, includeMedia: boolean) {
+  const payload = await createBackupV2Archive({
+    appVersion: '1.4.0-wp32-fixture',
+    state: v3State,
+    settings,
+    includeMedia,
+    readMedia: async () => new Blob([photoBytes], { type: 'image/jpeg' }),
+  });
+  const envelope = await createBackupV3Envelope({
+    payload,
+    passphrase: 'wp32-public-fixture-passphrase',
+    mediaIncluded: includeMedia,
+  });
+  await writeFile(path.join(output, name), Buffer.from(await envelope.arrayBuffer()));
+}
+
+await saveV3('wp32-data.swb3', false);
+await saveV3('wp32-full.swb3', true);
 
 console.log('Generated WP32 portable fixtures in ' + output);
