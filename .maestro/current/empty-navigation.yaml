@@ -1,0 +1,16 @@
+appId: com.spendwise.app
+---
+- launchApp:
+    stopApp: false
+- runFlow: ../helpers/onboard-current.yaml
+# These controls must reach Android accessibility even when the empty Home
+# content is taller than the viewport. Their painted pixels alone are no proof.
+- assertVisible: "Home"
+- assertVisible: "History"
+- assertVisible: "AI Insights"
+- assertVisible: "Statistics"
+- assertVisible: "Add Expense"
+- tapOn: "Open Settings"
+- tapOn: "Back to previous screen"
+- tapOn: "History"
+- assertVisible: "Add Expense"

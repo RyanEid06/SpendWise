@@ -16,6 +16,7 @@ capture_failure() {
   adb shell dumpsys activity activities > "$RESULT_ROOT/failure/activity.txt" 2>/dev/null || true
   adb shell uiautomator dump /sdcard/wp32-window.xml >/dev/null 2>&1 || true
   adb exec-out cat /sdcard/wp32-window.xml > "$RESULT_ROOT/failure/window.xml" 2>/dev/null || true
+  timeout 120 node scripts/wp32-inspect-webview.mjs "$RESULT_ROOT/failure/webview" || true
   adb logcat -d -t 4000 \
     | grep -E "SpendWise|com\\.spendwise\\.app|Capacitor|AppPlugin|ActivityTaskManager|AndroidRuntime|FATAL EXCEPTION|chromium" \
     > "$RESULT_ROOT/failure/logcat.txt" || true
@@ -180,6 +181,10 @@ done
 
 adb uninstall "$APP_ID" >/dev/null 2>&1 || true
 adb install "$NEW_APK" >/dev/null
+reset_app_expect "$ONBOARD_READY_TEXT"
+
+echo "== Empty Home navigation accessibility regression =="
+run_flow empty-navigation .maestro/current/empty-navigation.yaml
 reset_app_expect "$ONBOARD_READY_TEXT"
 
 echo "== Nearest safe prerequisite: representative media state =="
