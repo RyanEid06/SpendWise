@@ -20,6 +20,9 @@ capture_failure() {
   adb logcat -d -t 4000 \
     | grep -E "SpendWise|com\\.spendwise\\.app|Capacitor|AppPlugin|ActivityTaskManager|AndroidRuntime|FATAL EXCEPTION|chromium" \
     > "$RESULT_ROOT/failure/logcat.txt" || true
+  if [ "${WP32_INSPECT_WEBVIEW:-0}" = 1 ]; then
+    node scripts/wp32-inspect-webview.mjs "$RESULT_ROOT/failure/webview" || true
+  fi
 }
 
 cleanup() {
