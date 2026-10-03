@@ -24,7 +24,11 @@ test('Backup v3 data-only survives clear and replace restore', async ({ page }) 
   const confirm = page.getByRole('alertdialog');
   await confirm.getByRole('button', { name: /Erase|Delete|Clear/i }).click();
   await expect(page.getByText('0 expenses', { exact: false }).first()).toBeAttached();
+  await page.getByRole('button', { name: 'Back to previous screen', exact: true }).click();
+  await page.getByRole('button', { name: 'History' }).click();
+  await expect(page.getByText('WP32 Disaster Recovery')).toHaveCount(0);
 
+  await openSettings(page);
   await page.getByText('Backup & Restore', { exact: true }).click();
   await page.locator('input[type="file"]').setInputFiles(backupPath!);
   const unlock = page.getByRole('dialog');
