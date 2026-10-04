@@ -17,7 +17,11 @@ passing release candidate. Resume WP32; do not start WP33/WP34 or merge/release.
   seed's `Confirm PIN` covered by the keyboard, before upgrade verification.
   Artifact `11306668428` justifies keyboard dismissal and required scrolling
   in the seed flow. One narrow completed-media corruption product repair was
-  validated; remaining repairs are test/bootstrap. Latest seed repair is pending.
+  validated; remaining repairs are test/bootstrap. Seed repair passes in run
+  `37213179650`; the target then fails at the `Enter PIN` placeholder omitted
+  from native accessibility. Artifact `11307397681` shows the credential field
+  already focused. The target now enters the legacy PIN directly; all migration,
+  authentication, ledger, budget, and photo assertions remain required.
 - Earlier attempts of corrected-head isolated run `37161873538`, Build
   `37161873533`, and web `37161873506` failed before steps because the account
   exhausted 3,000 included private Actions minutes with a $0 stopping budget.
@@ -25,6 +29,8 @@ passing release candidate. Resume WP32; do not start WP33/WP34 or merge/release.
   verified SpendWise is public. Failed-job retries now execute runner steps.
   The billing barrier is resolved. Android Build attempt 2 passes 226 Node
   checks and uploads APK artifact `11306633130`; web attempt 3 passes 54 checks.
+  Build `37213179638` and web `37213179641` also pass on seed repair head
+  `7e4507aa589a69cab9c0b3eb13fa903a023a12b4`.
 - Local **237 Node checks**, **11 component checks**, and **21 published browser/
   accessibility/layout checks** pass, plus build/shell checks. CI acceptance on
   this source head is pending. Existing uncommitted light-theme contrast test

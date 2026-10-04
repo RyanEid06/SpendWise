@@ -4,7 +4,8 @@ appId: com.spendwise.app
     stopApp: false
 - assertVisible: "SpendWise is Locked"
 - assertVisible: "Enter your existing SpendWise PIN once.*"
-- tapOn: "Enter PIN"
+# The migrated legacy credential field is autofocus. Native accessibility
+# exposes a focused password EditText without the HTML placeholder label.
 - inputText: "2468"
 - pressKey: enter
 - runFlow: ../helpers/android-device-pin.yaml

@@ -10,7 +10,8 @@ Original diagnostic head: `30147beef70ad9556799bbc421b368d713492f61`
 
 ### Current checkpoint: public-repository CI restored
 
-Published repair head: `4bd98fbc7d5eacfa342d233c79439f67ec1dfe05`.
+Completed-media repair head: `4bd98fbc7d5eacfa342d233c79439f67ec1dfe05`.
+Latest tested legacy-seed head: `7e4507aa589a69cab9c0b3eb13fa903a023a12b4`.
 Local HEAD, origin tracking ref, and live branch match; ahead/behind is **0/0**.
 All ten second-batch changed-file blob SHAs were independently matched to local
 bytes. Publication initially transferred a truncated source payload in commit
@@ -69,6 +70,7 @@ Changed implementation/automation files since the objective's starting commit:
 `.maestro/current/import-v1.yaml`, `.maestro/helpers/android-device-pin.yaml`,
 `.maestro/current/app-lock-background-cancel-retry.yaml`,
 `.maestro/current/corrupt-media.yaml`, `.maestro/migration/v14-seed.yaml`,
+`.maestro/migration/hardened-verify.yaml`,
 `scripts/wp32-android-helpers.sh`, `scripts/run-wp32-isolated-gate.sh`,
 `scripts/run-wp32-android-e2e.sh`, `src/utils/attachmentStorage.ts`,
 `tests/wp32-android-runner.test.ts`, and `tests/wp32-failure-injection.test.ts`.
@@ -87,8 +89,18 @@ The shared legacy seed now dismisses the keyboard and scrolls to the required
 `Confirm PIN` and agreement controls before tapping. Assertions remain required,
 the old APK remains frozen, and no production code changes. The hardened-upgrade
 job reruns the entire seed followed by migration verification; previously green
-isolated targets are excluded from the matrix. Native proof of this repair is
-pending. Full sequential acceptance remains withheld until it passes.
+isolated targets are excluded from the matrix. The seed repair is verified
+in run `37213179650`: the seed passes in 1m 42s. Upgrade verification
+then reaches the correct migration lock screen but fails at `Enter PIN`.
+Artifact `11307397681` exposes a focused native password `EditText` with no
+placeholder text; WebView layout identifies the same active input and its
+HTML `Enter PIN` placeholder. **Stale native selector**, not migration failure.
+The flow now enters the old PIN into this already-focused field, as the proven
+legacy unlock does. Required migration prompt, real device authentication,
+ledger/budget/photo retention, and subsequent native unlock checks are retained.
+This target repair is pending native proof. Full sequential acceptance remains
+withheld until it passes. Build `37213179638` and web `37213179641` are green
+on the seed repair head.
 
 ### Second repair batch, 2026-10-04
 
