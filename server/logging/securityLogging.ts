@@ -1,4 +1,6 @@
 import { createHash, randomBytes } from 'crypto';
+import { boundedLog } from '../observability/safeLogging';
+import { operationalAggregates } from '../observability/aggregates';
 
 const processSalt =
   process.env.SPENDWISE_TELEMETRY_SALT?.trim() ||
@@ -25,11 +27,14 @@ export function logSecurityEvent(
 ) {
   // Metadata only. This API deliberately does not accept request bodies,
   // authorization credentials, AI payloads, or financial fields.
-  console.warn('[Security]', {
-    event: event.slice(0, 80),
+  operationalAggregates.recordFailure(event);
+  if (event === 'ai_global_cost_guardrail') operationalAggregates.recordFailure('GLOBAL_QUOTA_REJECTED');
+  if (event === 'ai_installation_daily_limited') operationalAggregates.recordFailure('INSTALLATION_QUOTA_REJECTED');
+  boundedLog('Security', {
+    event,
     scopeHash: securityScopeHash(details.scope),
-    route: details.route?.slice(0, 120),
-    code: details.code?.slice(0, 80),
+    route: details.route,
+    code: details.code,
     count: details.count,
   });
 }

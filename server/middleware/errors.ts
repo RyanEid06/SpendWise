@@ -7,6 +7,7 @@ import {
   AiReliabilityError,
   createAiFailure,
 } from '../geminiReliability';
+import { boundedLog } from '../observability/safeLogging';
 
 export function sendAiFailure(res: Response, error: unknown) {
   const failure =
@@ -45,8 +46,8 @@ export function apiErrorHandler(
 
   // Never print the error object here: parser/provider errors can carry
   // request fragments. Route and stable code are enough for diagnostics.
-  console.warn('[API]', {
-    route: req.path,
+  boundedLog('API', {
+    route: req.originalUrl,
     code: 'UNHANDLED_API_ERROR',
   });
   return res.status(500).json({
