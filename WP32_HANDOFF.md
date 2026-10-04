@@ -4,7 +4,7 @@ Updated 2026-10-04. Read `WP32_ISOLATED_DIAGNOSTIC_REPORT.md` for complete
 repair classifications and source/run evidence. This handoff supersedes the
 earlier pending diagnostic checkpoints. User approval now includes green
 main integration, proven merged-branch cleanup, and signed APK delivery to
-Downloads; the original no-merge instruction is superseded. No WP33/WP34.
+Desktop; the original no-merge instruction is superseded. No WP33/WP34.
 
 ## Verified WP32 automation
 
@@ -36,7 +36,15 @@ Official v1.4 APK download hash:
 Certificate SHA256, also matching v1.3:
 `e279124cd9d2cd6d4c191e2644fd71063993e42d13441a46759fa922f16d5965`.
 The candidate must match that signing identity before delivery to
-`C:/Users/Administrator/Downloads/SpendWise-v2.0.0.apk`.
+`C:/Users/Administrator/Desktop/SpendWise-v2.0.0.apk`.
+
+The first signed candidate run `37229468655` built successfully and apksigner
+verified that exact certificate. Its receipt parser failed because SDK37 prints
+`V2 Signer: certificate SHA-256 digest:` instead of the older
+`Signer #1 certificate SHA-256 digest:` format. The corrected verifier accepts
+both formats, rejects every unexpected identity, and has 10 executable workflow
+regressions. Candidate artifact verification is required before merge/delivery;
+the earlier failed run uploaded no signed artifact.
 
 PR #31 Share/Lucide maintenance is retained in WP32 merge ancestry. Use a merge
 commit for PR #30, inspect all PR states, require post-main Build/backend smoke,
@@ -49,6 +57,9 @@ candidate/merge/delivery hashes are recorded in signing and completion receipts.
   edit and untracked `SpendWise-v1.3.0-release/` folder. The additional unpublished
   light-theme contrast test failed locally; it is not included in the green
   published test count. The dark-theme check passed.
+  To satisfy the latest request for matching tracked local/main files, back up
+  this unpublished edit first, then restore the tracked file from accepted main.
+  Keep the untracked old APK folder and the backup.
 - Physical-device installation/use and the manual TalkBack checklist in
   `WP32_TESTING.md` remain separate from automated WP32 acceptance. The tests
   do not prove process-kill recovery, OEM behavior or immediate native status

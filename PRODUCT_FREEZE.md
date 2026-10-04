@@ -1,6 +1,6 @@
 # SpendWise Product Freeze — WP16
 
-WP16 is the final planned product work package for the current SpendWise roadmap.
+WP16 established the original product freeze. Later approved UX refinement and WP25–WP32 hardening preserve the product shape below. The current v2.0 signed trial does not add a new product feature set; WP33/WP34 remain future work.
 
 ## Frozen product shape
 
@@ -9,7 +9,7 @@ WP16 is the final planned product work package for the current SpendWise roadmap
 - Add Expense remains manual-first with optional Smart Capture, receipt scanning, and photo attachment tools.
 - Dashboard owns expense editing.
 - History and Statistics use read-only expense details; History retains delete.
-- Media stays private/local by default. Backup v2 explicitly separates data-only from data+photos.
+- Media stays private/local by default. Secure Backup v3 separates data-only from data+photos; Backup v1/v2 imports remain compatible.
 - Existing compact mobile design remains the product baseline. Tablet/landscape support is a sanity/responsiveness pass, not a tablet redesign.
 
 ## Accessibility and interaction baseline

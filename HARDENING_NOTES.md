@@ -28,6 +28,6 @@ This document records the original hardening work that established the current S
 
 ## Current verification status
 
-The earlier environment limitation from the initial hardening pass is no longer applicable. The frozen release line is continuously verified in GitHub Actions with TypeScript/Vite, AI reliability, currency, persistence/migration, media/Backup v2, core UX, final freeze regressions, Capacitor sync, Android debug APK build, artifact upload, and a deployed Gemini backend smoke test.
+The earlier environment limitation from the initial hardening pass is no longer applicable. WP32's integrated source passed all 22 native flows together in run37227530296, 54 web checks and 226 Build regression checks. Current CI covers encrypted local data, secure Backup v3 and legacy imports, native authentication, TypeScript/Vite, Android construction and deployed backend authentication on main. Version2.0.0/code6 is a user-approved signed local trial; public release, physical-device acceptance and TalkBack validation are separate.
 
 For current release procedure, use `RELEASE.md`. For the frozen product scope, use `PRODUCT_FREEZE.md`.

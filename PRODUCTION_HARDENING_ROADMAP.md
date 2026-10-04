@@ -1,9 +1,17 @@
 # SpendWise Production Hardening Roadmap — WP25–WP34
 
-Status: **Approved planning baseline; implementation not started**
-Baseline: **SpendWise v1.4.0 on main**
+Status: **WP25–WP32 implementation complete; WP32 automated acceptance GREEN. WP33/WP34 not started.**
+Historical planning baseline: **SpendWise v1.4.0**
 Baseline commit: **c0d7522192af7e07cbb1f46c3a00145e8b94a988**
-Tentative release target after the final gate: **v1.5.0**. Do not bump version files or create a release tag before WP34.
+Current user-approved trial: **v2.0.0, Android build 6**. This supersedes the tentative v1.5 target and the earlier version-freeze rule for local trial distribution. It does not authorize starting WP33/WP34 or publishing a new public release tag.
+
+## Current checkpoint — 2026-10-04
+
+- WP25–WP31 are already merged in main. WP32 and dependency PR #31 are approved for main integration after candidate CI/signing passes.
+- WP32 source `253639e561c9ed822ea9ab892b32125d4d81eb4e` passed all **22/22 native flows together** in run `37227530296`, plus **54 web checks**. Android Build `37219280661` passed **226 regression checks**, audits and APK construction.
+- Version 2.0.0/code 6 is prepared with the same permanent Android signing identity. The signed artifact records package/version, signature, hash and exact source/run provenance. No new public release/tag is created for the local trial request.
+- Manual physical-device/TalkBack coverage, actual process-kill migration proof and final production certification are not claimed by these automated results. WP33 observability and WP34 release certification remain future work.
+- See `WP32_ISOLATED_DIAGNOSTIC_REPORT.md`, `WP32_HANDOFF.md` and `RELEASE.md` for evidence and delivery provenance. The original baseline analysis below is historical context, not a description of the current hardened implementation.
 
 ## Mission
 
@@ -47,9 +55,9 @@ Primary references:
 
 The current SQLite plugin supports SQLCipher on native platforms, including encryption of existing databases, but implementation must still be proven on SpendWise with migration and rollback tests before release.
 
-## Current v1.4 risks this roadmap addresses
+## Historical v1.4 baseline risks addressed by this roadmap
 
-The following are concrete engineering risks, not theoretical style complaints:
+The following were concrete risks in the original v1.4 baseline. WP28–WP31 implement the authentication, encryption, backup and network changes; WP32 tests the implemented behavior. They are retained here as planning provenance:
 
 - App Lock currently stores the SpendWise PIN in plaintext browser localStorage.
 - The native SQLite connection currently opens in no-encryption mode.

@@ -113,6 +113,9 @@ jobs:
       - name: Run WP32 Android harness regression tests
         run: npm run test:wp32:runner
 
+      - name: Run APK signing verification regression tests
+        run: node --test tests/apk-signing-verification.test.cjs
+
       - name: Sync Capacitor Android
         run: npm run android:sync
 
@@ -273,8 +276,9 @@ jobs:
           const match=badging.match(/^package: name='([^']+)' versionCode='([^']+)' versionName='([^']+)'/m);
           if(!match || match[1]!=='com.spendwise.app' || match[2]!==process.env.APK_CODE || match[3]!==process.env.APK_VERSION) throw Error('APK package/version mismatch');
           const signature=fs.readFileSync('release/signature.txt','utf8');
-          const signer=signature.match(/Signer #1 certificate SHA-256 digest: ([a-fA-F0-9]+)/)?.[1]?.toLowerCase();
-          if(signer!=='e279124cd9d2cd6d4c191e2644fd71063993e42d13441a46759fa922f16d5965') throw Error('APK signing identity differs from previous official releases');
+          const signers=[...signature.matchAll(/^(?:Signer #\d+ |V\d+ Signer: )certificate SHA-256 digest: ([a-fA-F0-9]+)\r?$/gm)].map(match=>match[1].toLowerCase());
+          if(!signers.length || signers.some(signer=>signer!=='e279124cd9d2cd6d4c191e2644fd71063993e42d13441a46759fa922f16d5965')) throw Error('APK signing identity differs from previous official releases');
+          const signer=signers[0];
           const source=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
           fs.writeFileSync('release/build-receipt.json',JSON.stringify({package:match[1],versionName:match[3],versionCode:Number(match[2]),source,signingCertificateSha256:signer,runId:process.env.GITHUB_RUN_ID},null,2)+'\n');
           NODE

@@ -2,7 +2,7 @@
 
 Updated 2026-10-04. This replaces the earlier diagnostic snapshots. The user
 authorized merging appropriate green PRs to main, deleting proven merged
-branches, and delivering a signed v2.0 APK to Downloads. No WP33/WP34 work.
+branches, and delivering a signed v2.0 APK to Desktop. No WP33/WP34 work.
 
 ## Acceptance
 
@@ -90,6 +90,14 @@ at its original source. The signed artifact checks `com.spendwise.app`, version,
 signature and the previous official certificate, and contains SHA256SUMS plus
 the exact checkout source/run receipt. Public publishing remains tag-only.
 No public release/tag is created by the local trial-APK request.
+
+The first v2 signed run `37229468655` built the APK and cryptographically verified
+the correct existing certificate, then failed the receipt parser on SDK37's
+`V2 Signer:` output format. The parser now handles that and the older `Signer #1`
+format with the same pinned identity, rejects unexpected signers, and is covered
+by 10 executable workflow regressions. This is packaging automation; native
+22/22 acceptance at `253639e` remains valid. Signed artifact checks are required
+before the approved merge and Desktop delivery.
 
 ## Remaining validation and preserved work
 
