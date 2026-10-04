@@ -18,6 +18,14 @@ appId: com.spendwise.app
 - tapOn:
     text: "Replace"
     index: 1
+# The restore result is painted, but WebView 113 can omit the newly inserted
+# banner from Android's cached accessibility tree after the modal closes.
+# Reopen the section without repeating restore; the exact result remains required.
+- extendedWaitUntil:
+    notVisible: "Backup restore v3"
+    timeout: 30000
+- tapOn: "Back"
+- tapOn: "Backup & Restore.*"
 - extendedWaitUntil:
     visible: "Backup restored: 2 expenses, 0 photos"
     timeout: 30000
