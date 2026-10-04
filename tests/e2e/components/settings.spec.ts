@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 test('Settings overview renders real interactive sections and navigation actions', async ({ page }) => {
-  await page.goto('/wp32.component.html?case=settings');
+  await page.goto('/tests/e2e/components/index.html?case=settings');
   await expect(page.getByText('Appearance', { exact: true })).toBeVisible();
   await page.getByText('Appearance', { exact: true }).click();
   await expect(page.getByRole('button', { name: 'Dark' })).toBeVisible();
@@ -23,7 +23,7 @@ for (const [lang, dir, label] of [
   ['ar', 'rtl', 'النسخ الاحتياطي'],
 ] as const) {
   test(`Settings keeps accessible labels in ${lang}`, async ({ page }) => {
-    await page.goto(`/wp32.component.html?case=settings&lang=${lang}`);
+    await page.goto(`/tests/e2e/components/index.html?case=settings&lang=${lang}`);
     await expect(page.locator('html')).toHaveAttribute('dir', dir);
     await expect(page.getByText(label, { exact: false }).first()).toBeVisible();
     const buttons = page.getByRole('button');

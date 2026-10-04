@@ -25,10 +25,10 @@ debug.keystore
 *.keystore
 /android/keystore.properties
 
-# WP31 backend installation registry (server runtime state)
+# Backend installation registry (server runtime state)
 /.spendwise-security/
 
-# Generated WP32 test evidence (may include screenshots/logs from local runs)
+# Generated test evidence (may include screenshots/logs from local runs)
 /artifacts/
 /playwright-report/
 /test-results/

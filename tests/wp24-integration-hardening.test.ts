@@ -309,7 +309,7 @@ test('WP24 approved release gate is promoted to v2.0.0 with aligned metadata', (
   assert.equal(versionJson.versionCode, 6);
   assert.equal(packageJson.scripts['test:wp24'], 'tsx --test tests/wp24-integration-hardening.test.ts');
 
-  const release = read('RELEASE.md');
+  const release = read('ROADMAP.md');
   assert.match(release, /"versionName": "2\.0\.0"/);
   assert.match(release, /"versionCode": 6/);
 });

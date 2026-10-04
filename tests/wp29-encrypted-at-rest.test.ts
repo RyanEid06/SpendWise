@@ -22,7 +22,7 @@ if (!globalThis.crypto) {
 }
 
 function source(path: string): string {
-  return readFileSync(new URL('../' + path, import.meta.url), 'utf8');
+  return readFileSync(new URL('../' + path, import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 }
 
 function bytes(length: number, seed = 17): Uint8Array {
