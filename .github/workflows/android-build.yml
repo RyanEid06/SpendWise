@@ -152,7 +152,11 @@ jobs:
 
 
   signed-release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.ref == 'wp32/e2e-hardening' &&
+       github.event.pull_request.head.repo.full_name == github.repository)
     needs: verify-debug
     runs-on: ubuntu-latest
     permissions:
@@ -163,6 +167,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Setup Node
         uses: actions/setup-node@v7
@@ -179,14 +185,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Validate release tag and version
+      - name: Validate release or candidate version
         id: version
         shell: bash
         run: |
           VERSION_NAME="$(node -e "const fs=require('fs');const v=JSON.parse(fs.readFileSync('version.json','utf8'));process.stdout.write(v.versionName)")"
           VERSION_CODE="$(node -e "const fs=require('fs');const v=JSON.parse(fs.readFileSync('version.json','utf8'));process.stdout.write(String(v.versionCode))")"
-          if [ "$GITHUB_REF_NAME" != "v$VERSION_NAME" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match version.json (v$VERSION_NAME)."
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            if [ "$GITHUB_REF_NAME" != "v$VERSION_NAME" ]; then
+              echo "::error::Tag $GITHUB_REF_NAME does not match version.json (v$VERSION_NAME)."
+              exit 1
+            fi
+          elif [ "$VERSION_NAME" != "2.0.0" ] || [ "$VERSION_CODE" != "6" ]; then
+            echo "::error::WP32 candidate must be version 2.0.0, build 6."
             exit 1
           fi
           echo "version=$VERSION_NAME" >> "$GITHUB_OUTPUT"
@@ -242,14 +253,42 @@ jobs:
           mkdir -p release
           cp android/app/build/outputs/apk/release/app-release.apk "release/SpendWise-v${{ steps.version.outputs.version }}.apk"
 
+      - name: Verify APK signature, version, and provenance
+        shell: bash
+        env:
+          APK_VERSION: ${{ steps.version.outputs.version }}
+          APK_CODE: ${{ steps.version.outputs.code }}
+        run: |
+          set -euo pipefail
+          apk="release/SpendWise-v$APK_VERSION.apk"
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          tools_dir="$(find "$sdk_root/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)"
+          test -n "$tools_dir"
+          "$tools_dir/apksigner" verify --verbose --print-certs "$apk" | tee release/signature.txt
+          "$tools_dir/aapt" dump badging "$apk" > release/apk-badging.txt
+          node <<'NODE'
+          const fs=require('node:fs');
+          const {execFileSync}=require('node:child_process');
+          const badging=fs.readFileSync('release/apk-badging.txt','utf8');
+          const match=badging.match(/^package: name='([^']+)' versionCode='([^']+)' versionName='([^']+)'/m);
+          if(!match || match[1]!=='com.spendwise.app' || match[2]!==process.env.APK_CODE || match[3]!==process.env.APK_VERSION) throw Error('APK package/version mismatch');
+          const signature=fs.readFileSync('release/signature.txt','utf8');
+          const signer=signature.match(/Signer #1 certificate SHA-256 digest: ([a-fA-F0-9]+)/)?.[1]?.toLowerCase();
+          if(signer!=='e279124cd9d2cd6d4c191e2644fd71063993e42d13441a46759fa922f16d5965') throw Error('APK signing identity differs from previous official releases');
+          const source=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
+          fs.writeFileSync('release/build-receipt.json',JSON.stringify({package:match[1],versionName:match[3],versionCode:Number(match[2]),source,signingCertificateSha256:signer,runId:process.env.GITHUB_RUN_ID},null,2)+'\n');
+          NODE
+          (cd release && sha256sum "SpendWise-v$APK_VERSION.apk" > SHA256SUMS)
+
       - name: Upload signed release APK
         uses: actions/upload-artifact@v7
         with:
           name: SpendWise-v${{ steps.version.outputs.version }}-release
-          path: release/SpendWise-v${{ steps.version.outputs.version }}.apk
+          path: release/
           if-no-files-found: error
 
       - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}

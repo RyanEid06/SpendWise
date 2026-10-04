@@ -2,7 +2,7 @@
 
 SpendWise is a privacy-first, local-first personal expense tracker and monthly budget planner for Android and the web. Core financial data remains on the device; Gemini-powered features are optional and use the SpendWise backend only when the user explicitly invokes them.
 
-Current app version: **1.4.0**
+Current app version: **2.0.0**
 
 ## Key Features
 

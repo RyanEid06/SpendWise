@@ -238,10 +238,10 @@ test('WP27 secure seams remain the only app-facing owners after WP28 implementat
   assert.doesNotMatch(key, /BiometricPrompt|AndroidKeyStore|KeyGenParameterSpec/);
 });
 
-test('WP27 remains version and release frozen', () => {
+test('WP27 preserves approved release metadata', () => {
   const packageJson = JSON.parse(read('package.json')) as { version: string };
   const versionJson = JSON.parse(read('version.json')) as { versionName: string; versionCode: number };
-  assert.equal(packageJson.version, '1.4.0');
-  assert.equal(versionJson.versionName, '1.4.0');
-  assert.equal(versionJson.versionCode, 5);
+  assert.equal(packageJson.version, '2.0.0');
+  assert.equal(versionJson.versionName, '2.0.0');
+  assert.equal(versionJson.versionCode, 6);
 });

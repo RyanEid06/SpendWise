@@ -247,14 +247,14 @@ test('WP26 shell is composition-only and orchestration moved behind focused seam
   assert.doesNotMatch(stageSource, /deleteExpenses|deleteDetachedFiles/);
 });
 
-test('WP26 does not introduce later hardening behavior or version changes', () => {
+test('WP26 preserves behavior and approved release metadata', () => {
   const packageJson = JSON.parse(read('package.json')) as { version: string };
   const versionJson = JSON.parse(read('version.json')) as { versionName: string; versionCode: number };
   const appLock = read('src/app/hooks/useAppLockLifecycle.ts');
 
-  assert.equal(packageJson.version, '1.4.0');
-  assert.equal(versionJson.versionName, '1.4.0');
-  assert.equal(versionJson.versionCode, 5);
+  assert.equal(packageJson.version, '2.0.0');
+  assert.equal(versionJson.versionName, '2.0.0');
+  assert.equal(versionJson.versionCode, 6);
 
   for (const forbidden of [
     'BiometricPrompt',

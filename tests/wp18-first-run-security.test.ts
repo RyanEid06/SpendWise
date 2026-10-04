@@ -231,7 +231,7 @@ test('WP17 product shape remains frozen', () => {
   assert.match(statisticsSource, /CategoryStatisticsSection/);
 });
 
-test('v1.4 Android update identity and release metadata stay aligned', () => {
+test('v2.0 Android update identity and release metadata stay aligned', () => {
   const version = JSON.parse(readFileSync('version.json', 'utf8')) as {
     versionName: string;
     versionCode: number;
@@ -246,8 +246,8 @@ test('v1.4 Android update identity and release metadata stay aligned', () => {
   const manifest = readFileSync('android/app/src/main/AndroidManifest.xml', 'utf8');
   const workflow = readFileSync('.github/workflows/android-build.yml', 'utf8');
 
-  assert.equal(version.versionName, '1.4.0');
-  assert.equal(version.versionCode, 5);
+  assert.equal(version.versionName, '2.0.0');
+  assert.equal(version.versionCode, 6);
   assert.equal(packageJson.version, version.versionName);
   assert.equal(packageLock.version, version.versionName);
   assert.equal(packageLock.packages?.['']?.version, version.versionName);
@@ -257,7 +257,7 @@ test('v1.4 Android update identity and release metadata stay aligned', () => {
   assert.match(capacitor, /"appId": "com\.spendwise\.app"/);
   assert.match(manifest, /android:allowBackup="false"/);
   assert.match(workflow, /Build signed release APK[\s\S]*assembleRelease/);
-  assert.match(workflow, /Validate release tag and version/);
+  assert.match(workflow, /Validate release or candidate version/);
   assert.match(workflow, /SPENDWISE_KEYSTORE_BASE64/);
 });
 

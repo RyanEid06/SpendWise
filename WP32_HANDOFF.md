@@ -1,178 +1,61 @@
-# WP32 active repair checkpoint
+# WP32 acceptance and v2.0 trial APK handoff
 
-Updated 2026-10-04. All isolated targets have native proof; full sequential
-acceptance is pending. The user has now authorized merging appropriate green
-PRs to main, deleting proven-unneeded branches, and delivering a version 2.0
-APK to Downloads. This overrides the earlier no-merge instruction. No WP33/WP34.
+Updated 2026-10-04. Read `WP32_ISOLATED_DIAGNOSTIC_REPORT.md` for complete
+repair classifications and source/run evidence. This handoff supersedes the
+earlier pending diagnostic checkpoints. User approval now includes green
+main integration, proven merged-branch cleanup, and signed APK delivery to
+Downloads; the original no-merge instruction is superseded. No WP33/WP34.
 
-## Latest checkpoint
+## Verified WP32 automation
 
-- Read `WP32_ISOLATED_DIAGNOSTIC_REPORT.md` first; its latest checkpoint and
-  second repair batch supersede the older failure descriptions below.
-- Hardened upgrade is GREEN in run `37215799249`, job `111475927746`, head
-  `1f255cae810a7191e913e80e5d87e071ab7db35d`; legacy seed and complete upgrade
-  verification both pass. Native isolated coverage is **22/22**.
-- Reviewed open dependency PR #31: Share 8.0.2 and Lucide 0.577.0, green Build
-  `36922131996`. Integrate it into WP32 while retaining scripts/Playwright,
-  then validate combined work before the ONE final sequential suite. Main is
-  unchanged until acceptance. Merge/cleanup and version 2.0 delivery follow.
-- Published source head `4bd98fbc7d5eacfa342d233c79439f67ec1dfe05`; local and
-  tracking/live branch match with 0/0 ahead/behind. Every changed remote blob
-  matches the locally verified bytes.
-- First repaired matrix run `37159757487` proved import-v1, App Lock setup/auth,
-  and timeout green. Restored-runner attempt 2 of `37161873538` additionally
-  proves corruption, cancellation/retry, and v1.4 seed. Coverage is **21/22**.
-- Only hardened upgrade remains in the matrix. Its latest failure is legacy
-  seed's `Confirm PIN` covered by the keyboard, before upgrade verification.
-  Artifact `11306668428` justifies keyboard dismissal and required scrolling
-  in the seed flow. One narrow completed-media corruption product repair was
-  validated; remaining repairs are test/bootstrap. Seed repair passes in run
-  `37213179650`; the target then fails at the `Enter PIN` placeholder omitted
-  from native accessibility. Artifact `11307397681` shows the credential field
-  already focused. The target now enters the legacy PIN directly; all migration,
-  authentication, ledger, budget, and photo assertions remain required.
-  Run `37213890908` then passes legacy/device authentication and ledger/budget
-  checks; artifact `11307169556` shows the photo control below the editor's
-  viewport. The target now scrolls using the protected media flow's gestures.
-  One pre-test fixture packaging failure cleared on a narrow retry. Latest
-  photo-control repair is pending native proof; Build/web on `00f1d37` pass.
-  Run `37214978728` on `613f422` passes migrated-photo inspection. Its restart
-  assertion expects the manual app screen while the correct Android cold-start
-  challenge is active (`11307968396`). The test now requires that system
-  challenge and hidden ledger before authentication, then verifies retained
-  photos. Build `37214978744` and web `37214978700` pass; target proof is pending.
-- Earlier attempts of corrected-head isolated run `37161873538`, Build
-  `37161873533`, and web `37161873506` failed before steps because the account
-  exhausted 3,000 included private Actions minutes with a $0 stopping budget.
-  The user authorized and performed the CLI visibility change; the connector
-  verified SpendWise is public. Failed-job retries now execute runner steps.
-  The billing barrier is resolved. Android Build attempt 2 passes 226 Node
-  checks and uploads APK artifact `11306633130`; web attempt 3 passes 54 checks.
-  Build `37213179638` and web `37213179641` also pass on seed repair head
-  `7e4507aa589a69cab9c0b3eb13fa903a023a12b4`.
-- Local **237 Node checks**, **11 component checks**, and **21 published browser/
-  accessibility/layout checks** pass, plus build/shell checks. CI acceptance on
-  this source head is pending. Existing uncommitted light-theme contrast test
-  fails; it remains preserved and unpublished, outside this repair.
-- Only after all remaining isolated targets pass, add `wp32-final-native` to
-  PR #30 for the ONE final full sequential native 22/22 gate. Do not launch it
-  while any isolated target lacks proof. Android Build/web must then pass too.
-- Final native suite not launched. Real-device/TalkBack remains separate.
-- Preserve `tests/e2e/browser/backup.spec.ts` local edit and
-  `SpendWise-v1.3.0-release/`. No merge, release, WP33, or WP34.
+- Source: `253639e561c9ed822ea9ab892b32125d4d81eb4e`.
+- All **22/22 isolated native targets** proved. Final targeted data-only restore
+  passed run `37219280680`, attempt 2, job `111508850698`.
+- Full sequential native: **GREEN: 22/22 passed together**, run `37227530296`, native
+  job `111510178359`. First final attempt `37217373384` stopped after 12
+  passes on a painted but native-tree-omitted receipt. The renewed run follows
+  a reviewed test-only section-reentry repair, preserving every assertion.
+- Android Build `37219280661`, job `111486131378`: GREEN, **226 Node tests**,
+  dependency audits, TypeScript/Vite verification, Android sync/build/artifact.
+- Final-run web `111510178323`: GREEN, **54 tests** (22 Node, 32 Playwright).
+- Complete proposed source through the dependency integration and new test
+  observation step received independent review with no confirmed defects.
 
-## Repository and access
+## Version and APK provenance
 
-- Repository: RyanEid06/SpendWise. Active branch: wp32/e2e-hardening, PR #30.
-- Use the GitHub plugin for remote access. Local Git is safe; remote Git's
-  git-remote-https.exe crashed on this Windows machine. No shell fetch/push/gh.
-- Keep local and remote WP32 commits synchronized after each meaningful change.
-- Preserve the user's untracked SpendWise-v1.3.0-release directory.
-- Main's live commit is 58ca3c453ed780b442c209cc3d692fd5dc02f613. WP29–31 are
-  merged there. PR #31 is separate dependency maintenance; no review comments
-  were present on either open PR at inspection. PR #2 is old WP13–16 integration.
+Version metadata is **2.0.0**, Android code **6**, package `com.spendwise.app`.
+Current-version assertions are aligned; legacy v1.4 fixture source and test
+payload versions remain frozen. The same-repository WP32 PR signing job checks
+out its exact head, builds with the existing release key, verifies signature,
+package/version and prior official certificate, and archives SHA256SUMS,
+signature/badging output plus the source/run receipt. Publishing stays tag-only;
+the user requested a local trial APK, not a new public GitHub Release.
 
-## Confirmed fixes and evidence
+Official v1.4 APK download hash:
+`eb641a73b2f5568a9036ce7baea23bc7beda72008b0f918ae12c566fb8525da2`.
+Certificate SHA256, also matching v1.3:
+`e279124cd9d2cd6d4c191e2644fd71063993e42d13441a46759fa922f16d5965`.
+The candidate must match that signing identity before delivery to
+`C:/Users/Administrator/Downloads/SpendWise-v2.0.0.apk`.
 
-- Fixed fixed-control native accessibility after Settings → empty Home by using
-  the existing body ViewportPortal for Navigation and Home Add Expense. Static
-  DOM-order changes alone failed; CDP/native probes reproduced the issue.
-- Rebuilt the corrupted full Android runner and restored the entire CI suite,
-  including construction of the frozen v1.4 fixture APK.
-- Shared adb helpers select exact data/full SWB3 exports, strip CRLF paths,
-  validate envelope mode, and corrupt every encrypted fixture file safely.
-- v1/v2 portable fixtures now use consistent current-month dates/budgets. Full
-  v2 media uses a valid 1024px JPEG. Recovery asserts amounts/budget/photos.
-- Maestro owns launch/readiness after each reset and upgrade, avoiding host
-  uiautomator probing an already-running WebView before the driver attaches.
-  The launch-boundary regression failed before this fix and passes after it.
-- Commit 2686596f9ee3464d402aa5b27ec3c6c6b2716dd4: Android Build run
-  37117984440 passed 221 Node tests and built/uploaded the debug APK. WP32 web
-  run 37117984436 passed 44 checks: 6 runner, 6 failure injection, 11 component,
-  10 browser, 3 accessibility, 8 layout.
-- Native job 111188397920 passed empty navigation/all tabs/Home FAB, onboarding,
-  fresh persistence, delete/Undo, background restoration, offline AI, 1/8 photo
-  media/restart, both exports and clear-financial-data.
+PR #31 Share/Lucide maintenance is retained in WP32 merge ancestry. Use a merge
+commit for PR #30, inspect all PR states, require post-main Build/backend smoke,
+then delete only branch tips proven ancestors of accepted main. Exact final
+candidate/merge/delivery hashes are recorded in signing and completion receipts.
 
-## Current blocker and pending test
+## Preserved work and remaining manual checks
 
-Run 37117984436 failed during full v3 import waiting for `Backup restored`.
-The screenshot shows `Backup restored: 2 expenses, 9 photos`; restore completed.
-Maestro and uiautomator omit the whole Settings content after dialog closure.
-The Android 34 google_apis image has WebView 113.0.5672.136.
-
-There are two distinct issues:
-
-1. Maestro text selectors match the entire label. All five restore success
-   selectors were incorrect. This checkpoint corrects exact expense/photo
-   counts; legacy v1 correctly expects `Merge & Import: 2`. A real two-expense
-   browser restore reproduced the old selector failure and passed after the
-   corrected v3 data selector. See tests/e2e/browser/backup.spec.ts.
-2. Backup modal transitions lose focus. The browser regression now explicitly
-   requires focus in the restore preview and return to the Import Data trigger.
-   The regression failed before repair and now passes. Shared useModalFocus
-   gives the passphrase field/preview safe initial focus, traps Tab, and restores
-   the connected trigger or main landmark on closure. React autoFocus is removed
-   so it cannot overwrite the saved trigger before capture. v1 preview shares
-   this lifecycle. Wrong-passphrase cancellation and preview Tab wrap also pass.
-
-## Completed diagnostic evidence
-
-Diagnostic commit 525a690ceea3e4a7042559ce7e9c133bbf710220 completed WP32 E2E:
-https://github.com/RyanEid06/SpendWise/actions/runs/37119658098
-Native job: 111193147940. Web job: 111193148026 (passed).
-
-The original pre-probe native tree already contains both Back and the complete
-`Backup restored: 2 expenses, 9 photos` result. CDP AX/layout also show visible
-content, no aria-hidden/inert and opacity 1. All three probe native trees contain
-the result. This run proves the incorrect exact text selector caused its failure;
-it does NOT establish that focus or animation caused run 68's missing subtree.
-Review run69/failure/window.xml and failure/webview/original-*, focus-main-*,
-no-animation-* and version.json. Modal focus is a separately reproduced defect.
-The diagnostic only runs after a failed flow on the disposable synthetic test
-emulator. It does not change release code or mask the failing exit status.
-
-Commit 85cca18 used [skip ci] only to preserve that then-active diagnostic run
-while saving the failing regression. The current implementation commit runs
-normal CI and the complete Android suite. The skipped checkpoint is not green
-acceptance evidence. Local Chrome passed 21 browser/accessibility/layout checks
-and 11 component checks after repair; native acceptance is still pending.
-
-## Isolated downstream diagnostic matrix
-
-The branch now contains `.github/workflows/wp32-isolated-gates.yml` and
-`scripts/run-wp32-isolated-gate.sh`. It fans the 13 native gates that were not
-yet independently proven into separate clean-emulator jobs with fail-fast off.
-Each job stops after its named target and uses only the minimum bootstrap state
-required by that target. Portable v1/v2/v3 fixtures are generated directly from
-the backup implementation, so v3 restore diagnostics do not need to replay the
-earlier media/export chain. This matrix is diagnostic evidence only; the full
-sequential WP32 Android suite remains the final acceptance gate.
-
-## Next work
-
-1. Publish/synchronize the selector/focus repair; run the complete native gate through v3 recovery,
-   corruption, v1/v2 imports, App Lock, and v1.4 migration. Fix each actual failure
-   from artifacts; do not hide/skip unexecuted gates.
-2. Update PR validation and this checkpoint. Keep PR draft until CI passes.
-
-## Local environment and artifacts
-
-- Windows/PowerShell; Node 24.18 locally, Node 22 in CI. Git Bash is installed.
-- Chrome: C:/Program Files/Google/Chrome/Application/chrome.exe.
-- No local Android SDK/emulator. Native proof comes from CI.
-- Local Playwright configs under artifacts/investigation use installed Chrome
-  with video disabled because bundled Playwright browser/ffmpeg is unavailable.
-  CI uses pinned Playwright Chromium normally.
-- Artifacts: artifacts/investigation/run63, run64, run65, run67, run68, run69.
-  WP32-repair-evidence.md records reproductions/results. These are ignored local
-  artifacts; GitHub failure artifacts remain downloadable for seven days.
-- Debug APK from 2686596: artifacts/investigation/apk-2686596/app-debug.apk.
-  SHA256: 2B226D40D2CC3DA0C9E544C445E77F893FEB76EF3AE1DD4915474517A8FFBDFE.
-- Local Git objects have been reconstructed from plugin-fetched trees/commits,
-  verifying every object SHA before updating refs/index. Helper and data live in
-  artifacts/investigation/sync-plugin-git.cjs and git-plugin-sync-data-*.json.
-
-Manual TalkBack smoke is not performed. Version remains 1.4.0; the user's
-possible 2.0 release decision has not been implemented. WP33 observability/
-performance and WP34 security/release validation remain separate later work.
+- Preserve the user's uncommitted `tests/e2e/browser/backup.spec.ts` contrast
+  edit and untracked `SpendWise-v1.3.0-release/` folder. The additional unpublished
+  light-theme contrast test failed locally; it is not included in the green
+  published test count. The dark-theme check passed.
+- Physical-device installation/use and the manual TalkBack checklist in
+  `WP32_TESTING.md` remain separate from automated WP32 acceptance. The tests
+  do not prove process-kill recovery, OEM behavior or immediate native status
+  announcements. The data-only receipt is required after ordinary reentry.
+- Repo stays public as authorized; included private Actions allowance was
+  exhausted across the account, and public runners now execute normally.
+- Remote work uses the GitHub connector. Local Git can synchronize verified
+  objects/ref/index without overwriting user edits; remote Git crashes on this
+  machine. CLI `gh api` is the authorized branch-deletion fallback because the
+  connector has no delete-branch operation. No computer/UI access is needed.

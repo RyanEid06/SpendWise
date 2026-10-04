@@ -638,7 +638,7 @@ test('CI deployed smoke uses registration, challenge, proof and bearer access wi
   assert.doesNotMatch(smoke, /console\.log\([^\n]*(?:accessToken|privateKey)/i);
 });
 
-test('WP31 stays in scope and keeps version/release frozen', () => {
+test('WP31 stays in scope and preserves approved release metadata', () => {
   const packageJson = JSON.parse(
     readFileSync('package.json', 'utf8')
   ) as { version: string };
@@ -651,9 +651,9 @@ test('WP31 stays in scope and keeps version/release frozen', () => {
     readFileSync('src/security/InstallationIdentityService.ts', 'utf8'),
   ].join('\n');
 
-  assert.equal(packageJson.version, '1.4.0');
-  assert.equal(versionJson.versionName, '1.4.0');
-  assert.equal(versionJson.versionCode, 5);
+  assert.equal(packageJson.version, '2.0.0');
+  assert.equal(versionJson.versionName, '2.0.0');
+  assert.equal(versionJson.versionCode, 6);
   assert.doesNotMatch(
     changedSecurity,
     /SQLCipher|Backup v3|passphrase|Play Integrity|certificate pin/i
