@@ -1,12 +1,21 @@
 # WP32 active repair checkpoint
 
-Updated 2026-10-04. This is an unfinished repair checkpoint, not a
-passing release candidate. Resume WP32; do not start WP33/WP34 or merge/release.
+Updated 2026-10-04. All isolated targets have native proof; full sequential
+acceptance is pending. The user has now authorized merging appropriate green
+PRs to main, deleting proven-unneeded branches, and delivering a version 2.0
+APK to Downloads. This overrides the earlier no-merge instruction. No WP33/WP34.
 
 ## Latest checkpoint
 
 - Read `WP32_ISOLATED_DIAGNOSTIC_REPORT.md` first; its latest checkpoint and
   second repair batch supersede the older failure descriptions below.
+- Hardened upgrade is GREEN in run `37215799249`, job `111475927746`, head
+  `1f255cae810a7191e913e80e5d87e071ab7db35d`; legacy seed and complete upgrade
+  verification both pass. Native isolated coverage is **22/22**.
+- Reviewed open dependency PR #31: Share 8.0.2 and Lucide 0.577.0, green Build
+  `36922131996`. Integrate it into WP32 while retaining scripts/Playwright,
+  then validate combined work before the ONE final sequential suite. Main is
+  unchanged until acceptance. Merge/cleanup and version 2.0 delivery follow.
 - Published source head `4bd98fbc7d5eacfa342d233c79439f67ec1dfe05`; local and
   tracking/live branch match with 0/0 ahead/behind. Every changed remote blob
   matches the locally verified bytes.

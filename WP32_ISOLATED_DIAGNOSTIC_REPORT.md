@@ -8,7 +8,25 @@ Original diagnostic head: `30147beef70ad9556799bbc421b368d713492f61`
 
 ## Executive status
 
-### Current checkpoint: public-repository CI restored
+### Current checkpoint: 22 isolated greens; combined acceptance pending
+
+Hardened upgrade passes run `37215799249`, job `111475927746`, head
+`1f255cae810a7191e913e80e5d87e071ab7db35d`. Its seed and complete migration,
+retained photo, cold-start device-authentication, and restart checks pass.
+All seven repaired targets now have native proof: **22/22 isolated coverage**.
+Android Build `37215799263` and web `37215799241` are green.
+
+The user's latest instruction authorizes reviewing all open PRs, merging all
+appropriate green work to main, and deleting branches proven unnecessary.
+It overrides the original no-merge condition. They also request version 2.0
+and a complete APK in Downloads once checks pass; WP33/WP34 remain out of scope.
+
+Only PRs #30 and #31 are open. #31 changes Share 8.0.1 to 8.0.2 and Lucide
+0.475.0 to 0.577.0; Build `36922131996` is green. These dependency changes are
+integrated into WP32 with both parent commits retained, preserving WP32 scripts
+and pinned Playwright. Validate this combined tree, then execute the ONE final
+sequential 22-flow gate. Main merge, branch cleanup and version delivery wait
+for acceptance. The following repair chronology is historical evidence.
 
 Completed-media repair head: `4bd98fbc7d5eacfa342d233c79439f67ec1dfe05`.
 Latest tested legacy-seed head: `7e4507aa589a69cab9c0b3eb13fa903a023a12b4`.
