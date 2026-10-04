@@ -1,93 +1,123 @@
 # SpendWise
 
-SpendWise is a privacy-first, local-first personal expense tracker and monthly budget planner for Android and the web. Core financial data remains on the device; Gemini-powered features are optional and use the SpendWise backend only when the user explicitly invokes them.
+SpendWise is a local-first expense tracker and monthly budget planner for Android
+and the web. Financial records stay on the device. Optional AI analysis, Smart
+Capture and receipt scanning send selected data to the SpendWise backend/Gemini
+when invoked.
 
-Current app version: **2.0.0** (Android build **6**, signed local trial).
-The last published GitHub Release remains v1.4.0; see `RELEASE.md`.
+The source is **2.0.0**, Android build **6** (`com.spendwise.app`). The signed 2.0
+trial is integrated on `main`; the latest public release is still
+[v1.4.0](https://github.com/RyanEid06/SpendWise/releases/tag/v1.4.0), checked
+2026-10-04. See [release instructions](ROADMAP.md#release-operations) for publishing and signing.
 
-## Key Features
+## Features
 
-- **Dashboard & Budget Tracking**
-  - Monthly budgets, remaining-money status, proportional spending progress, category breakdowns, and top expenses.
-  - Dashboard-only expense editing keeps the main workflow predictable.
+- Monthly budgets, category breakdowns, remaining-money status and top expenses.
+- Manual-first expense entry with optional notes and up to eight photos.
+- Dashboard editing; searchable History with read-only details and grouped,
+  five-second delete/Undo; multi-period Statistics.
+- Optional Gemini insights with deterministic local statistical fallback.
+- Private Android media, integrity checks, encrypted Backup v3 (data-only or
+  data + photos), legacy v1/v2 import, merge/replace restore and CSV export.
+- Android device-credential/strong-biometric App Lock and encrypted database/media.
+  Browser PIN protection is a UI privacy lock; browser storage has lower assurance.
+- English, French and Arabic/RTL; Light, Dark and System themes; 11 currencies.
+  Conversion defaults are dated suggestions, not a live exchange-rate feed.
 
-- **Manual-First Expense Capture**
-  - Amount, description, category, date, and optional note are the primary flow.
-  - Smart Capture, receipt scanning, and photo attachment are optional tools opened only when needed.
-  - Up to 8 photos can be attached to an expense.
+Home, History, AI Insights and Statistics are the four primary destinations.
+Settings opens from the top app bar. [Product constraints](ROADMAP.md#product-constraints)
+record the navigation, accessibility and scope baseline.
 
-- **History & Statistics**
-  - Search and monthly transaction history with swipe-to-delete, a 5-second grouped Undo window, and read-only details.
-  - History and Statistics open read-only expense details instead of silently entering edit mode.
-  - Pending History deletes remain in storage until Undo expires; backgrounding/termination conservatively restores them.
-  - Multi-period statistics, category trends, largest expenses, and large-ledger regression coverage.
+## Run locally
 
-- **AI Spending Analysis & Receipt Scanning**
-  - Gemini-powered spending analysis with a deterministic local statistical fallback when AI is unavailable.
-  - Receipt and Smart Capture flows use bounded server-side requests and validated structured responses.
-  - Model selection and fallback models are configured on the backend; see `AI_BACKEND.md`.
-
-- **Private Media & Backup**
-  - Encrypted app-scoped Android photo storage; photos are not copied to the device gallery by default.
-  - Media Library with integrity checks and conservative repair of safe-to-fix issues.
-  - Secure Backup v3 provides passphrase-encrypted **data-only** and **data + photos** backups, validation, merge, replace, and rollback protection.
-  - Legacy Backup v1 JSON and Backup v2 ZIP imports remain supported.
-  - CSV export is available for spreadsheet use.
-
-- **Privacy, Security & Localization**
-  - Native Android App Lock uses device credentials/strong biometrics and an inactivity timeout; web PIN protection uses an Argon2id verifier.
-  - Android ledger and private media use encrypted storage with Keystore-backed key protection.
-  - Light, Dark, and System themes.
-  - English, French, and Arabic/RTL UI.
-  - Supported currencies: USD, LBP, EUR, GBP, AED, SAR, EGP, CAD, AUD, JPY, and INR.
-
-## Navigation
-
-SpendWise has four primary destinations:
-
-1. Home
-2. History
-3. AI Insights
-4. Statistics
-
-Settings is a secondary destination opened from the top app bar.
-
-## Tech Stack
-
-The checked-in npm lock currently resolves the trial release line to:
-
-- **Frontend:** React 19.3, TypeScript 5.9, Tailwind CSS 4.3, Lucide React 0.577
-- **Backend / Proxy:** Node.js 22, Express 4.22, `@google/genai`
-- **Mobile:** Capacitor 8, Android compile/target SDK 36
-- **Build Tool:** Vite 6.4
-- **Persistence:** native encrypted SQLite plus authenticated encrypted app-scoped media; browser storage has lower assurance
-
-Major upgrades such as Express 5, Vite 8, TypeScript 7, and Lucide 1.x are intentionally not mixed into maintenance updates without a dedicated compatibility pass.
-
-## Roadmaps
-
-- `UX_REFINEMENT_ROADMAP.md` documents the completed v1.4 UX refinement program.
-- `PRODUCTION_HARDENING_ROADMAP.md` records WP25–WP32 implementation and the remaining WP33/WP34 plan. WP32 automated acceptance passed; the user approved a signed v2.0 trial before the final production release gate. WP33/WP34 have not started.
-- `WP32_ISOLATED_DIAGNOSTIC_REPORT.md` records the complete 22-flow native run, repairs and exact evidence. Manual physical-device/TalkBack checks remain separate.
-
-## Verification
+Use **Node.js 22** (the package requires `>=22 <23`) and npm:
 
 ```bash
 npm ci
+```
+
+Copy `.env.example` to `.env` (PowerShell: `Copy-Item .env.example .env`). Set a
+server-only `GEMINI_API_KEY` for AI features, then start:
+
+```bash
+npm run dev
+```
+
+Open `http://localhost:3000`. The Express server serves the API and Vite middleware
+in development. Manual tracking works without a provider key. Never place a
+Gemini key or signing secret in a `VITE_*` variable. See
+[backend configuration](ROADMAP.md#backend-configuration-and-authentication) for origins, identity and quotas.
+
+To build and preview the frontend:
+
+```bash
 npm run verify
-npm run test:reliability
-npm run test:currency
-npm run test:persistence
-npm run test:media-backup
-npm run test:core-ux
-npm run test:final-freeze
-npm run test:wp17
-npm run test:wp18
-npm run test:wp29
-npm run test:wp30
-npm run test:wp31
-npm run test:wp32
+npm run preview
+```
+
+`preview` serves the frontend only. For a backend that also serves built `dist/`,
+set `NODE_ENV=production` before `npm start`. For Android AI, set
+`VITE_API_BASE_URL` to the deployed HTTPS backend before building/syncing.
+
+## Android
+
+Use JDK 21 and an Android SDK installation (compile/target SDK 36, minimum SDK 24):
+
+```bash
+npm run verify
 npm run android:sync
 ```
 
-GitHub Actions passed 22/22 native flows together, 54 web checks and 226 Build regressions for the WP32 source. It also builds APKs and runs deployed Gemini authentication smoke on main. The v2.0 PR artifact uses the permanent signing identity; a public release still requires the signed tag workflow in `RELEASE.md`.
+Build a debug APK on Windows:
+
+```powershell
+cd android
+.\gradlew.bat assembleDebug
+```
+
+On macOS/Linux use `./gradlew assembleDebug`. Output is
+`android/app/build/outputs/apk/debug/app-debug.apk`. Use the permanent signing
+identity in [the release runbook](ROADMAP.md#release-operations) for updates to an installed release.
+
+## Tests and CI
+
+The project retains Node/tsx regression tests, Playwright rendered-component,
+browser, accessibility and layout checks, plus Maestro native flows. Install
+Chromium and run the executable web suite:
+
+```bash
+npx playwright install chromium
+npm run test:wp32
+```
+
+The `wpNN` names identify existing regression suites; these remain active build
+inputs. [Testing](ROADMAP.md#tests-and-recorded-acceptance) lists commands, native runners, fixtures,
+recorded acceptance and manual checks. CI builds Android, runs regressions and
+checks deployed installation-authenticated Gemini access on `main`/release tags.
+Full native E2E runs on manual dispatch or the `wp32-final-native` PR label.
+
+WP32 recorded **22/22 native flows together** and **54 web checks**. These are
+historical acceptance receipts, not claims about a new local run. Physical-device,
+TalkBack and final production validation remain separate. WP33/WP34 are pending.
+
+## Project layout and documentation
+
+| Path | Contents |
+| --- | --- |
+| `src/` | React app, feature services, repositories and security/platform adapters |
+| `server/` | Express API, installation authentication and Gemini integration |
+| `android/` | Capacitor native app and Gradle project |
+| `tests/`, `.maestro/` | Regression fixtures, web tests and Android flows |
+| `scripts/`, `.github/` | Test/build/release orchestration |
+| `ROADMAP.md` | Completed work, architecture, constraints, acceptance, remaining work and release operations |
+
+- [All delivered changes and remaining work](ROADMAP.md)
+- [Architecture](ROADMAP.md#implemented-architecture)
+- [Security and recovery](ROADMAP.md#security-recovery-and-known-limits)
+- [Backup v3 format](ROADMAP.md#backup-v3-format-and-compatibility)
+- [Testing and acceptance](ROADMAP.md#tests-and-recorded-acceptance)
+- [Release runbook](ROADMAP.md#release-operations)
+
+Completed work-package plans and superseded diagnostic/handoff reports are
+available in Git history. Generated builds, test reports, runtime state and
+signing material stay out of Git.

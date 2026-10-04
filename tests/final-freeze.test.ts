@@ -12,7 +12,7 @@ const app = readFileSync('src/app/AppShell.tsx', 'utf8');
 const appNavigation = readFileSync('src/app/navigation/useAppNavigation.ts', 'utf8');
 const themeLanguage = readFileSync('src/app/hooks/useThemeLanguage.ts', 'utf8');
 const css = readFileSync('src/index.css', 'utf8');
-const freeze = readFileSync('PRODUCT_FREEZE.md', 'utf8');
+const freeze = readFileSync('ROADMAP.md', 'utf8');
 
 test('bottom navigation is frozen to exactly four primary destinations', () => {
   const entries = navigation.match(/\{ screen: '(home|history|insights|statistics)'/g) || [];
