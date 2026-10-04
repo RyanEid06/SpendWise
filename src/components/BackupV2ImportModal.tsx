@@ -3,6 +3,7 @@ import { ArchiveRestore, Image as ImageIcon, X } from 'lucide-react';
 import type { Language } from '../types';
 import type { BackupV2Preview } from '../utils/backupV2';
 import { ViewportPortal } from './ViewportPortal';
+import { useModalFocus } from './useModalFocus';
 
 const labels = {
   en: { title: 'Backup restore', data: 'Data only', media: 'Data + photos', expenses: 'Expenses', budgets: 'Budgets', photos: 'Photos', size: 'Photo size', mode: 'Mode', merge: 'Merge', replace: 'Replace', cancel: 'Cancel', warning: 'Replace fully validates and stages the backup before changing your current ledger.' },
@@ -23,12 +24,13 @@ export const BackupV2ImportModal: React.FC<{
 }> = ({ preview, version = preview.schemaVersion, language, onConfirm, onClose }) => {
   const text = labels[language];
   const [replace, setReplace] = useState(false);
+  const dialogRef = useModalFocus();
   return (
     <ViewportPortal>
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs p-4 flex items-center justify-center" role="dialog" aria-modal="true">
+    <div ref={dialogRef} tabIndex={-1} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs p-4 flex items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="backup-restore-title">
       <div className="w-full max-w-md rounded-3xl bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div className="p-4 flex justify-between items-center border-b border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-2 font-bold"><ArchiveRestore className="w-5 h-5" />{text.title} v{version}</div>
+          <div id="backup-restore-title" className="flex items-center gap-2 font-bold"><ArchiveRestore className="w-5 h-5" />{text.title} v{version}</div>
           <button type="button" onClick={onClose} className="min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label={text.cancel}><X className="w-5 h-5" /></button>
         </div>
         <div className="p-5 space-y-4">

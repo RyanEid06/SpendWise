@@ -1,0 +1,208 @@
+name: WP32 E2E
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wp32-e2e-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Check Android harness syntax
+        run: |
+          bash -n scripts/wp32-android-helpers.sh
+          bash -n scripts/run-wp32-android-e2e.sh
+          bash -n scripts/run-wp32-backup-restore-targeted.sh
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install pinned Chromium
+        run: ./node_modules/.bin/playwright install --with-deps chromium
+
+      - name: Verify application build
+        run: npm run verify
+
+      - name: Run WP32 executable web suite
+        run: npm run test:wp32
+
+      - name: Upload Playwright failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: wp32-playwright-failure
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  android-e2e:
+    # Run the full native acceptance suite only after isolated repairs pass.
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'wp32-final-native')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+      MAESTRO_VERSION: "2.11.0"
+      WP32_INSPECT_WEBVIEW: "1"
+
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build current debug APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run verify
+          npm run android:sync
+          chmod +x android/gradlew
+          (cd android && ./gradlew assembleDebug)
+          mkdir -p artifacts/android-e2e/apks artifacts/android-e2e/fixtures
+          cp android/app/build/outputs/apk/debug/app-debug.apk             artifacts/android-e2e/apks/current-debug.apk
+          npx tsx scripts/wp32-generate-portable-fixtures.ts             artifacts/android-e2e/fixtures
+
+      - name: Build v1.4 migration fixture APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          fixture="$RUNNER_TEMP/spendwise-v14"
+          git worktree add --detach "$fixture" c0d7522192af7e07cbb1f46c3a00145e8b94a988
+          pushd "$fixture"
+          npm ci
+          npm run build
+          npm run android:sync
+          chmod +x android/gradlew
+          (cd android && ./gradlew assembleDebug)
+          popd
+          cp "$fixture/android/app/build/outputs/apk/debug/app-debug.apk"             artifacts/android-e2e/apks/v14-debug.apk
+          git worktree remove "$fixture" --force
+
+      - name: Install pinned Maestro CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/maestro-2.11.0.zip"
+          install_root="$RUNNER_TEMP/maestro-2.11.0"
+          curl --fail --location --retry 3             "https://github.com/mobile-dev-inc/Maestro/releases/download/cli-2.11.0/maestro.zip"             --output "$archive"
+          echo "5384593cb4e7a106489e75a821d157dd43f4e438df6bc308b72e82c685e1283a  $archive"             | sha256sum --check
+          mkdir -p "$install_root"
+          unzip -q "$archive" -d "$install_root"
+          maestro_bin="$(find "$install_root" -type f -path '*/bin/maestro' -print -quit)"
+          test -n "$maestro_bin"
+          chmod +x "$maestro_bin"
+          echo "$(dirname "$maestro_bin")" >> "$GITHUB_PATH"
+          "$maestro_bin" --version
+          rm -f "$archive"
+
+      - name: Enable KVM
+        shell: bash
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"'             | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Free disk for emulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Disk before cleanup:"
+          df -h /
+          rm -rf node_modules dist
+          rm -rf android/.gradle android/build android/app/build
+          rm -rf "$HOME/.gradle/caches" "$HOME/.gradle/wrapper/dists"
+          npm cache clean --force || true
+
+          # APK construction is complete. The hosted image carries several large
+          # NDK/CMake installations that the emulator/Maestro phase does not use.
+          sudo rm -rf "$ANDROID_SDK_ROOT/ndk" "$ANDROID_SDK_ROOT/cmake"
+
+          echo "Disk after cleanup:"
+          df -h /
+
+      - name: Preinstall Android emulator system image
+        shell: bash
+        run: |
+          set -euo pipefail
+          package="system-images;android-34;google_apis;x86_64"
+
+          for attempt in 1 2 3; do
+            echo "Installing $package (attempt $attempt/3)"
+            if "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --install "$package"; then
+              break
+            fi
+
+            if [ "$attempt" -eq 3 ]; then
+              echo "Failed to install $package after 3 attempts" >&2
+              exit 1
+            fi
+
+            rm -rf "$ANDROID_SDK_ROOT/.temp"
+            rm -rf "$ANDROID_SDK_ROOT/system-images/android-34/google_apis/x86_64"
+            sleep 5
+          done
+
+          test -f "$ANDROID_SDK_ROOT/system-images/android-34/google_apis/x86_64/package.xml"
+          df -h /
+
+      - name: Run Android black-box suite
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          cores: 2
+          ram-size: 4096M
+          disk-size: 3G
+          disable-animations: true
+          emulator-options: >-
+            -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+            -no-snapshot-save -camera-back none
+          script: bash scripts/run-wp32-android-e2e.sh
+
+      - name: Upload Android failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: wp32-android-failure
+          path: artifacts/android-e2e/results/
+          if-no-files-found: ignore
+          retention-days: 7

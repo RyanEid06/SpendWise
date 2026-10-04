@@ -533,10 +533,20 @@ export class AttachmentStorage {
       // Normal startup is O(1) in media count. The completed migration already
       // verified every file; validate one representative against the session
       // key, then only enforce that no legacy plaintext was reintroduced.
+      // A damaged attachment is isolated by authenticated on-demand reads;
+      // it must not prevent opening the independently encrypted ledger.
       if (before.attachments.length > 0) {
-        await withMediaKey((key) =>
-          verifyEncryptedAttachment(before.attachments[0], key)
-        );
+        await withMediaKey(async (key) => {
+          try {
+            await verifyEncryptedAttachment(before.attachments[0], key);
+          } catch (error) {
+            if (!(error instanceof Error) || !(
+              error.message.startsWith('MEDIA_ENVELOPE_') ||
+              error.message === 'MEDIA_AUTHENTICATION_FAILED' ||
+              error.message === 'MEDIA_PLAINTEXT_SIZE_MISMATCH'
+            )) throw error;
+          }
+        });
       }
       await deleteLegacyPlaintextFilesStrict();
       return;

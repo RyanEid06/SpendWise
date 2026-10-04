@@ -1,0 +1,149 @@
+appId: com.spendwise.app
+---
+- launchApp:
+    stopApp: false
+    permissions:
+      all: allow
+- addMedia:
+    - "../../tests/fixtures/media/wp32-photo-01.jpg"
+    - "../../tests/fixtures/media/wp32-photo-02.jpg"
+    - "../../tests/fixtures/media/wp32-photo-03.jpg"
+    - "../../tests/fixtures/media/wp32-photo-04.jpg"
+    - "../../tests/fixtures/media/wp32-photo-05.jpg"
+    - "../../tests/fixtures/media/wp32-photo-06.jpg"
+    - "../../tests/fixtures/media/wp32-photo-07.jpg"
+    - "../../tests/fixtures/media/wp32-photo-08.jpg"
+    - "../../tests/fixtures/media/wp32-photo-09.jpg"
+- runFlow: ../helpers/onboard-current.yaml
+- tapOn: "Set Monthly Budget"
+- tapOn: "Monthly Budget .*"
+- inputText: "1250"
+- pressKey: enter
+- extendedWaitUntil:
+    visible: ".*1,250.*"
+    timeout: 15000
+- tapOn: "Add Expense"
+- tapOn: "Amount .*"
+- inputText: "11.50"
+- tapOn: "Description / Merchant .*"
+- inputText: "WP32 One Photo"
+# WebView accessibility can report nodes that are below the physical modal viewport.
+# Dismiss the IME, then use two deterministic scroll gestures so Attach Photos is
+# physically above the fixed action footer before Maestro taps its semantic node.
+- tapOn: "Food"
+- swipe:
+    start: 50%, 74%
+    end: 50%, 34%
+    duration: 600
+- swipe:
+    start: 50%, 74%
+    end: 50%, 34%
+    duration: 600
+- tapOn: "Attach Photos.*"
+- swipe:
+    start: 50%, 76%
+    end: 50%, 45%
+    duration: 500
+- tapOn: "Choose Photo"
+- tapOn:
+    id: "com.google.android.providers.media.module:id/icon_thumbnail"
+    index: 0
+# Multi-select Photo Picker requires explicit confirmation. Keep this mandatory
+# so the test fails at the picker boundary instead of timing out later in SpendWise.
+- tapOn:
+    id: "com.google.android.providers.media.module:id/button_add"
+# Use high-resolution deterministic JPEG fixtures. @capacitor/camera 8.x has an
+# upstream Android race where very small/fast-processing images can leave
+# IONCAMRLoadingActivity stuck above the WebView forever. That is a fixture
+# pathology, not SpendWise behavior, so exercise the real gallery path with
+# representative image dimensions and wait only for normal native processing.
+# Android/WebView accessibility exposes the visual "1/8" counter as three
+# separate nodes ("1", "/", "8"). The tool button exposes one stable semantic
+# label that carries the same state, so assert that instead.
+- extendedWaitUntil:
+    visible: "Attach Photos · 1"
+    timeout: 30000
+- tapOn: "Save Expense"
+- tapOn: "History"
+- tapOn: "WP32 One Photo.*"
+- assertVisible: "Attached photos"
+- assertVisible: "View photos"
+- tapOn: "Close details"
+- stopApp
+- launchApp
+- tapOn: "History"
+- tapOn: "WP32 One Photo.*"
+- assertVisible: "View photos"
+- tapOn: "Close details"
+- tapOn: "Home"
+- tapOn: "Add Expense"
+- tapOn: "Amount .*"
+- inputText: "88.00"
+- tapOn: "Description / Merchant .*"
+- inputText: "WP32 Eight Photos"
+- tapOn: "Food"
+- swipe:
+    start: 50%, 74%
+    end: 50%, 34%
+    duration: 600
+- swipe:
+    start: 50%, 74%
+    end: 50%, 34%
+    duration: 600
+- tapOn: "Attach Photos.*"
+- swipe:
+    start: 50%, 76%
+    end: 50%, 45%
+    duration: 500
+- tapOn: "Choose Photo"
+- tapOn:
+    id: "com.google.android.providers.media.module:id/icon_thumbnail"
+    index: 0
+- tapOn:
+    id: "com.google.android.providers.media.module:id/icon_thumbnail"
+    index: 1
+- tapOn:
+    id: "com.google.android.providers.media.module:id/icon_thumbnail"
+    index: 2
+- tapOn:
+    id: "com.google.android.providers.media.module:id/icon_thumbnail"
+    index: 3
+- tapOn:
+    id: "com.google.android.providers.media.module:id/icon_thumbnail"
+    index: 4
+- tapOn:
+    id: "com.google.android.providers.media.module:id/icon_thumbnail"
+    index: 5
+- tapOn:
+    id: "com.google.android.providers.media.module:id/icon_thumbnail"
+    index: 6
+- tapOn:
+    id: "com.google.android.providers.media.module:id/icon_thumbnail"
+    index: 7
+# Multi-select Photo Picker requires explicit confirmation.
+- tapOn:
+    id: "com.google.android.providers.media.module:id/button_add"
+# Eight full-resolution fixtures legitimately take longer to decode/copy on a
+# hosted emulator; this timeout is for normal processing, not a stuck activity.
+- extendedWaitUntil:
+    visible: "Attach Photos · 8"
+    timeout: 90000
+# The semantic tool label reaching 8 proves the cap state. The visual "8/8"
+# counter is split into separate accessibility nodes on Android, so it is not a
+# reliable Maestro selector.
+- tapOn: "Save Expense"
+- tapOn: "History"
+- tapOn: "WP32 Eight Photos.*"
+- assertVisible: "Attached photos"
+- assertVisible:
+    text: "View photos"
+    index: 7
+- tapOn: "Close details"
+- stopApp
+- launchApp
+- tapOn: "History"
+- tapOn: "WP32 Eight Photos.*"
+- assertVisible:
+    text: "View photos"
+    index: 7
+- tapOn: "Close details"

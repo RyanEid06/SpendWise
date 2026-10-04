@@ -1,0 +1,207 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+APP_ID="com.spendwise.app"
+APP_ACTIVITY="$APP_ID/.MainActivity"
+NEW_APK="${NEW_APK:-artifacts/android-e2e/apks/current-debug.apk}"
+V14_APK="${V14_APK:-artifacts/android-e2e/apks/v14-debug.apk}"
+RESULT_ROOT="${RESULT_ROOT:-artifacts/android-e2e/results}"
+FIXTURE_ROOT="${FIXTURE_ROOT:-artifacts/android-e2e/fixtures}"
+
+mkdir -p "$RESULT_ROOT" "$FIXTURE_ROOT"
+source scripts/wp32-android-helpers.sh
+
+capture_failure() {
+  mkdir -p "$RESULT_ROOT/failure"
+  adb exec-out screencap -p > "$RESULT_ROOT/failure/device.png" 2>/dev/null || true
+  adb shell dumpsys activity activities > "$RESULT_ROOT/failure/activity.txt" 2>/dev/null || true
+  adb shell uiautomator dump /sdcard/wp32-window.xml >/dev/null 2>&1 || true
+  adb exec-out cat /sdcard/wp32-window.xml > "$RESULT_ROOT/failure/window.xml" 2>/dev/null || true
+  adb logcat -d -t 4000 \
+    | grep -E "SpendWise|com\\.spendwise\\.app|Capacitor|AppPlugin|ActivityTaskManager|AndroidRuntime|FATAL EXCEPTION|chromium" \
+    > "$RESULT_ROOT/failure/logcat.txt" || true
+  if [ "${WP32_INSPECT_WEBVIEW:-0}" = 1 ]; then
+    node scripts/wp32-inspect-webview.mjs "$RESULT_ROOT/failure/webview" || true
+  fi
+}
+
+cleanup() {
+  adb shell cmd connectivity airplane-mode disable >/dev/null 2>&1 || true
+  adb shell locksettings clear --old 2468 >/dev/null 2>&1 || true
+  adb shell settings delete global hide_error_dialogs >/dev/null 2>&1 || true
+}
+
+on_exit() {
+  local rc=$?
+  trap - EXIT
+  if [ "$rc" -ne 0 ]; then capture_failure; fi
+  cleanup
+  exit "$rc"
+}
+trap on_exit EXIT
+
+app_is_foreground() {
+  local resumed
+  resumed="$(
+    adb shell dumpsys activity activities 2>/dev/null \
+      | grep -m 1 -E "mResumedActivity|topResumedActivity" || true
+  )"
+  [[ "$resumed" == *"$APP_ID"* ]]
+}
+
+# Maestro attaches its accessibility service before creating the WebView.
+# Host-side launch/uiautomator readiness probes hand an already-running WebView
+# between accessibility clients and can leave Maestro with a partial tree.
+reset_app() {
+  adb shell pm clear "$APP_ID" >/dev/null
+}
+
+run_flow() {
+  local name="$1"
+  local flow="$2"
+  local out="$RESULT_ROOT/$name"
+  mkdir -p "$out"
+  maestro test \
+    --config=.maestro/config.yaml \
+    --format=junit \
+    --output="$out/report.xml" \
+    --test-output-dir="$out/artifacts" \
+    --debug-output="$out/debug" \
+    "$flow"
+}
+
+dismiss_share_sheet() {
+  if ! app_is_foreground; then
+    adb shell input keyevent KEYCODE_BACK >/dev/null 2>&1 || true
+  fi
+  adb shell am start -n "$APP_ACTIVITY" >/dev/null 2>&1 || true
+}
+
+verify_swb3() {
+  local file="$1"
+  local expected_media="$2"
+  python3 - "$file" "$expected_media" <<'PY'
+import json
+import struct
+import sys
+
+path = sys.argv[1]
+expected = sys.argv[2].lower() == "true"
+raw = open(path, "rb").read()
+if len(raw) < 25 or raw[:4] != b"SWB3" or raw[4] != 3:
+    raise SystemExit(f"{path}: invalid SWB3 magic/version")
+header_len = struct.unpack(">I", raw[5:9])[0]
+if header_len <= 0 or 9 + header_len + 16 > len(raw):
+    raise SystemExit(f"{path}: invalid SWB3 header length")
+header = json.loads(raw[9:9 + header_len].decode("utf-8"))
+actual = header.get("payload", {}).get("mediaIncluded")
+if actual is not expected:
+    raise SystemExit(f"{path}: mediaIncluded={actual!r}, expected {expected!r}")
+print(f"Verified {path}: mediaIncluded={actual}, envelopeBytes={len(raw)}")
+PY
+}
+
+push_download() {
+  local source="$1"
+  local target_name="$2"
+  adb shell mkdir -p /sdcard/Download
+  adb push "$source" "/sdcard/Download/$target_name" >/dev/null
+  adb shell am broadcast \
+    -a android.intent.action.MEDIA_SCANNER_SCAN_FILE \
+    -d "file:///sdcard/Download/$target_name" >/dev/null || true
+}
+
+echo "== Device preparation =="
+adb wait-for-device
+adb shell settings put system screen_off_timeout 2147483647 || true
+adb shell svc power stayon true || true
+adb shell cmd connectivity airplane-mode disable >/dev/null 2>&1 || true
+
+# Fresh hosted emulators can briefly ANR System UI after cold boot. Suppress only
+# OS error dialogs on this disposable test device; app failures still fail the
+# assertions and are captured in the failure bundle.
+adb shell settings put global hide_error_dialogs 1 || true
+adb shell input keyevent KEYCODE_HOME >/dev/null 2>&1 || true
+for attempt in {1..15}; do
+  if adb shell uiautomator dump /sdcard/wp32-window.xml >/dev/null 2>&1; then
+    break
+  fi
+  if [ "$attempt" -eq 15 ]; then
+    echo "::error::Android UI automation did not become ready after cold boot."
+    exit 1
+  fi
+  sleep 2
+done
+
+adb uninstall "$APP_ID" >/dev/null 2>&1 || true
+adb install "$NEW_APK" >/dev/null
+reset_app
+run_flow empty-navigation .maestro/current/empty-navigation.yaml
+reset_app
+
+echo "== Fresh install, persistence, delete safety, network failure =="
+run_flow fresh-persistence .maestro/current/fresh-persistence.yaml
+run_flow delete-undo .maestro/current/delete-undo.yaml
+run_flow delete-background .maestro/current/delete-background-verify.yaml
+run_flow offline-ai .maestro/current/offline-ai.yaml
+
+echo "== Media boundaries and restart durability =="
+reset_app
+run_flow media .maestro/current/media.yaml
+
+echo "== Secure Backup v3 exports =="
+run_flow export-v3-data .maestro/current/backup-export-data.yaml
+extract_backup_prefix "spendwise_backup_v3_data_" "$FIXTURE_ROOT/wp32-data.swb3"
+verify_swb3 "$FIXTURE_ROOT/wp32-data.swb3" false
+dismiss_share_sheet
+
+run_flow export-v3-full .maestro/current/backup-export-full.yaml
+extract_backup_prefix "spendwise_backup_v3_full_" "$FIXTURE_ROOT/wp32-full.swb3"
+verify_swb3 "$FIXTURE_ROOT/wp32-full.swb3" true
+dismiss_share_sheet
+
+push_download "$FIXTURE_ROOT/wp32-data.swb3" wp32-data.swb3
+push_download "$FIXTURE_ROOT/wp32-full.swb3" wp32-full.swb3
+
+echo "== Backup v3 disaster recovery and encrypted-media corruption =="
+run_flow clear-before-v3-full .maestro/current/clear-financial-data.yaml
+run_flow import-v3-full .maestro/current/import-v3-full.yaml
+corrupt_secure_media_files
+run_flow corrupt-encrypted-media .maestro/current/corrupt-media.yaml
+
+run_flow clear-before-v3-data .maestro/current/clear-financial-data.yaml
+run_flow import-v3-data .maestro/current/import-v3-data.yaml
+
+echo "== Backward-compatible v1/v2 restore =="
+push_download "$FIXTURE_ROOT/wp32-v1.json" wp32-v1.json
+push_download "$FIXTURE_ROOT/wp32-v2-data.zip" wp32-v2-data.zip
+push_download "$FIXTURE_ROOT/wp32-v2-full.zip" wp32-v2-full.zip
+
+reset_app
+run_flow import-v1 .maestro/current/import-v1.yaml
+reset_app
+run_flow import-v2-data .maestro/current/import-v2-data.yaml
+reset_app
+run_flow import-v2-full .maestro/current/import-v2-full.yaml
+
+echo "== Native App Lock cancellation and retry =="
+adb shell locksettings set-pin 2468 >/dev/null
+reset_app
+run_flow app-lock-setup .maestro/current/app-lock-setup-start.yaml
+run_flow app-lock-setup-auth .maestro/helpers/android-device-pin.yaml
+run_flow app-lock-timeout .maestro/current/app-lock-configure-timeout.yaml
+run_flow app-lock-cancel-retry .maestro/current/app-lock-background-cancel-retry.yaml
+
+echo "== v1.4 in-place upgrade migration =="
+adb shell locksettings clear --old 2468 >/dev/null
+adb shell input keyevent KEYCODE_WAKEUP >/dev/null
+adb shell wm dismiss-keyguard >/dev/null
+adb uninstall "$APP_ID" >/dev/null
+adb install "$V14_APK" >/dev/null
+run_flow v14-seed .maestro/migration/v14-seed.yaml
+adb shell locksettings set-pin 2468 >/dev/null
+adb install -r "$NEW_APK" >/dev/null
+adb shell am force-stop "$APP_ID"
+run_flow hardened-upgrade .maestro/migration/hardened-verify.yaml
+
+echo "WP32 Android E2E completed successfully."

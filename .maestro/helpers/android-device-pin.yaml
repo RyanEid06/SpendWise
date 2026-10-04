@@ -1,0 +1,19 @@
+appId: com.spendwise.app
+---
+- runFlow:
+    when:
+      visible: "Use PIN"
+    commands:
+      - tapOn: "Use PIN"
+- extendedWaitUntil:
+    visible:
+      id: "com.android.systemui:id/lockPassword"
+    timeout: 15000
+- tapOn:
+    id: "com.android.systemui:id/lockPassword"
+- inputText: "2468"
+- pressKey: enter
+- extendedWaitUntil:
+    notVisible:
+      id: "com.android.systemui:id/lockPassword"
+    timeout: 15000

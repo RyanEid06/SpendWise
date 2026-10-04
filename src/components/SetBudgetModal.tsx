@@ -91,6 +91,7 @@ export const SetBudgetModal: React.FC<SetBudgetModalProps> = ({
               </div>
               <input
                 type="number"
+                aria-label={t(language, 'startingBudgetLabel')}
                 step={currency.code === 'LBP' || currency.code === 'JPY' ? '1' : '0.01'}
                 placeholder={currency.code === 'LBP' || currency.code === 'JPY' ? '0' : '0.00'}
                 dir="ltr"
@@ -98,6 +99,11 @@ export const SetBudgetModal: React.FC<SetBudgetModalProps> = ({
                 onChange={(e) => {
                   setAmountText(e.target.value);
                   setError(null);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter') return;
+                  event.preventDefault();
+                  void handleSave();
                 }}
                 className={`w-full ${currency.symbolPrefix === false ? 'pl-4 pr-14' : 'pl-14 pr-4'} py-3 rounded-2xl border text-lg font-bold tabular-nums bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-white focus:outline-none focus:ring-2 transition-all ${
                   error

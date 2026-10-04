@@ -1,0 +1,12 @@
+appId: com.spendwise.app
+---
+- launchApp
+- tapOn: "AI Insights"
+- assertVisible: "Analyze My Spending"
+- setAirplaneMode: enabled
+- tapOn: "Analyze My Spending"
+- extendedWaitUntil:
+    visible: "Local Statistical"
+    timeout: 35000
+- assertVisible: ".*AI is unavailable right now.*"
+- setAirplaneMode: disabled

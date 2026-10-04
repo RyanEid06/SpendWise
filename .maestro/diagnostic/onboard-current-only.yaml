@@ -1,0 +1,7 @@
+appId: com.spendwise.app
+---
+- launchApp:
+    stopApp: false
+    permissions:
+      all: allow
+- runFlow: ../helpers/onboard-current.yaml

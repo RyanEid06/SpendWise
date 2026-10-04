@@ -3,6 +3,7 @@ import { DownloadCloud, AlertTriangle, X } from 'lucide-react';
 import { Language, SpendWiseBackup } from '../types';
 import { t } from '../utils/translations';
 import { ViewportPortal } from './ViewportPortal';
+import { useModalFocus } from './useModalFocus';
 
 interface ImportPreviewModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
   onClose,
 }) => {
   const [replaceExisting, setReplaceExisting] = useState(false);
+  const dialogRef = useModalFocus(undefined, isOpen);
 
   if (!isOpen) return null;
 
@@ -32,6 +34,8 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="import-modal-title"
+      ref={dialogRef}
+      tabIndex={-1}
     >
       <div className="bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden transition-colors">
         {/* Header */}

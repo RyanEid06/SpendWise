@@ -1,0 +1,51 @@
+appId: com.spendwise.app
+---
+- launchApp:
+    stopApp: false
+- assertVisible: "SpendWise is Locked"
+- assertVisible: "Enter your existing SpendWise PIN once.*"
+# The migrated legacy credential field is autofocus. Native accessibility
+# exposes a focused password EditText without the HTML placeholder label.
+- inputText: "2468"
+- pressKey: enter
+- runFlow: ../helpers/android-device-pin.yaml
+- extendedWaitUntil:
+    visible: "WP32 Upgrade Ledger.*"
+    timeout: 30000
+- assertVisible: ".*1,250.*"
+- tapOn: "WP32 Upgrade Ledger.*"
+- assertVisible: "Edit Expense"
+# The optional photo tool is below the modal viewport. Use the same physical
+# scroll sequence as the protected media flow before tapping and inspecting it.
+- swipe:
+    start: 50%, 74%
+    end: 50%, 34%
+    duration: 600
+- swipe:
+    start: 50%, 74%
+    end: 50%, 34%
+    duration: 600
+- tapOn: "Attach Photos.*"
+- swipe:
+    start: 50%, 76%
+    end: 50%, 45%
+    duration: 500
+- assertVisible: "Attach Photos · 1"
+- assertVisible: "View photos"
+- tapOn: "Cancel"
+- stopApp
+- launchApp
+# A cold launch of migrated native App Lock prompts through Android before
+# opening protected storage (src/main.tsx). The app lock fallback is shown only
+# after cancellation. Require the system challenge and hidden ledger instead.
+- extendedWaitUntil:
+    visible: "Unlock SpendWise"
+    timeout: 30000
+- assertNotVisible: "WP32 Upgrade Ledger.*"
+- runFlow: ../helpers/android-device-pin.yaml
+- extendedWaitUntil:
+    visible: "WP32 Upgrade Ledger.*"
+    timeout: 30000
+- tapOn: "History"
+- tapOn: "WP32 Upgrade Ledger.*"
+- assertVisible: "View photos"

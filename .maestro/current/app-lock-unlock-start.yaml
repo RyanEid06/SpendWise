@@ -1,0 +1,6 @@
+appId: com.spendwise.app
+---
+- launchApp:
+    stopApp: false
+- assertVisible: "SpendWise is Locked"
+- tapOn: "Authenticate & Unlock"

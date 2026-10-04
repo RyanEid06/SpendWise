@@ -390,6 +390,13 @@ export const SetupWizardScreen: React.FC<Props> = ({
                   <label className="min-h-[52px] flex items-center gap-3 cursor-pointer">
                     <input
                       type="checkbox"
+                      aria-label={
+                        language === 'ar'
+                          ? 'تفعيل قفل التطبيق'
+                          : language === 'fr'
+                            ? 'Activer le verrouillage'
+                            : 'Enable App Lock'
+                      }
                       checked={enableNativeLock}
                       disabled={appLockEnabled}
                       onChange={(event) => setEnableNativeLock(event.target.checked)}
@@ -433,6 +440,13 @@ export const SetupWizardScreen: React.FC<Props> = ({
               <label className="min-h-[56px] bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex items-start gap-3 rtl:flex-row-reverse cursor-pointer">
                 <input
                   type="checkbox"
+                  aria-label={
+                    language === 'ar'
+                      ? 'الموافقة على شروط الاستخدام وسياسة الخصوصية'
+                      : language === 'fr'
+                        ? 'Accepter les conditions d’utilisation et la politique de confidentialité'
+                        : 'Accept Terms of Use and Privacy Policy'
+                  }
                   checked={accepted}
                   onChange={(event) => setAccepted(event.target.checked)}
                   className="mt-1 w-5 h-5 accent-emerald-600"

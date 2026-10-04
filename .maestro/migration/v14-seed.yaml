@@ -1,0 +1,96 @@
+appId: com.spendwise.app
+---
+- launchApp:
+    stopApp: false
+    permissions:
+      all: allow
+- addMedia:
+    - "../../tests/fixtures/media/wp32-photo-01.jpg"
+- extendedWaitUntil:
+    visible: "Language"
+    timeout: 30000
+- assertVisible:
+    text: "Set up SpendWise"
+    optional: true
+- tapOn: "English"
+- tapOn: "Next"
+- tapOn: "Next"
+- tapOn:
+    text: "^PIN$"
+- inputText: "2468"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      text: "Confirm PIN"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "Confirm PIN"
+- inputText: "2468"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      text: "I agree to the"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "I agree to the"
+- scrollUntilVisible:
+    element:
+      text: "Finish setup"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "Finish setup"
+- extendedWaitUntil:
+    visible: "Money Remaining"
+    timeout: 30000
+- tapOn: "Set Monthly Budget"
+- tapOn: "0.00"
+- inputText: "1250"
+- hideKeyboard
+- tapOn: "Save Budget"
+- tapOn: "Add Expense"
+- tapOn: "0.00"
+- inputText: "55.50"
+- tapOn: "e.g. Supermarket, Coffee Shop, Rent"
+- inputText: "WP32 Upgrade Ledger"
+# Reuse the proven media flow: dismiss the IME and scroll inside the modal,
+# keeping the photo control above the fixed action footer before tapping.
+- tapOn: "Food"
+- swipe:
+    start: 50%, 74%
+    end: 50%, 34%
+    duration: 600
+- swipe:
+    start: 50%, 74%
+    end: 50%, 34%
+    duration: 600
+- tapOn: "Attach Photos.*"
+- swipe:
+    start: 50%, 76%
+    end: 50%, 45%
+    duration: 500
+- tapOn: "Choose Photo"
+- tapOn:
+    id: "com.google.android.providers.media.module:id/icon_thumbnail"
+    index: 0
+# Multi-select Photo Picker confirmation. The picker's confirm control is
+# button_add; "add_button" does not exist, so the previous optional:true taps
+# silently no-opped and attachment verification could never succeed. The control
+# label is dynamic ("Add (1)"), so match the stable resource id and let a
+# missing control fail here rather than mask the problem.
+- tapOn:
+    id: "com.google.android.providers.media.module:id/button_add"
+- extendedWaitUntil:
+    visible: "Attach Photos · 1"
+    timeout: 30000
+- tapOn: "Save Expense"
+- assertVisible: "WP32 Upgrade Ledger.*"
+- stopApp
+- launchApp
+- assertVisible: "SpendWise is Locked"
+# The v1.4 PIN field is autofocus. Do not depend on placeholder text being
+# exported through Android WebView accessibility.
+- inputText: "2468"
+- pressKey: enter
+- extendedWaitUntil:
+    visible: "WP32 Upgrade Ledger.*"
+    timeout: 30000

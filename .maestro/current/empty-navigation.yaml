@@ -1,0 +1,24 @@
+appId: com.spendwise.app
+---
+- launchApp:
+    stopApp: false
+- runFlow: ../helpers/onboard-current.yaml
+# These controls must reach Android accessibility even when the empty Home
+# content is taller than the viewport. Their painted pixels alone are no proof.
+- assertVisible: "Home"
+- assertVisible: "History"
+- assertVisible: "AI Insights"
+- assertVisible: "Statistics"
+- assertVisible: "Add Expense"
+- tapOn: "Open Settings"
+- tapOn: "Back to previous screen"
+- tapOn: "History"
+- assertVisible: "Add Expense"
+- tapOn: "AI Insights"
+- tapOn: "Statistics"
+- tapOn: "Home"
+# Empty Home has only the floating Add Expense control, so opening the editor
+# proves that control is operable rather than matching History's inline action.
+- tapOn: "Add Expense"
+- assertVisible: "Amount .*"
+- tapOn: "Cancel"

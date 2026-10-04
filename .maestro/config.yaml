@@ -1,0 +1,6 @@
+flows:
+  - "current/*.yaml"
+  - "migration/*.yaml"
+testOutputDir: "../artifacts/android-e2e/maestro"
+executionOrder:
+  continueOnFailure: false

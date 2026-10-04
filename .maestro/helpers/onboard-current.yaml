@@ -1,0 +1,27 @@
+appId: com.spendwise.app
+---
+# Gate on the step heading ("Language"), not the wizard's <h1> title.
+# The WebView accessibility bridge intermittently omits the h1 text node
+# ("Set up SpendWise") from the hierarchy while exposing the h2 step headings,
+# which made every onboarding-dependent flow time out at this gate.
+- extendedWaitUntil:
+    visible: "Language"
+    timeout: 120000
+# Sanity check that the wizard title also painted. Non-gating on purpose: the
+# text node is unreliable through the WebView bridge, but the h2 gate above is.
+- assertVisible:
+    text: "Set up SpendWise"
+    optional: true
+- tapOn: "English"
+- tapOn: "Next"
+- tapOn: "Next"
+- tapOn: "Accept Terms of Use and Privacy Policy"
+- scrollUntilVisible:
+    element:
+      text: "Finish setup"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "Finish setup"
+- extendedWaitUntil:
+    visible: "Money Remaining"
+    timeout: 120000

@@ -27,3 +27,8 @@ debug.keystore
 
 # WP31 backend installation registry (server runtime state)
 /.spendwise-security/
+
+# Generated WP32 test evidence (may include screenshots/logs from local runs)
+/artifacts/
+/playwright-report/
+/test-results/
