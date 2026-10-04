@@ -102,6 +102,18 @@ This target repair is pending native proof. Full sequential acceptance remains
 withheld until it passes. Build `37213179638` and web `37213179641` are green
 on the seed repair head.
 
+Head `00f1d37ca67a45d3d8f24889999cf89168a0fce7`, run `37213890908`:
+attempt 1 stops packaging the immutable v1.4 fixture (`:app:packageDebug`,
+underlying Gradle cause unreported), before native tests. One narrow retry
+successfully packages it, passes the seed and real legacy/device authentication,
+then proves retained ledger and $1,250 budget. The remaining failure is the
+editor's `Attach Photos` control: artifact `11307169556` shows
+`Attach Photos · 1` below the modal viewport with zero native bounds.
+**Test scrolling defect**, not lost media. The target now uses the protected
+media flow's two modal scroll gestures and post-expansion scroll; photo preview
+and restart/unlock assertions remain required. Native proof is pending.
+Build `37213890915` and web `37213890920` pass on this head.
+
 ### Second repair batch, 2026-10-04
 
 Native run `37159757487`, commit `7399b6d6ec473d93b1c90456f1ae89809b47a4b9`,

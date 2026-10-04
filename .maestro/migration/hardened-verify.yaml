@@ -15,7 +15,21 @@ appId: com.spendwise.app
 - assertVisible: ".*1,250.*"
 - tapOn: "WP32 Upgrade Ledger.*"
 - assertVisible: "Edit Expense"
+# The optional photo tool is below the modal viewport. Use the same physical
+# scroll sequence as the protected media flow before tapping and inspecting it.
+- swipe:
+    start: 50%, 74%
+    end: 50%, 34%
+    duration: 600
+- swipe:
+    start: 50%, 74%
+    end: 50%, 34%
+    duration: 600
 - tapOn: "Attach Photos.*"
+- swipe:
+    start: 50%, 76%
+    end: 50%, 45%
+    duration: 500
 - assertVisible: "Attach Photos · 1"
 - assertVisible: "View photos"
 - tapOn: "Cancel"

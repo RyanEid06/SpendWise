@@ -22,6 +22,11 @@ passing release candidate. Resume WP32; do not start WP33/WP34 or merge/release.
   from native accessibility. Artifact `11307397681` shows the credential field
   already focused. The target now enters the legacy PIN directly; all migration,
   authentication, ledger, budget, and photo assertions remain required.
+  Run `37213890908` then passes legacy/device authentication and ledger/budget
+  checks; artifact `11307169556` shows the photo control below the editor's
+  viewport. The target now scrolls using the protected media flow's gestures.
+  One pre-test fixture packaging failure cleared on a narrow retry. Latest
+  photo-control repair is pending native proof; Build/web on `00f1d37` pass.
 - Earlier attempts of corrected-head isolated run `37161873538`, Build
   `37161873533`, and web `37161873506` failed before steps because the account
   exhausted 3,000 included private Actions minutes with a $0 stopping budget.
