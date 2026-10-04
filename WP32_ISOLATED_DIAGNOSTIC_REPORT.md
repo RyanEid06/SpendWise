@@ -8,7 +8,7 @@ Original diagnostic head: `30147beef70ad9556799bbc421b368d713492f61`
 
 ## Executive status
 
-### Current checkpoint: native CI cannot start jobs
+### Current checkpoint: public-repository CI restored
 
 Published repair head: `4bd98fbc7d5eacfa342d233c79439f67ec1dfe05`.
 Local HEAD, origin tracking ref, and live branch match; ahead/behind is **0/0**.
@@ -17,22 +17,41 @@ bytes. Publication initially transferred a truncated source payload in commit
 `89777777a81857221c11a18eaa095ab0fdcd4567`; the published head corrects it and
 includes the runner regression. That intermediate commit is not acceptance evidence.
 
-GitHub runs on the corrected head failed before executing any job steps:
+Earlier GitHub attempts on the corrected head failed before any job steps:
 
 - isolated native run `37161873538`: all four jobs have zero steps;
 - Android Build run `37161873533`: `verify-debug` has zero steps;
 - WP32 web run `37161873506`: `web-e2e` has zero steps, including one narrow
   infrastructure retry (job `111317165609`).
 
-No runner logs exist (GitHub log storage returns `BlobNotFound`). Check records
-show failure annotations, but the GitHub connector does not support reading that
-endpoint. The user has been asked for the annotation message; its cause has not
-been established. No application assertion executed in these runs. Do not
-repeat jobs until the runner/account condition is identified and corrected.
+The user's GitHub annotations and billing screenshots establish the cause:
+the account consumed all **3,000/3,000 included Actions minutes**, with an
+Actions budget of **$0** and stop-usage enabled. No application assertion ran
+in those attempts. The included allowance showed a reset in 29 days.
 
-Confirmed native coverage remains **18/22**, comprising the protected 15 and
-the three green targets on `7399b6d6ec473d93b1c90456f1ae89809b47a4b9`.
-The four repaired targets below remain **pending native proof**. The final
+The user explicitly authorized changing `RyanEid06/SpendWise` to public and
+performed the CLI visibility change. The connector verified `private=false`
+and `visibility=public` on 2026-10-04. Retrying only the failed jobs in the
+three runs above now starts real runner steps. The private-repository included
+usage barrier is resolved; the earlier failures were billing infrastructure,
+not product or test failures.
+
+Restored-runner results on the same source head:
+
+- Isolated run `37161873538`, attempt 2: corruption (`111465950153`),
+  cancellation/retry (`111465950055`), and v1.4 seed (`111465950316`) pass.
+  Hardened upgrade (`111465950165`) fails in its legacy seed bootstrap at
+  `Confirm PIN`; upgrade verification is not reached.
+- Android Build `37161873533`, attempt 2, job `111465964722`: **GREEN**,
+  **226 Node checks**, dependency audits, web verification, sync, APK build,
+  and debug APK artifact `11306633130`.
+- Web E2E `37161873506`, attempt 3, job `111465980049`: **GREEN**, **54 checks**
+  (11 runner, 11 failure injection, 11 component, 10 browser, 3 accessibility,
+  8 layout). Full native intentionally skipped.
+
+Confirmed native coverage is **21/22**, comprising the protected 15, three
+first-batch targets, and three second-batch targets above. Only hardened upgrade
+remains unproven; its isolated matrix is now reduced to that one target. The final
 sequential 22-flow suite has **not been launched**; its label is still withheld
 until all isolated targets pass. WP32 remains incomplete; no merge or WP33/WP34.
 
@@ -43,8 +62,7 @@ and shell syntax pass. These do not replace native or Android APK acceptance.
 The pre-existing uncommitted browser test adds two contrast checks: its light
 theme check fails (observed ratio 1.0955 versus required 4.5), while dark passes.
 That edit is preserved, excluded from publication, and outside this repair scope.
-Latest actual CI greens remain the first batch's Android Build and web runs
-listed below, rather than current-head acceptance.
+Current-source Android Build and web CI are green as recorded above.
 
 Changed implementation/automation files since the objective's starting commit:
 `.github/workflows/wp32-e2e.yml`, `.github/workflows/wp32-isolated-gates.yml`,
@@ -56,6 +74,21 @@ Changed implementation/automation files since the objective's starting commit:
 `tests/wp32-android-runner.test.ts`, and `tests/wp32-failure-injection.test.ts`.
 This report and `WP32_HANDOFF.md` record the checkpoint. User's browser edit and
 untracked release folder are preserved. Real-device/TalkBack checks remain open.
+
+### Final isolated repair, 2026-10-04
+
+Hardened upgrade artifact `11306668428` shows the legacy app alive with the
+first PIN entered and Android's keyboard covering the confirmation field.
+The native screenshot and WebView accessibility tree establish a **test viewport
+defect**, not an app crash or migration defect. The same legacy seed passed in
+its independent job, explaining why this timing-sensitive assumption survived.
+
+The shared legacy seed now dismisses the keyboard and scrolls to the required
+`Confirm PIN` and agreement controls before tapping. Assertions remain required,
+the old APK remains frozen, and no production code changes. The hardened-upgrade
+job reruns the entire seed followed by migration verification; previously green
+isolated targets are excluded from the matrix. Native proof of this repair is
+pending. Full sequential acceptance remains withheld until it passes.
 
 ### Second repair batch, 2026-10-04
 

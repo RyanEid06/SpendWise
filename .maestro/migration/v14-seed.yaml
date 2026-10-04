@@ -18,8 +18,20 @@ appId: com.spendwise.app
 - tapOn:
     text: "^PIN$"
 - inputText: "2468"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      text: "Confirm PIN"
+    direction: DOWN
+    timeout: 30000
 - tapOn: "Confirm PIN"
 - inputText: "2468"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      text: "I agree to the"
+    direction: DOWN
+    timeout: 30000
 - tapOn: "I agree to the"
 - scrollUntilVisible:
     element:

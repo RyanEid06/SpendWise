@@ -11,15 +11,20 @@ passing release candidate. Resume WP32; do not start WP33/WP34 or merge/release.
   tracking/live branch match with 0/0 ahead/behind. Every changed remote blob
   matches the locally verified bytes.
 - First repaired matrix run `37159757487` proved import-v1, App Lock setup/auth,
-  and timeout green. Native confirmed count is **18/22**.
-- Four targets remain in the matrix: corruption, cancellation/retry, legacy
-  v1.4 seed, and hardened upgrade. Artifacts justified one narrow product repair
-  for completed-media migration corruption; other repairs are test/bootstrap.
-- Corrected-head isolated run `37161873538`, Build `37161873533`, and web
-  `37161873506` fail before any job steps. One web-job retry does the same.
-  Logs are absent; connector cannot fetch annotations. Await the annotation
-  message requested from the user, then restore runner availability before
-  retrying those four targets. Do not infer a product failure or keep retrying.
+  and timeout green. Restored-runner attempt 2 of `37161873538` additionally
+  proves corruption, cancellation/retry, and v1.4 seed. Coverage is **21/22**.
+- Only hardened upgrade remains in the matrix. Its latest failure is legacy
+  seed's `Confirm PIN` covered by the keyboard, before upgrade verification.
+  Artifact `11306668428` justifies keyboard dismissal and required scrolling
+  in the seed flow. One narrow completed-media corruption product repair was
+  validated; remaining repairs are test/bootstrap. Latest seed repair is pending.
+- Earlier attempts of corrected-head isolated run `37161873538`, Build
+  `37161873533`, and web `37161873506` failed before steps because the account
+  exhausted 3,000 included private Actions minutes with a $0 stopping budget.
+  The user authorized and performed the CLI visibility change; the connector
+  verified SpendWise is public. Failed-job retries now execute runner steps.
+  The billing barrier is resolved. Android Build attempt 2 passes 226 Node
+  checks and uploads APK artifact `11306633130`; web attempt 3 passes 54 checks.
 - Local **237 Node checks**, **11 component checks**, and **21 published browser/
   accessibility/layout checks** pass, plus build/shell checks. CI acceptance on
   this source head is pending. Existing uncommitted light-theme contrast test
