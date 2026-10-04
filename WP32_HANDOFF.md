@@ -27,6 +27,11 @@ passing release candidate. Resume WP32; do not start WP33/WP34 or merge/release.
   viewport. The target now scrolls using the protected media flow's gestures.
   One pre-test fixture packaging failure cleared on a narrow retry. Latest
   photo-control repair is pending native proof; Build/web on `00f1d37` pass.
+  Run `37214978728` on `613f422` passes migrated-photo inspection. Its restart
+  assertion expects the manual app screen while the correct Android cold-start
+  challenge is active (`11307968396`). The test now requires that system
+  challenge and hidden ledger before authentication, then verifies retained
+  photos. Build `37214978744` and web `37214978700` pass; target proof is pending.
 - Earlier attempts of corrected-head isolated run `37161873538`, Build
   `37161873533`, and web `37161873506` failed before steps because the account
   exhausted 3,000 included private Actions minutes with a $0 stopping budget.

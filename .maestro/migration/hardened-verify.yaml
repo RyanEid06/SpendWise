@@ -35,8 +35,13 @@ appId: com.spendwise.app
 - tapOn: "Cancel"
 - stopApp
 - launchApp
-- assertVisible: "SpendWise is Locked"
-- tapOn: "Authenticate & Unlock"
+# A cold launch of migrated native App Lock prompts through Android before
+# opening protected storage (src/main.tsx). The app lock fallback is shown only
+# after cancellation. Require the system challenge and hidden ledger instead.
+- extendedWaitUntil:
+    visible: "Unlock SpendWise"
+    timeout: 30000
+- assertNotVisible: "WP32 Upgrade Ledger.*"
 - runFlow: ../helpers/android-device-pin.yaml
 - extendedWaitUntil:
     visible: "WP32 Upgrade Ledger.*"

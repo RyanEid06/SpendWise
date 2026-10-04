@@ -114,6 +114,16 @@ media flow's two modal scroll gestures and post-expansion scroll; photo preview
 and restart/unlock assertions remain required. Native proof is pending.
 Build `37213890915` and web `37213890920` pass on this head.
 
+Head `613f422333742ad409905c63f2802c362ee3a91d`, run `37214978728`,
+passes migrated-photo inspection, then fails expecting the application's manual
+lock screen after cold restart. Artifact `11307968396` shows Android SystemUI
+`Unlock SpendWise` and `lockPassword`. `src/main.tsx` deliberately authenticates
+migrated native users before opening protected storage; the fallback app screen
+appears after cancellation. **Test expectation defect.** The target now requires
+the real system challenge and an invisible ledger, uses the existing credential
+helper, and retains ledger/photo verification after unlock. Build `37214978744`
+and web `37214978700` pass. Final target proof remains pending.
+
 ### Second repair batch, 2026-10-04
 
 Native run `37159757487`, commit `7399b6d6ec473d93b1c90456f1ae89809b47a4b9`,
