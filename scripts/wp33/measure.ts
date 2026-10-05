@@ -1,5 +1,21 @@
 import { performance } from 'node:perf_hooks';
 
+let clockActive = false;
+/** Harness-only clock; real performance.now and cryptographic operations are untouched. */
+export async function withBenchmarkClock<T>(timestamp: number, work: () => Promise<T>): Promise<T> {
+  if (!Number.isSafeInteger(timestamp) || timestamp <= 0 || clockActive) throw new Error('INVALID_BENCHMARK_CLOCK');
+  const RealDate = globalThis.Date;
+  function FixedDate(...args: unknown[]): Date | string {
+    if (!new.target) return new RealDate(timestamp).toString();
+    return Reflect.construct(RealDate, args.length ? args : [timestamp], RealDate);
+  }
+  Object.setPrototypeOf(FixedDate, RealDate); FixedDate.prototype = RealDate.prototype;
+  Object.defineProperty(FixedDate, 'now', { value: () => timestamp });
+  clockActive = true; globalThis.Date = FixedDate as unknown as DateConstructor;
+  try { return await work(); }
+  finally { globalThis.Date = RealDate; clockActive = false; }
+}
+
 export interface OperationMeasurement {
   operation: string;
   samplesMs: number[];

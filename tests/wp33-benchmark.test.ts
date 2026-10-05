@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { measureOperation, summarizeSamples } from '../scripts/wp33/measure';
+import { measureOperation, summarizeSamples, withBenchmarkClock } from '../scripts/wp33/measure';
 import { runBenchmarks, BENCHMARK_OPERATIONS } from '../scripts/wp33/benchmark';
 import { createSyntheticLedger, createSyntheticMedia } from '../scripts/wp33/fixtures';
 
@@ -32,4 +32,16 @@ test('fixture limits are enforced without widening archive or media protections'
   assert.throws(() => createSyntheticMedia(createSyntheticLedger(0), 1));
   assert.throws(() => createSyntheticMedia(createSyntheticLedger(100), 801));
   assert.notDeepEqual(createSyntheticLedger(100, 1), createSyntheticLedger(100, 2));
+});
+test('synthetic clock preserves explicit Date construction and restores real time after failures', async () => {
+  const original = Date; const fixed = Date.UTC(2026, 9, 5, 12);
+  await withBenchmarkClock(fixed, async () => {
+    assert.equal(Date.now(), fixed); assert.equal(new Date().getTime(), fixed);
+    assert.equal(new Date(2025, 0, 2, 3, 4).getTime(), new original(2025, 0, 2, 3, 4).getTime());
+    assert.equal(Date.UTC(2025, 0, 2), original.UTC(2025, 0, 2));
+  });
+  assert.equal(Date, original);
+  const failure = new Error('clock test failure');
+  await assert.rejects(withBenchmarkClock(fixed, async () => { throw failure; }), (error) => error === failure);
+  assert.equal(Date, original);
 });

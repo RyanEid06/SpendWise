@@ -4,11 +4,12 @@ import { cpus, platform, arch, release } from 'node:os';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { performance } from 'node:perf_hooks';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { CategoryStatisticsSection } from '../../src/components/CategoryStatisticsSection';
-import { BENCHMARK_SIZES, BENCHMARK_ANCHOR, FIXTURE_SEED, createSyntheticLedger, createSyntheticMedia, createMemoryStorage, createRestoreHarness } from './fixtures';
-import { measureOperation, type OperationMeasurement } from './measure';
+import { BENCHMARK_SIZES, BENCHMARK_ANCHOR, FIXTURE_SEED, FIXTURE_CLOCK, createSyntheticLedger, createSyntheticMedia, createMemoryStorage, createRestoreHarness } from './fixtures';
+import { measureOperation, withBenchmarkClock, type OperationMeasurement } from './measure';
 import { LocalDataStoreImpl } from '../../src/utils/localDataStore';
 import { financialStatesEqual, persistWebFinancialState, readLegacyFinancialState } from '../../src/utils/financialState';
 import { sortHistoryExpenses, searchHistoryExpenses, filterHistoryByDay, groupHistoryByDay, groupHistoryByCategory } from '../../src/utils/historyView';
@@ -38,7 +39,7 @@ export interface BenchmarkDataset {
   correctness: { expenses: number; totalCents: number; idSum: number };
 }
 export interface BenchmarkReport {
-  format: 'spendwise-benchmark-v1'; generatedAt: string; revision: string; fixture: { seed: number; version: 1; distribution: 'ten-months' };
+  format: 'spendwise-benchmark-v1'; generatedAt: string; revision: string; fixture: { seed: number; version: 1; distribution: 'ten-months'; clockTimestamp: number };
   environment: BenchmarkEnvironment; samples: number; warmups: number; datasets: BenchmarkDataset[];
 }
 export interface BenchmarkOptions { sizes?: readonly number[]; samples?: number; warmups?: number; operations?: readonly string[]; onDataset?: (dataset: BenchmarkDataset) => void; }
@@ -46,6 +47,10 @@ const passphrase = 'WP33 synthetic benchmark passphrase';
 const settings = { currencyCode: 'USD', themeMode: 'SYSTEM', language: 'en' } as const;
 
 export async function runBenchmarks(options: BenchmarkOptions = {}): Promise<BenchmarkReport> {
+  return withBenchmarkClock(FIXTURE_CLOCK, () => runActualBenchmarks(options));
+}
+
+async function runActualBenchmarks(options: BenchmarkOptions): Promise<BenchmarkReport> {
   if (Number(process.versions.node.split('.')[0]) !== 22) throw new Error('BENCHMARK_REQUIRES_NODE_22');
   const samples = options.samples ?? 5; const warmups = options.warmups ?? 1;
   const sizes = options.sizes ?? BENCHMARK_SIZES;
@@ -53,8 +58,8 @@ export async function runBenchmarks(options: BenchmarkOptions = {}): Promise<Ben
   if (options.operations?.some((value) => !(BENCHMARK_OPERATIONS as readonly string[]).includes(value))) throw new Error('UNKNOWN_BENCHMARK_OPERATION');
   const cpu = cpus();
   const report: BenchmarkReport = {
-    format: 'spendwise-benchmark-v1', generatedAt: new Date().toISOString(), revision: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
-    fixture: { seed: FIXTURE_SEED, version: 1, distribution: 'ten-months' }, samples, warmups,
+    format: 'spendwise-benchmark-v1', generatedAt: new Date(performance.timeOrigin + performance.now()).toISOString(), revision: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
+    fixture: { seed: FIXTURE_SEED, version: 1, distribution: 'ten-months', clockTimestamp: FIXTURE_CLOCK }, samples, warmups,
     environment: { runtime: 'node', nodeMajor: 22, nodeVersion: process.versions.node, platform: platform(), arch: arch(), osRelease: release(), cpu: cpu[0]?.model ?? 'unknown', cpuCount: cpu.length, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, storageMode: 'isolated-web-memory-adapter', cryptoMode: 'production-argon2id-and-webcrypto' }, datasets: [],
   };
   for (const size of sizes) {
