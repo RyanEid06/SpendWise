@@ -23,4 +23,8 @@ test('full-media measurements exercise production archive and every restored byt
   slow.operations[0].samplesMs = slow.operations[0].samplesMs.map((value) => value * 100);
   Object.assign(slow.operations[0], { medianMs: slow.operations[0].medianMs * 100, minMs: slow.operations[0].minMs * 100, maxMs: slow.operations[0].maxMs * 100, madMs: slow.operations[0].madMs * 100 });
   assert.equal(compareFullMedia(slow, baseline).warnings.length, 1);
+  const invalidTiming = structuredClone(report); invalidTiming.operations[0].medianMs = NaN;
+  assert.equal(compareFullMedia(invalidTiming, baseline).failures.length, 1);
+  const invalidBudget = structuredClone(baseline); invalidBudget.operations[0].warningMs = NaN;
+  assert.equal(compareFullMedia(report, invalidBudget).failures.length, 1);
 });

@@ -1,6 +1,6 @@
 # SpendWise roadmap and delivery record
 
-Updated 2026-10-04. This is the single project record for completed work,
+Updated 2026-10-05. This is the single project record for completed work,
 implemented constraints, verification and remaining production work. README is
 the quick-start guide. Detailed superseded plans/diagnostic timelines remain in
 Git history; existing regression tests and native runners remain active.
@@ -13,8 +13,9 @@ Git history; existing regression tests and native runners remain active.
 - A signed 2.0 trial was integrated; the latest public GitHub Release is still
   [v1.4.0](https://github.com/RyanEid06/SpendWise/releases/tag/v1.4.0), checked
   2026-10-04.
-- WP33 observability/performance and WP34 production certification have not
-  started. Physical-device/TalkBack validation remains separate.
+- WP33 is implemented on `wp33/observability-performance`; final exact-head CI
+  acceptance is pending. WP34 has not started. Physical-device/TalkBack
+  validation remains separate.
 
 ## Completed work — what we added
 
@@ -107,7 +108,7 @@ certification claim.
   platform CA trust; certificate pinning is not deployed.
 - Logs exclude financial bodies/photos, passphrases, keys and raw tokens. Existing
   security telemetry records sanitized metadata/hashed scopes. Exportable support
-  diagnostics, operational aggregates and performance budgets remain WP33 work.
+  diagnostics and operational aggregates now follow the WP33 contracts below.
 
 ## Backup v3 format and compatibility
 
@@ -245,26 +246,144 @@ Before production release, verify on a physical Android device:
 - Backup passphrase fields, warnings, Merge/Replace and errors are announced without exposing secrets.
 - App Lock announces state/authentication; cancellation leaves the app protected.
 
-## Remaining roadmap — not started
+## WP33 delivery and remaining roadmap
 
 ### WP33 — privacy-safe observability and performance
 
-Depends on merged WP32. Build inspectable user-approved support diagnostics using
-technical metadata and sanitized recent error codes. Do not collect amounts,
-budgets, descriptions/notes, photos, receipt text, backup contents, PINs,
-passphrases, keys, tokens or raw AI requests.
+Local support diagnostics expose inspect/export/clear controls in EN/FR/AR
+Settings and remain available after storage initialization fails. Runtime
+allowlists sanitize recording, persisted reload and export. Reports include
+version/build/schema/backup format, platform, encrypted initialization/migration
+state, fixed error/operation codes, bounded durations/status classes and safe
+media integrity counts. They exclude amounts, budgets, descriptions, notes,
+merchant/receipt text, category activity, photos, backup/CSV contents, PINs,
+passphrases, keys, tokens, raw installation identifiers, challenges/signatures,
+prompts and financial AI responses. Unknown fields/codes cannot pass through.
+Only failures/fallbacks retain timestamps: at most 128 records, seven days and
+64 KiB. Successful operations retain fixed aggregate timing buckets. Export is
+an explicit local technical-diagnostics file; no tracking/crash SDK or remote
+diagnostic upload is added. Clear preserves financial data and current technical
+state. Best-effort recording never changes the operation result or failure.
 
-Operational aggregates should cover request/error counts, 429/auth failures,
-latency percentiles, model/fallback use, provider-cost bounds and malformed/
-oversized requests. External crash reporting is optional; adding a provider
-requires consent/disclosure review, scrubbing, no screenshots/session replay,
-SDK collection verification and retention/deletion controls.
+Backend metrics use eight fixed API route labels plus `other`, fixed reason
+codes, saturating counters and 512-sample request/provider latency windows
+(p50/p95/p99). They cover status classes, 429, aborts, auth/challenge/proof,
+malformed/oversized requests, quotas, provider attempts, roles, retries and
+fallbacks. A one-minute aggregate report and per-tag ten-message/minute limit
+bound emitted logging; host log retention remains an operator responsibility.
+Only existing salted scope hashes and allowlisted technical fields are logged.
+No request bodies, arbitrary paths/errors, photos or raw AI payloads enter the
+logger. No new endpoint or health disclosure is added. Cost bounds are configured
+daily admissions × model count × two attempts, not a monetary invoice estimate.
 
-Benchmark empty, 100, 1,000, 10,000 and stress ledgers for startup/read,
-History search/filter, Statistics/category expansion, backup create/validate/
-restore and media scans. Derive budgets from measured behavior; choose CI fail/
-warning thresholds according to stability. Acceptance requires useful safe
-support data, visible backend anomalies and a measurable regression baseline.
+`npm run test:wp33` runs privacy/backend/fixture/large-ledger/equivalence/budget
+contracts, then all 25 actual benchmark operations at 0/100/1,000/10,000/25,000
+expenses. Seed 330026, UTC and a fixed 2026-10-05 clock isolate calendar behavior;
+real monotonic timers, production Argon2id/AES-GCM and every result assertion
+remain active. Each Node operation has one warmup and five independent samples,
+on fresh synthetic adapters where mutation requires isolation. Two complete
+runs establish the baseline. Media inventory scales to 1,000 generated records;
+codec cases use generated 4 KiB/5 MiB bytes, not photo decoding or disk I/O.
+Node web-memory storage timing is distinct from native SQLCipher timing.
+Separately, 100 expenses/32 copies of the existing synthetic JPEG (11,376,864
+media bytes) exercise full-media archive creation, decrypt, checksum validation
+and restore staging. Every restored byte and attachment record is checked.
+Two five-sample runs measured medians 206.35/54.93/97.00/318.49 ms respectively;
+warning thresholds are 943.81/181.03/261.60/1,175.66 ms, derived from the same
+measured envelope, with no hard timing failure. Environment, samples and source
+are in `scripts/wp33/baselines/full-media-windows-node22.json`; the normal WP33
+gate measures and compares this case too. This uses isolated media adapters,
+not native disk I/O or photo decoding.
+
+Measured Node environment: Node 22.23.3, Windows 10.0.26200 x64, Intel
+i7-13620H/16 logical CPUs, UTC, isolated web-memory adapter, production crypto.
+The table contains pooled median milliseconds across the two runs. Values
+rounded to 0.00 are below the table precision. Exact medians, maxima, MAD,
+source SHAs, dates, per-size thresholds and reasons are in
+`scripts/wp33/baselines/windows-node22.json`.
+
+| Operation | 0 | 100 | 1,000 | 10,000 | 25,000 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| storage.web.init | 0.03 | 0.10 | 0.69 | 5.19 | 14.57 |
+| storage.web.read | 0.01 | 0.08 | 0.60 | 4.75 | 15.40 |
+| storage.web.persist | 0.01 | 0.15 | 1.44 | 11.63 | 31.20 |
+| ledger.initial | 0.01 | 0.02 | 0.06 | 0.27 | 1.10 |
+| history.sort | 0.00 | 0.02 | 0.15 | 1.03 | 3.92 |
+| history.search | 0.00 | 0.03 | 0.22 | 1.67 | 5.67 |
+| history.category | 0.00 | 0.02 | 0.15 | 1.38 | 3.57 |
+| history.date | 0.00 | 0.03 | 0.18 | 1.70 | 4.15 |
+| history.group.day | 0.00 | 0.11 | 0.41 | 2.71 | 8.03 |
+| history.group.category | 0.00 | 0.01 | 0.16 | 1.06 | 3.70 |
+| statistics.monthly | 0.06 | 0.21 | 0.40 | 2.28 | 5.74 |
+| statistics.all | 0.06 | 3.03 | 3.67 | 11.77 | 23.13 |
+| statistics.ranking | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| statistics.detail | 0.41 | 4.96 | 4.74 | 4.96 | 4.75 |
+| statistics.localAI | 0.01 | 0.17 | 0.95 | 9.34 | 21.69 |
+| backup.v3.create | 24.63 | 30.70 | 71.84 | 546.75 | 1600.66 |
+| backup.v3.header | 0.02 | 0.02 | 0.06 | 0.18 | 0.28 |
+| backup.v3.decrypt | 22.29 | 22.07 | 23.27 | 24.00 | 30.46 |
+| backup.validate.parse | 0.30 | 0.55 | 2.80 | 26.00 | 79.70 |
+| backup.restore.prepare | 0.00 | 0.35 | 1.90 | 28.69 | 100.23 |
+| backup.restore.replace | 22.58 | 25.50 | 34.24 | 123.46 | 411.02 |
+| backup.restore.merge | 23.61 | 26.93 | 41.23 | 220.95 | 828.73 |
+| media.inventory.integrity | 0.01 | 0.13 | 0.64 | 0.75 | 2.36 |
+| media.codec.small | 0.19 | 0.10 | 0.12 | 0.17 | 0.17 |
+| media.codec.large | 10.23 | 10.49 | 9.29 | 9.72 | 14.68 |
+
+The measured envelope is max(observed maximum, median + 6×MAD). Warnings start
+at 2× that envelope. Severe failures require **every** repeated sample above
+6× the envelope for History search, all-time Statistics or restore preparation
+at sizes ≥1,000, on a matching runtime/CPU/platform/timezone/adapter/crypto
+environment. Small, crypto-heavy and browser/native timings are warning-only.
+Missing/invalid sizes, operations, samples, summaries or correctness receipts
+always fail. A changed environment reports incomparable timings explicitly;
+Linux runners cannot inherit a certified Windows timing budget. Comparison
+never updates baselines. Recollect two isolated Node runs with
+`npm run benchmark:wp33 -- <report.json>` and use `createBenchmarkBaseline`
+after reviewing measured evidence and environment metadata.
+
+`npm run test:wp33:browser` measures real History/Statistics React rendering,
+commit, search and category detail in pinned Chromium 153.0.8010.12, 390×844,
+UTC, development mode. All five sizes run in distributed ten-month and
+concentrated single-month layouts, with five samples and ID/count/total
+assertions. History initial render medians (distributed/concentrated) are
+2/2, 8/41, 44/301, 331/1,904 and 548/4,682 ms respectively. Full metric samples,
+spread and warning thresholds are in
+`scripts/wp33/baselines/browser-windows-chromium.json`. Full DOM rendering at
+25k concentrated entries remains expensive; this is not a subsecond or
+physical-device responsiveness certification. Tracing is disabled only in
+this performance harness because snapshotting the large DOM perturbs timings;
+WP32 traces, assertions and flows remain intact.
+
+Measured repairs: restore preparation originally scanned IDs/duplicates
+quadratically (10k 933.67 ms; 25k 4,640.47 ms). Indexed candidates now retain the
+original strict amount predicate, ordering, duplicate rules and ID mappings;
+the reference implementation remains in equivalence tests. Repeated per-row
+Intl construction was the second measured bottleneck. A maximum of two number
+and nine date/time formatters is retained, never formatted financial values.
+Independent EN/FR/AR, currency, DST and timezone-change equivalence tests guard
+the repair. Diagnostics, logging, latency rings and listener/timer cleanup are
+bounded. Heap deltas are approximate process observations affected by GC, not
+retained-heap certification.
+
+Native collection is restricted to a named disposable `wp33-synthetic` debug
+emulator, after the normal isolated WP32 restore and before App Lock mutations.
+It reads only re-sanitized technical diagnostics and measures three actual
+cold encrypted open/read runs without changing credentials or bypassing crypto.
+No local SDK/emulator was available; actual CI receipt remains pending. Native
+large-ledger rendering, device reboot/OEM timing and physical-device performance
+are unmeasured. Existing WP32 migration, encrypted media, backup and Undo gates
+remain required.
+
+Local validation: 318/318 Node checks before the review follow-up, ten performance browser cases, extended
+TypeScript/Vite and Capacitor sync pass. Production audit has zero findings;
+the high-severity full audit passes with three moderate development-only
+Capacitor CLI/xcode/uuid findings. The full WP32 gate passes 22 Node checks and
+36 executable web checks. Exact-head Android/native/
+deployed-smoke receipts are pending. Android Build runs WP33 after retained
+WP32/signing checks and before sync/build; WP32 E2E adds separate browser/native
+receipts. Safe compact artifacts have seven-day retention. Checkout selects
+the source PR head. WP34 and automatic merge/release remain outside this work.
 
 ### WP34 — production security and release gate
 

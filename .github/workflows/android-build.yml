@@ -129,6 +129,7 @@ jobs:
             artifacts/wp33/ci-benchmark.json
             artifacts/wp33/ci-budget-result.json
             artifacts/wp33/ci-full-media.json
+            artifacts/wp33/ci-full-media-budget-result.json
           if-no-files-found: ignore
           retention-days: 7
 
