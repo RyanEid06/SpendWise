@@ -4,7 +4,7 @@ import { Expense, Language } from '../types';
 import { getCategoryInfo } from '../utils/categories';
 import { formatCurrency } from '../utils/currency';
 import { getLocalizedCategoryName } from '../utils/translations';
-import { formatHistoryTime, localeForLanguage } from '../utils/historyView';
+import { formatHistoryTime, formatHistoryDate } from '../utils/historyView';
 import { ta } from '../utils/attachmentTranslations';
 import { wp17Copy } from '../utils/wp17Copy';
 
@@ -14,7 +14,7 @@ interface ExpenseItemCardProps {
 export const ExpenseItemCard: React.FC<ExpenseItemCardProps> = ({ expense,currencyCode,language,attachmentCount,onClick }) => {
   const catInfo=getCategoryInfo(expense.category), localizedCat=getLocalizedCategoryName(expense.category,language);
   const hasNote=Boolean(expense.note?.trim());
-  const localizedDate=new Intl.DateTimeFormat(localeForLanguage(language),{month:'short',day:'numeric'}).format(new Date(expense.date));
+  const localizedDate=formatHistoryDate(expense.date,language);
   return <div className="relative bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 rounded-2xl shadow-xs transition-all hover:border-slate-300 dark:hover:border-slate-700">
     <div onClick={onClick} role="button" tabIndex={0}
       aria-label={`${expense.description}, ${formatCurrency(expense.amount,currencyCode)}, ${localizedCat}`}

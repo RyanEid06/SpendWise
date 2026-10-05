@@ -25,6 +25,31 @@ const LOCALES: Record<Language, string> = {
   ar: 'ar-LB',
 };
 
+type HistoryFormatterKind = 'day' | 'dayYear' | 'time';
+const historyFormatters: Record<Language, Partial<Record<HistoryFormatterKind, Intl.DateTimeFormat>>> = { en: {}, fr: {}, ar: {} };
+
+function historyFormatter(language: Language, kind: HistoryFormatterKind): Intl.DateTimeFormat {
+  const options: Intl.DateTimeFormatOptions = kind === 'time'
+    ? { hour: 'numeric', minute: '2-digit', timeZone: 'UTC' }
+    : { month: 'short', day: 'numeric', year: kind === 'dayYear' ? 'numeric' : undefined, timeZone: 'UTC' };
+  const cache = historyFormatters[language];
+  if (!cache) return new Intl.DateTimeFormat(undefined, options);
+  return cache[kind] ??= new Intl.DateTimeFormat(LOCALES[language], options);
+}
+
+// Project current local calendar fields into UTC. Reused formatters therefore
+// remain correct after a system timezone change, including historical DST.
+function localCalendarDate(timestamp: number): Date {
+  const local = new Date(timestamp); const projected = new Date(0);
+  projected.setUTCFullYear(local.getFullYear(), local.getMonth(), local.getDate());
+  projected.setUTCHours(local.getHours(), local.getMinutes(), local.getSeconds(), local.getMilliseconds());
+  return projected;
+}
+
+export function formatHistoryDate(timestamp: number, language: Language): string {
+  return historyFormatter(language, 'day').format(localCalendarDate(timestamp));
+}
+
 export function localeForLanguage(language: Language): string {
   return LOCALES[language];
 }
@@ -139,18 +164,12 @@ export function formatHistoryGroupLabel(
     return 'Yesterday';
   }
 
-  return new Intl.DateTimeFormat(localeForLanguage(language), {
-    month: 'short',
-    day: 'numeric',
-    year: new Date(timestamp).getFullYear() === new Date(nowTimestamp).getFullYear() ? undefined : 'numeric',
-  }).format(new Date(timestamp));
+  const kind = new Date(timestamp).getFullYear() === new Date(nowTimestamp).getFullYear() ? 'day' : 'dayYear';
+  return historyFormatter(language, kind).format(localCalendarDate(timestamp));
 }
 
 export function formatHistoryTime(timestamp: number, language: Language): string {
-  return new Intl.DateTimeFormat(localeForLanguage(language), {
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(new Date(timestamp));
+  return historyFormatter(language, 'time').format(localCalendarDate(timestamp));
 }
 
 export function swipeDeleteProgress(offsetX: number, width: number, isRtl: boolean): number {

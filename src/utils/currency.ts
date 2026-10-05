@@ -105,16 +105,18 @@ export function convertLbpToUsd(lbp: number): number {
   return convertCurrencyAmount(lbp, 1 / LBP_RATE);
 }
 
+const numberFormatters: Partial<Record<0 | 2, Intl.NumberFormat>> = {};
+
 export function formatCurrency(
   amount: number,
   currencyCode: string = DEFAULT_CURRENCY_CODE
 ): string {
   const currency = getCurrency(currencyCode);
   const decimals = (currency.code === 'JPY' || currency.code === 'LBP') ? 0 : 2;
-  const formatted = new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  }).format(amount);
+  const formatter = numberFormatters[decimals] ??= new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: decimals, maximumFractionDigits: decimals,
+  });
+  const formatted = formatter.format(amount);
 
   return currency.symbolPrefix !== false
     ? `${currency.symbol}${formatted}`
