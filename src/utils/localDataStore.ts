@@ -3,6 +3,7 @@ import type { SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { Expense, ExpenseAttachment, MonthlyBudget } from '../types';
 import { applySpendWiseSchema } from '../data/databaseSchema';
 import { nativeEncryptedDatabaseService } from '../data/NativeEncryptedDatabaseService';
+import { diagnostics, measureDiagnostic } from '../services/diagnostics/diagnostics';
 import {
   cloneFinancialState,
   FinancialState,
@@ -74,20 +75,25 @@ export class LocalDataStoreImpl {
     if (this.initialized) return;
     this.storage = storage;
     this.native = Capacitor.getPlatform() === 'android';
+    diagnostics.setState({ platform: this.native ? 'android' : 'web', databaseOpen: false, databaseEncrypted: false });
 
     if (!this.native) {
-      recoverWebFinancialTransaction(storage);
-      this.state = readLegacyFinancialState(storage);
+      this.state = await measureDiagnostic('storage.init', async () => {
+        recoverWebFinancialTransaction(storage);
+        return readLegacyFinancialState(storage);
+      });
       this.initialized = true;
+      diagnostics.setState({ databaseOpen: true });
       return;
     }
 
-    this.db = await nativeEncryptedDatabaseService.open(storage);
-    await this.applySchemaMigrations();
-    await this.migrateLegacyLocalStorage(storage);
-    this.state = await this.loadNativeState();
-    await nativeEncryptedDatabaseService.finalizePlaintextSourceCleanup(storage);
+    this.db = await measureDiagnostic('storage.open', () => nativeEncryptedDatabaseService.open(storage));
+    await measureDiagnostic('storage.schema', () => this.applySchemaMigrations());
+    await measureDiagnostic('storage.migration', () => this.migrateLegacyLocalStorage(storage));
+    this.state = await measureDiagnostic('storage.read', () => this.loadNativeState());
+    await measureDiagnostic('storage.migration', () => nativeEncryptedDatabaseService.finalizePlaintextSourceCleanup(storage));
     this.initialized = true;
+    diagnostics.setState({ databaseOpen: true, databaseEncrypted: true });
   }
 
   isNativeSqlite(): boolean {

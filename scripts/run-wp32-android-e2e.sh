@@ -184,6 +184,11 @@ run_flow import-v2-data .maestro/current/import-v2-data.yaml
 reset_app
 run_flow import-v2-full .maestro/current/import-v2-full.yaml
 
+if [ "${WP33_NATIVE_BENCHMARK:-0}" = "1" ]; then
+  WP33_NATIVE_FIXTURE="wp32-v2-full" ADB_SERIAL="${ANDROID_SERIAL:-emulator-5554}" bash scripts/run-wp33-native-benchmark.sh \
+    "$RESULT_ROOT/wp33-native-benchmark.json"
+fi
+
 echo "== Native App Lock cancellation and retry =="
 adb shell locksettings set-pin 2468 >/dev/null
 reset_app

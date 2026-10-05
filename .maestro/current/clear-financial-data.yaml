@@ -2,6 +2,11 @@ appId: com.spendwise.app
 ---
 - launchApp
 - tapOn: "Open Settings"
+- scrollUntilVisible:
+    element:
+      text: "Clear App Data.*"
+    direction: DOWN
+    timeout: 30000
 - tapOn: "Clear App Data.*"
 - assertVisible: "Clear Financial Data?"
 - tapOn: "Erase Financial Data"

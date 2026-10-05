@@ -252,15 +252,43 @@ function normalizeBackupExpense(item: ExpenseBackupItem): Expense {
   };
 }
 
-function isDuplicateExpense(incoming: ExpenseBackupItem, existing: Expense[]): boolean {
-  return existing.some(
-    (expense) =>
-      (incoming.createdAt === expense.createdAt && Math.abs(incoming.amount - expense.amount) < 0.001) ||
-      (incoming.date === expense.date &&
-        Math.abs(incoming.amount - expense.amount) < 0.001 &&
-        expense.description.trim().toLowerCase() === incoming.description.trim().toLowerCase() &&
-        expense.category.trim().toLowerCase() === incoming.category.trim().toLowerCase())
-  );
+/** Candidate buckets narrow the search; the original strict tolerance decides equality. */
+class DuplicateExpenseIndex {
+  private readonly byCreatedAt = new Map<number, Map<number, Expense[]>>();
+  private readonly byContent = new Map<string, Map<number, Expense[]>>();
+
+  private contentKey(item: Expense | ExpenseBackupItem): string {
+    return JSON.stringify([item.date, item.description.trim().toLowerCase(), item.category.trim().toLowerCase()]);
+  }
+
+  private addTo<K>(index: Map<K, Map<number, Expense[]>>, key: K, item: Expense): void {
+    let amounts = index.get(key);
+    if (!amounts) { amounts = new Map(); index.set(key, amounts); }
+    const bucket = Math.floor(item.amount * 1000);
+    const entries = amounts.get(bucket);
+    if (entries) entries.push(item); else amounts.set(bucket, [item]);
+  }
+
+  add(item: Expense): void {
+    this.addTo(this.byCreatedAt, item.createdAt, item);
+    this.addTo(this.byContent, this.contentKey(item), item);
+  }
+
+  private hasAmount(amounts: Map<number, Expense[]> | undefined, incoming: ExpenseBackupItem): boolean {
+    if (!amounts) return false;
+    const bucket = Math.floor(incoming.amount * 1000);
+    // Two neighboring buckets also cover floating-point multiplication at large
+    // magnitudes. Above exact integer range, equal floats still share a bucket.
+    for (const candidate of new Set([bucket - 2, bucket - 1, bucket, bucket + 1, bucket + 2])) {
+      if (amounts.get(candidate)?.some((item) => Math.abs(incoming.amount - item.amount) < 0.001)) return true;
+    }
+    return false;
+  }
+
+  has(incoming: ExpenseBackupItem): boolean {
+    return this.hasAmount(this.byCreatedAt.get(incoming.createdAt), incoming) ||
+      this.hasAmount(this.byContent.get(this.contentKey(incoming)), incoming);
+  }
 }
 
 function validateManifestShape(input: unknown): BackupV2Manifest {
@@ -587,17 +615,20 @@ export function planBackupV2Restore(
   const skippedExpenseIds = new Set<number>();
   const importedExpenses: Expense[] = [];
   const knownExpenses = replaceExisting ? [] : current.expenses.map((item) => ({ ...item }));
+  const knownIds = new Set(knownExpenses.map((item) => item.id));
+  const duplicates = new DuplicateExpenseIndex();
+  if (!replaceExisting) knownExpenses.forEach((item) => duplicates.add(item));
   let maxId = knownExpenses.reduce((max, expense) => Math.max(max, expense.id), 0);
 
   for (const incoming of manifest.expenses) {
-    if (!replaceExisting && isDuplicateExpense(incoming, knownExpenses)) {
+    if (!replaceExisting && duplicates.has(incoming)) {
       skippedExpenseIds.add(incoming.id);
       continue;
     }
 
     let targetId = incoming.id;
     if (!replaceExisting) {
-      const conflict = knownExpenses.some((expense) => expense.id === targetId);
+      const conflict = knownIds.has(targetId);
       if (conflict) {
         targetId = ++maxId;
       } else {
@@ -608,7 +639,7 @@ export function planBackupV2Restore(
     const imported = { ...normalizeBackupExpense(incoming), id: targetId };
     expenseIdMap.set(incoming.id, targetId);
     importedExpenses.push(imported);
-    knownExpenses.push(imported);
+    if (!replaceExisting) { knownIds.add(targetId); duplicates.add(imported); }
   }
 
   const nextExpenses = replaceExisting

@@ -5,6 +5,7 @@ import {
   executeGeminiJsonWithModelFallback,
 } from '../geminiReliability';
 import { logAiFailure } from '../logging/aiLogging';
+import { operationalAggregates } from '../observability/aggregates';
 
 export interface GeminiJsonRequest<T> {
   endpoint: string;
@@ -36,18 +37,32 @@ export class GeminiService implements GeminiServiceContract {
       models: serverConfig.geminiModels,
       timeoutMs: serverConfig.geminiTimeoutMs,
       retryDelayMs: serverConfig.geminiRetryDelayMs,
-      logFailure: logAiFailure,
-      request: (model, timeoutMs) =>
-        ai.models.generateContent({
-          model,
-          contents: request.contents,
-          config: {
-            responseMimeType: 'application/json',
-            responseJsonSchema: request.responseJsonSchema,
-            httpOptions: { timeout: timeoutMs, retryOptions: { attempts: 1 } },
-            systemInstruction: request.systemInstruction,
-          },
-        }),
+      logFailure: (details) => {
+        logAiFailure(details);
+        if (details.willRetry) operationalAggregates.recordFailure('PROVIDER_RETRY');
+      },
+      logModelFallback: () => operationalAggregates.recordFailure('PROVIDER_FALLBACK'),
+      request: async (model, timeoutMs) => {
+        const start = performance.now();
+        const role = model === serverConfig.geminiModels[0] ? 'primary' : 'fallback';
+        try {
+          const response = await ai.models.generateContent({
+            model,
+            contents: request.contents,
+            config: {
+              responseMimeType: 'application/json',
+              responseJsonSchema: request.responseJsonSchema,
+              httpOptions: { timeout: timeoutMs, retryOptions: { attempts: 1 } },
+              systemInstruction: request.systemInstruction,
+            },
+          });
+          operationalAggregates.recordProvider(role, performance.now() - start, true);
+          return response;
+        } catch (error) {
+          operationalAggregates.recordProvider(role, performance.now() - start, false);
+          throw error;
+        }
+      },
       validate: request.validate,
     });
   }

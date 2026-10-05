@@ -25,6 +25,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 2
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Check patch whitespace
         run: git diff --check HEAD^ HEAD
@@ -116,6 +117,22 @@ jobs:
       - name: Run APK signing verification regression tests
         run: node --test tests/apk-signing-verification.test.cjs
 
+      - name: Run WP33 privacy and performance regression gate
+        run: npm run test:wp33
+
+      - name: Upload safe WP33 benchmark receipts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: wp33-node-benchmark
+          path: |
+            artifacts/wp33/ci-benchmark.json
+            artifacts/wp33/ci-budget-result.json
+            artifacts/wp33/ci-full-media.json
+            artifacts/wp33/ci-full-media-budget-result.json
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Sync Capacitor Android
         run: npm run android:sync
 
@@ -134,7 +151,10 @@ jobs:
           if-no-files-found: error
 
       - name: Smoke test deployed Gemini backend with installation authentication
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+        if: >-
+          (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))) ||
+          github.event_name == 'workflow_dispatch' ||
+          (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'wp33/observability-performance' && github.event.pull_request.head.repo.full_name == github.repository)
         shell: bash
         run: |
           set -euo pipefail

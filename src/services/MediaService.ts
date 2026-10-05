@@ -1,4 +1,5 @@
 import { ExpenseAttachment, MediaStorageSummary } from '../types';
+import { diagnostics, measureDiagnostic } from './diagnostics/diagnostics';
 import {
   AttachmentDraft,
   AttachmentEditPayload,
@@ -44,7 +45,9 @@ export class ExistingAttachmentMediaService implements MediaService {
   }
 
   async getStorageSummary(): Promise<MediaStorageSummary> {
-    const report = await AttachmentStorage.auditIntegrity();
+    const report = await measureDiagnostic('media.integrity', () => AttachmentStorage.auditIntegrity());
+    diagnostics.setState({ photoCount: report.totalMetadataRecords, integrityIssueCount: report.issues.length });
+    if (!report.healthy) diagnostics.record({ operation: 'media.integrity', outcome: 'failure', code: 'MEDIA_INTEGRITY_FAILED' });
     return {
       photoCount: report.totalMetadataRecords,
       totalBytes: report.totalBinaryBytes,

@@ -1,4 +1,5 @@
 import express from 'express';
+import { observeApiRequests } from './observability/requestObservability';
 import { apiCors } from './middleware/cors';
 import { requireInstallationAccess } from './middleware/authentication';
 import { rateLimitGemini } from './middleware/rateLimit';
@@ -24,6 +25,7 @@ export function createServerApp() {
   const app = express();
 
   app.set('trust proxy', 1);
+  app.use('/api', observeApiRequests());
   app.use('/api', requireHttpsProduction, securityHeaders, apiCors);
 
   app.use('/api/auth', boundedAuthJsonBody, authRouter);

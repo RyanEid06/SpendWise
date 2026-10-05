@@ -22,6 +22,7 @@ import type { SettingsOverviewCopy } from './settingsCopy';
 export type InlineSettingsSection = 'appearance' | 'language' | 'currency' | null;
 
 interface SettingsOverviewProps {
+  technicalDiagnostics?: React.ReactNode;
   currentCurrencyCode: string;
   currentThemeMode: ThemeMode;
   currentLanguage: Language;
@@ -50,6 +51,7 @@ const languages: { code: Language; name: string; direction: string }[] = [
 ];
 
 export const SettingsOverview: React.FC<SettingsOverviewProps> = ({
+  technicalDiagnostics,
   currentCurrencyCode,
   currentThemeMode,
   currentLanguage,
@@ -244,6 +246,8 @@ export const SettingsOverview: React.FC<SettingsOverviewProps> = ({
         <span>{copy.version} <strong className="font-bold text-slate-700 dark:text-slate-300">{APP_VERSION_NAME}</strong></span>
         <span>{copy.build} <strong className="font-bold text-slate-700 dark:text-slate-300">{APP_VERSION_CODE}</strong></span>
       </div>
+
+      {technicalDiagnostics}
 
       <section className="bg-white dark:bg-[#111928] border border-rose-200 dark:border-rose-900/50 rounded-3xl overflow-hidden">
         <SettingsRow

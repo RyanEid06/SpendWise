@@ -4,6 +4,7 @@ import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import { createServerApp } from './app';
 import { serverConfig } from './config';
+import { operationalAggregates, startAggregateReporting } from './observability/aggregates';
 
 export async function startServer() {
   const app = createServerApp();
@@ -23,8 +24,10 @@ export async function startServer() {
     app.use(vite.middlewares);
   }
 
-  app.listen(serverConfig.port, '0.0.0.0', () => {
+  const server = app.listen(serverConfig.port, '0.0.0.0', () => {
     console.log('SpendWise server listening on port ' + serverConfig.port);
-    console.log('Gemini model: ' + serverConfig.geminiModel);
   });
+  const stopReporting = startAggregateReporting(operationalAggregates);
+  server.once('close', stopReporting);
+  return server;
 }

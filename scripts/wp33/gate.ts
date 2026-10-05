@@ -1,0 +1,23 @@
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { runBenchmarks } from './benchmark';
+import { compareBenchmark, type BenchmarkBaseline } from './budgets';
+import { runFullMediaBenchmark } from './fullMedia';
+import { compareFullMedia, type createFullMediaBaseline } from './fullMediaBudget';
+
+process.env.TZ = 'UTC';
+const baseline = JSON.parse(await readFile('scripts/wp33/baselines/windows-node22.json', 'utf8')) as BenchmarkBaseline;
+const report = await runBenchmarks({ onDataset: (dataset) => console.info(`WP33 ${dataset.size}: ${dataset.operations.length} correctness-validated operations`) });
+const result = compareBenchmark(report, baseline);
+await mkdir('artifacts/wp33', { recursive: true });
+await writeFile('artifacts/wp33/ci-benchmark.json', JSON.stringify(report, null, 2) + '\n');
+await writeFile('artifacts/wp33/ci-budget-result.json', JSON.stringify(result, null, 2) + '\n');
+for (const warning of result.warnings) console.warn(warning);
+if (result.failures.length) throw new Error(result.failures.join('\n'));
+const fullMedia = await runFullMediaBenchmark();
+await writeFile('artifacts/wp33/ci-full-media.json', JSON.stringify(fullMedia, null, 2) + '\n');
+const fullBaseline = JSON.parse(await readFile('scripts/wp33/baselines/full-media-windows-node22.json', 'utf8')) as ReturnType<typeof createFullMediaBaseline>;
+const fullResult = compareFullMedia(fullMedia, fullBaseline);
+await writeFile('artifacts/wp33/ci-full-media-budget-result.json', JSON.stringify(fullResult, null, 2) + '\n');
+for (const warning of fullResult.warnings) console.warn(warning);
+if (fullResult.failures.length) throw new Error(fullResult.failures.join('\n'));
+console.info(`WP33 benchmark gate passed; timing environment ${result.comparable ? 'comparable' : 'incomparable (warning only)'}.`);

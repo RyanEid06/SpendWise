@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AiAnalysisResult, Expense, Language } from '../../types';
 import { apiFetchJson } from '../../utils/api';
+import { diagnostics } from '../../services/diagnostics/diagnostics';
 import { getAiErrorMessage } from '../../utils/apiErrors';
 import { getDisplayName, getMonthKey, MonthYear } from '../../utils/date';
 import { SpendingAnalyzer } from '../../utils/spendingAnalyzer';
@@ -93,7 +94,7 @@ export function useAiAnalysis({
       setResult(data);
     } catch (analysisError) {
       if (!requestGateRef.current.isCurrent(requestId)) return;
-      console.warn('AI spending analysis unavailable; using local statistical fallback.');
+      diagnostics.record({ operation: 'ai.fallback', outcome: 'fallback', code: 'AI_LOCAL_FALLBACK' });
       StorageManager.cacheAnalysis(localFallback);
       setResult(localFallback);
       setNotice(`${getAiErrorMessage(language, analysisError)} ${t(language, 'aiFallbackNotice')}`);

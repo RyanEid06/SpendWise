@@ -1,0 +1,1169 @@
+{
+  "format": "spendwise-browser-summary-v1",
+  "generatedAt": "2026-10-05T12:37:39.879Z",
+  "revision": "423b42547b20399329310809e63591882b698f81",
+  "fixture": {
+    "clockTimestamp": 1791201600000,
+    "seed": 330026,
+    "version": 1
+  },
+  "environment": {
+    "browser": "153.0.8010.12",
+    "mode": "react-development-harness",
+    "timezone": "UTC",
+    "cpu": "13th Gen Intel(R) Core(TM) i7-13620H",
+    "cpuCount": 16,
+    "platform": "win32",
+    "arch": "x64"
+  },
+  "datasets": [
+    {
+      "size": 0,
+      "distribution": "concentrated",
+      "metrics": [
+        {
+          "metric": "history.initial.render",
+          "samplesMs": [
+            15,
+            2,
+            2,
+            2,
+            2
+          ],
+          "medianMs": 2,
+          "minMs": 2,
+          "maxMs": 15,
+          "madMs": 0,
+          "warningMs": 30,
+          "hardMs": null
+        },
+        {
+          "metric": "history.initial.commit",
+          "samplesMs": [
+            20,
+            3,
+            3,
+            3,
+            3
+          ],
+          "medianMs": 3,
+          "minMs": 3,
+          "maxMs": 20,
+          "madMs": 0,
+          "warningMs": 40,
+          "hardMs": null
+        },
+        {
+          "metric": "history.search.wall",
+          "samplesMs": [
+            34,
+            40,
+            34,
+            39,
+            30
+          ],
+          "medianMs": 34,
+          "minMs": 30,
+          "maxMs": 40,
+          "madMs": 4,
+          "warningMs": 116,
+          "hardMs": null
+        },
+        {
+          "metric": "history.search.render",
+          "samplesMs": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "medianMs": 0,
+          "minMs": 0,
+          "maxMs": 0,
+          "madMs": 0,
+          "warningMs": 0,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.initial.render",
+          "samplesMs": [
+            6,
+            4,
+            3,
+            2,
+            4
+          ],
+          "medianMs": 4,
+          "minMs": 2,
+          "maxMs": 6,
+          "madMs": 1,
+          "warningMs": 20,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.all.render",
+          "samplesMs": [
+            1,
+            2,
+            2,
+            1,
+            2
+          ],
+          "medianMs": 2,
+          "minMs": 1,
+          "maxMs": 2,
+          "madMs": 0,
+          "warningMs": 4,
+          "hardMs": null
+        }
+      ]
+    },
+    {
+      "size": 0,
+      "distribution": "distributed",
+      "metrics": [
+        {
+          "metric": "history.initial.render",
+          "samplesMs": [
+            13,
+            1,
+            2,
+            2,
+            2
+          ],
+          "medianMs": 2,
+          "minMs": 1,
+          "maxMs": 13,
+          "madMs": 0,
+          "warningMs": 26,
+          "hardMs": null
+        },
+        {
+          "metric": "history.initial.commit",
+          "samplesMs": [
+            19,
+            3,
+            3,
+            4,
+            3
+          ],
+          "medianMs": 3,
+          "minMs": 3,
+          "maxMs": 19,
+          "madMs": 0,
+          "warningMs": 38,
+          "hardMs": null
+        },
+        {
+          "metric": "history.search.wall",
+          "samplesMs": [
+            35,
+            38,
+            28,
+            33,
+            30
+          ],
+          "medianMs": 33,
+          "minMs": 28,
+          "maxMs": 38,
+          "madMs": 3,
+          "warningMs": 102,
+          "hardMs": null
+        },
+        {
+          "metric": "history.search.render",
+          "samplesMs": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "medianMs": 0,
+          "minMs": 0,
+          "maxMs": 0,
+          "madMs": 0,
+          "warningMs": 0,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.initial.render",
+          "samplesMs": [
+            6,
+            4,
+            4,
+            4,
+            4
+          ],
+          "medianMs": 4,
+          "minMs": 4,
+          "maxMs": 6,
+          "madMs": 0,
+          "warningMs": 12,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.all.render",
+          "samplesMs": [
+            2,
+            2,
+            1,
+            2,
+            2
+          ],
+          "medianMs": 2,
+          "minMs": 1,
+          "maxMs": 2,
+          "madMs": 0,
+          "warningMs": 4,
+          "hardMs": null
+        }
+      ]
+    },
+    {
+      "size": 100,
+      "distribution": "concentrated",
+      "metrics": [
+        {
+          "metric": "history.initial.render",
+          "samplesMs": [
+            59,
+            40,
+            43,
+            40,
+            41
+          ],
+          "medianMs": 41,
+          "minMs": 40,
+          "maxMs": 59,
+          "madMs": 1,
+          "warningMs": 118,
+          "hardMs": null
+        },
+        {
+          "metric": "history.initial.commit",
+          "samplesMs": [
+            63,
+            44,
+            45,
+            42,
+            43
+          ],
+          "medianMs": 44,
+          "minMs": 42,
+          "maxMs": 63,
+          "madMs": 1,
+          "warningMs": 126,
+          "hardMs": null
+        },
+        {
+          "metric": "history.search.wall",
+          "samplesMs": [
+            40,
+            38,
+            41,
+            34,
+            33
+          ],
+          "medianMs": 38,
+          "minMs": 33,
+          "maxMs": 41,
+          "madMs": 3,
+          "warningMs": 112,
+          "hardMs": null
+        },
+        {
+          "metric": "history.search.render",
+          "samplesMs": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "medianMs": 0,
+          "minMs": 0,
+          "maxMs": 0,
+          "madMs": 0,
+          "warningMs": 0,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.initial.render",
+          "samplesMs": [
+            10,
+            8,
+            10,
+            8,
+            7
+          ],
+          "medianMs": 8,
+          "minMs": 7,
+          "maxMs": 10,
+          "madMs": 1,
+          "warningMs": 28,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.all.render",
+          "samplesMs": [
+            9,
+            9,
+            9,
+            9,
+            9
+          ],
+          "medianMs": 9,
+          "minMs": 9,
+          "maxMs": 9,
+          "madMs": 0,
+          "warningMs": 18,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.detail.render",
+          "samplesMs": [
+            8,
+            6,
+            8,
+            7,
+            7
+          ],
+          "medianMs": 7,
+          "minMs": 6,
+          "maxMs": 8,
+          "madMs": 1,
+          "warningMs": 26,
+          "hardMs": null
+        }
+      ]
+    },
+    {
+      "size": 100,
+      "distribution": "distributed",
+      "metrics": [
+        {
+          "metric": "history.initial.render",
+          "samplesMs": [
+            23,
+            9,
+            8,
+            8,
+            8
+          ],
+          "medianMs": 8,
+          "minMs": 8,
+          "maxMs": 23,
+          "madMs": 0,
+          "warningMs": 46,
+          "hardMs": null
+        },
+        {
+          "metric": "history.initial.commit",
+          "samplesMs": [
+            28,
+            10,
+            9,
+            9,
+            10
+          ],
+          "medianMs": 10,
+          "minMs": 9,
+          "maxMs": 28,
+          "madMs": 1,
+          "warningMs": 56,
+          "hardMs": null
+        },
+        {
+          "metric": "history.search.wall",
+          "samplesMs": [
+            37,
+            33,
+            39,
+            40,
+            30
+          ],
+          "medianMs": 37,
+          "minMs": 30,
+          "maxMs": 40,
+          "madMs": 3,
+          "warningMs": 110,
+          "hardMs": null
+        },
+        {
+          "metric": "history.search.render",
+          "samplesMs": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "medianMs": 0,
+          "minMs": 0,
+          "maxMs": 0,
+          "madMs": 0,
+          "warningMs": 0,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.initial.render",
+          "samplesMs": [
+            10,
+            8,
+            8,
+            8,
+            8
+          ],
+          "medianMs": 8,
+          "minMs": 8,
+          "maxMs": 10,
+          "madMs": 0,
+          "warningMs": 20,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.all.render",
+          "samplesMs": [
+            11,
+            12,
+            11,
+            11,
+            11
+          ],
+          "medianMs": 11,
+          "minMs": 11,
+          "maxMs": 12,
+          "madMs": 0,
+          "warningMs": 24,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.detail.render",
+          "samplesMs": [
+            7,
+            9,
+            8,
+            9,
+            8
+          ],
+          "medianMs": 8,
+          "minMs": 7,
+          "maxMs": 9,
+          "madMs": 1,
+          "warningMs": 28,
+          "hardMs": null
+        }
+      ]
+    },
+    {
+      "size": 1000,
+      "distribution": "concentrated",
+      "metrics": [
+        {
+          "metric": "history.initial.render",
+          "samplesMs": [
+            213,
+            290,
+            301,
+            330,
+            338
+          ],
+          "medianMs": 301,
+          "minMs": 213,
+          "maxMs": 338,
+          "madMs": 29,
+          "warningMs": 950,
+          "hardMs": null
+        },
+        {
+          "metric": "history.initial.commit",
+          "samplesMs": [
+            220,
+            306,
+            314,
+            338,
+            345
+          ],
+          "medianMs": 314,
+          "minMs": 220,
+          "maxMs": 345,
+          "madMs": 24,
+          "warningMs": 916,
+          "hardMs": null
+        },
+        {
+          "metric": "history.search.wall",
+          "samplesMs": [
+            105,
+            102,
+            99,
+            88,
+            95
+          ],
+          "medianMs": 99,
+          "minMs": 88,
+          "maxMs": 105,
+          "madMs": 4,
+          "warningMs": 246,
+          "hardMs": null
+        },
+        {
+          "metric": "history.search.render",
+          "samplesMs": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "medianMs": 0,
+          "minMs": 0,
+          "maxMs": 0,
+          "madMs": 0,
+          "warningMs": 0,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.initial.render",
+          "samplesMs": [
+            15,
+            13,
+            15,
+            14,
+            14
+          ],
+          "medianMs": 14,
+          "minMs": 13,
+          "maxMs": 15,
+          "madMs": 1,
+          "warningMs": 40,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.all.render",
+          "samplesMs": [
+            14,
+            15,
+            17,
+            16,
+            21
+          ],
+          "medianMs": 16,
+          "minMs": 14,
+          "maxMs": 21,
+          "madMs": 1,
+          "warningMs": 44,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.detail.render",
+          "samplesMs": [
+            9,
+            11,
+            11,
+            12,
+            12
+          ],
+          "medianMs": 11,
+          "minMs": 9,
+          "maxMs": 12,
+          "madMs": 1,
+          "warningMs": 34,
+          "hardMs": null
+        }
+      ]
+    },
+    {
+      "size": 1000,
+      "distribution": "distributed",
+      "metrics": [
+        {
+          "metric": "history.initial.render",
+          "samplesMs": [
+            56,
+            40,
+            44,
+            45,
+            40
+          ],
+          "medianMs": 44,
+          "minMs": 40,
+          "maxMs": 56,
+          "madMs": 4,
+          "warningMs": 136,
+          "hardMs": null
+        },
+        {
+          "metric": "history.initial.commit",
+          "samplesMs": [
+            62,
+            42,
+            45,
+            46,
+            42
+          ],
+          "medianMs": 45,
+          "minMs": 42,
+          "maxMs": 62,
+          "madMs": 3,
+          "warningMs": 126,
+          "hardMs": null
+        },
+        {
+          "metric": "history.search.wall",
+          "samplesMs": [
+            40,
+            43,
+            32,
+            34,
+            39
+          ],
+          "medianMs": 39,
+          "minMs": 32,
+          "maxMs": 43,
+          "madMs": 4,
+          "warningMs": 126,
+          "hardMs": null
+        },
+        {
+          "metric": "history.search.render",
+          "samplesMs": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "medianMs": 0,
+          "minMs": 0,
+          "maxMs": 0,
+          "madMs": 0,
+          "warningMs": 0,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.initial.render",
+          "samplesMs": [
+            12,
+            8,
+            9,
+            8,
+            8
+          ],
+          "medianMs": 8,
+          "minMs": 8,
+          "maxMs": 12,
+          "madMs": 0,
+          "warningMs": 24,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.all.render",
+          "samplesMs": [
+            12,
+            11,
+            12,
+            12,
+            11
+          ],
+          "medianMs": 12,
+          "minMs": 11,
+          "maxMs": 12,
+          "madMs": 0,
+          "warningMs": 24,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.detail.render",
+          "samplesMs": [
+            10,
+            8,
+            9,
+            9,
+            8
+          ],
+          "medianMs": 9,
+          "minMs": 8,
+          "maxMs": 10,
+          "madMs": 1,
+          "warningMs": 30,
+          "hardMs": null
+        }
+      ]
+    },
+    {
+      "size": 10000,
+      "distribution": "concentrated",
+      "metrics": [
+        {
+          "metric": "history.initial.render",
+          "samplesMs": [
+            2052,
+            1779,
+            1904,
+            1816,
+            2419
+          ],
+          "medianMs": 1904,
+          "minMs": 1779,
+          "maxMs": 2419,
+          "madMs": 125,
+          "warningMs": 5308,
+          "hardMs": null
+        },
+        {
+          "metric": "history.initial.commit",
+          "samplesMs": [
+            2149,
+            1839,
+            1965,
+            1875,
+            2494
+          ],
+          "medianMs": 1965,
+          "minMs": 1839,
+          "maxMs": 2494,
+          "madMs": 126,
+          "warningMs": 5442,
+          "hardMs": null
+        },
+        {
+          "metric": "history.search.wall",
+          "samplesMs": [
+            616,
+            615,
+            582,
+            591,
+            669
+          ],
+          "medianMs": 615,
+          "minMs": 582,
+          "maxMs": 669,
+          "madMs": 24,
+          "warningMs": 1518,
+          "hardMs": null
+        },
+        {
+          "metric": "history.search.render",
+          "samplesMs": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "medianMs": 0,
+          "minMs": 0,
+          "maxMs": 0,
+          "madMs": 0,
+          "warningMs": 0,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.initial.render",
+          "samplesMs": [
+            26,
+            27,
+            22,
+            27,
+            40
+          ],
+          "medianMs": 27,
+          "minMs": 22,
+          "maxMs": 40,
+          "madMs": 1,
+          "warningMs": 80,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.all.render",
+          "samplesMs": [
+            28,
+            25,
+            29,
+            637,
+            35
+          ],
+          "medianMs": 29,
+          "minMs": 25,
+          "maxMs": 637,
+          "madMs": 4,
+          "warningMs": 1274,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.detail.render",
+          "samplesMs": [
+            9,
+            11,
+            11,
+            12,
+            12
+          ],
+          "medianMs": 11,
+          "minMs": 9,
+          "maxMs": 12,
+          "madMs": 1,
+          "warningMs": 34,
+          "hardMs": null
+        }
+      ]
+    },
+    {
+      "size": 10000,
+      "distribution": "distributed",
+      "metrics": [
+        {
+          "metric": "history.initial.render",
+          "samplesMs": [
+            387,
+            331,
+            334,
+            313,
+            331
+          ],
+          "medianMs": 331,
+          "minMs": 313,
+          "maxMs": 387,
+          "madMs": 3,
+          "warningMs": 774,
+          "hardMs": null
+        },
+        {
+          "metric": "history.initial.commit",
+          "samplesMs": [
+            407,
+            345,
+            340,
+            327,
+            340
+          ],
+          "medianMs": 340,
+          "minMs": 327,
+          "maxMs": 407,
+          "madMs": 5,
+          "warningMs": 814,
+          "hardMs": null
+        },
+        {
+          "metric": "history.search.wall",
+          "samplesMs": [
+            128,
+            92,
+            101,
+            100,
+            93
+          ],
+          "medianMs": 100,
+          "minMs": 92,
+          "maxMs": 128,
+          "madMs": 7,
+          "warningMs": 284,
+          "hardMs": null
+        },
+        {
+          "metric": "history.search.render",
+          "samplesMs": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "medianMs": 0,
+          "minMs": 0,
+          "maxMs": 0,
+          "madMs": 0,
+          "warningMs": 0,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.initial.render",
+          "samplesMs": [
+            23,
+            20,
+            23,
+            21,
+            18
+          ],
+          "medianMs": 21,
+          "minMs": 18,
+          "maxMs": 23,
+          "madMs": 2,
+          "warningMs": 66,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.all.render",
+          "samplesMs": [
+            34,
+            29,
+            29,
+            36,
+            41
+          ],
+          "medianMs": 34,
+          "minMs": 29,
+          "maxMs": 41,
+          "madMs": 5,
+          "warningMs": 128,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.detail.render",
+          "samplesMs": [
+            12,
+            13,
+            15,
+            14,
+            13
+          ],
+          "medianMs": 13,
+          "minMs": 12,
+          "maxMs": 15,
+          "madMs": 1,
+          "warningMs": 38,
+          "hardMs": null
+        }
+      ]
+    },
+    {
+      "size": 25000,
+      "distribution": "concentrated",
+      "metrics": [
+        {
+          "metric": "history.initial.render",
+          "samplesMs": [
+            4682,
+            5150,
+            4736,
+            4232,
+            4337
+          ],
+          "medianMs": 4682,
+          "minMs": 4232,
+          "maxMs": 5150,
+          "madMs": 345,
+          "warningMs": 13504,
+          "hardMs": null
+        },
+        {
+          "metric": "history.initial.commit",
+          "samplesMs": [
+            4851,
+            5321,
+            4924,
+            4418,
+            4488
+          ],
+          "medianMs": 4851,
+          "minMs": 4418,
+          "maxMs": 5321,
+          "madMs": 363,
+          "warningMs": 14058,
+          "hardMs": null
+        },
+        {
+          "metric": "history.search.wall",
+          "samplesMs": [
+            1754,
+            1797,
+            1678,
+            1655,
+            2004
+          ],
+          "medianMs": 1754,
+          "minMs": 1655,
+          "maxMs": 2004,
+          "madMs": 76,
+          "warningMs": 4420,
+          "hardMs": null
+        },
+        {
+          "metric": "history.search.render",
+          "samplesMs": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "medianMs": 0,
+          "minMs": 0,
+          "maxMs": 0,
+          "madMs": 0,
+          "warningMs": 0,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.initial.render",
+          "samplesMs": [
+            44,
+            53,
+            33,
+            30,
+            30
+          ],
+          "medianMs": 33,
+          "minMs": 30,
+          "maxMs": 53,
+          "madMs": 3,
+          "warningMs": 106,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.all.render",
+          "samplesMs": [
+            33,
+            36,
+            33,
+            31,
+            33
+          ],
+          "medianMs": 33,
+          "minMs": 31,
+          "maxMs": 36,
+          "madMs": 0,
+          "warningMs": 72,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.detail.render",
+          "samplesMs": [
+            10,
+            13,
+            12,
+            11,
+            10
+          ],
+          "medianMs": 11,
+          "minMs": 10,
+          "maxMs": 13,
+          "madMs": 1,
+          "warningMs": 34,
+          "hardMs": null
+        }
+      ]
+    },
+    {
+      "size": 25000,
+      "distribution": "distributed",
+      "metrics": [
+        {
+          "metric": "history.initial.render",
+          "samplesMs": [
+            679,
+            543,
+            546,
+            566,
+            548
+          ],
+          "medianMs": 548,
+          "minMs": 543,
+          "maxMs": 679,
+          "madMs": 5,
+          "warningMs": 1358,
+          "hardMs": null
+        },
+        {
+          "metric": "history.initial.commit",
+          "samplesMs": [
+            715,
+            570,
+            556,
+            581,
+            567
+          ],
+          "medianMs": 570,
+          "minMs": 556,
+          "maxMs": 715,
+          "madMs": 11,
+          "warningMs": 1430,
+          "hardMs": null
+        },
+        {
+          "metric": "history.search.wall",
+          "samplesMs": [
+            231,
+            221,
+            221,
+            226,
+            224
+          ],
+          "medianMs": 224,
+          "minMs": 221,
+          "maxMs": 231,
+          "madMs": 3,
+          "warningMs": 484,
+          "hardMs": null
+        },
+        {
+          "metric": "history.search.render",
+          "samplesMs": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "medianMs": 0,
+          "minMs": 0,
+          "maxMs": 0,
+          "madMs": 0,
+          "warningMs": 0,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.initial.render",
+          "samplesMs": [
+            35,
+            27,
+            28,
+            32,
+            27
+          ],
+          "medianMs": 28,
+          "minMs": 27,
+          "maxMs": 35,
+          "madMs": 1,
+          "warningMs": 70,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.all.render",
+          "samplesMs": [
+            39,
+            42,
+            149,
+            80,
+            91
+          ],
+          "medianMs": 80,
+          "minMs": 39,
+          "maxMs": 149,
+          "madMs": 38,
+          "warningMs": 616,
+          "hardMs": null
+        },
+        {
+          "metric": "statistics.detail.render",
+          "samplesMs": [
+            12,
+            23,
+            15,
+            11,
+            13
+          ],
+          "medianMs": 13,
+          "minMs": 11,
+          "maxMs": 23,
+          "madMs": 2,
+          "warningMs": 50,
+          "hardMs": null
+        }
+      ]
+    }
+  ]
+}
