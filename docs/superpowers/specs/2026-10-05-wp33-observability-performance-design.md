@@ -1,9 +1,14 @@
 # WP33 design for review
 
-Status: proposed design; implementation has not started.
+Status: approved design, implemented and accepted in PR #33 on `e10e959`, then
+merged at `dc60070`. The original design and starting-point observations below
+are historical; current delivery/release status is in [ROADMAP](../../../ROADMAP.md)
+and [validation](../plans/2026-10-05-wp33-validation.md).
 Scope: Privacy-Safe Observability + Performance Baselines only.
 User specification: the supplied `goal-objective.md`, Parts A-H and acceptance 1-16.
-Branch: `wp33/observability-performance`. Do not merge or delete this branch.
+Original execution branch: `wp33/observability-performance`; the original scope
+excluded merge/deletion. After completion the user authorized both, conditional
+on green merged-main CI. The branch is removed; its history and PR are retained.
 
 ## Intent and verified starting point
 

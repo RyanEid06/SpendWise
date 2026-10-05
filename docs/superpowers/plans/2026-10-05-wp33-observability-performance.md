@@ -1,5 +1,11 @@
 # WP33 Implementation Plan
 
+Status: completed and accepted on final head `e10e959` in PR #33, then merged
+at `dc60070` with green main CI. This is the original approved plan; its scope
+constraints and unchecked planning steps below are historical, not pending work.
+See [validation](2026-10-05-wp33-validation.md) for execution/final evidence and
+[ROADMAP](../../../ROADMAP.md) for current release, branch cleanup and WP34 deferral.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for native execution, or superpowers:subagent-driven-development if selected by the user. Track steps with checkboxes.
 
 **Goal:** Deliver privacy-safe support diagnostics, bounded backend aggregates and measured large-ledger performance with all retained gates green.

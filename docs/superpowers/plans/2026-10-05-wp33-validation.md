@@ -4,7 +4,32 @@ Approved design and seven-task plan were executed inline on
 `wp33/observability-performance`. Base/main inspected at
 `5ed7acdf2ce84e11200f3cc6f67eae76088a2610`; its Android Build was green before
 implementation. Version 2.0.0, Android code 6, schema 1 and Backup v3 are retained.
-WP34, automatic merge, release publication and branch deletion are excluded.
+The original implementation scope excluded WP34, automatic merge, release
+publication and branch deletion. After final acceptance, the user authorized
+merging PR #33 and removing its branch once merged-main CI passed. WP34 remains
+deferred; the existing public 2.0 APK is unchanged.
+
+## Final delivery and later integration
+
+All acceptance requirements passed on final head
+`e10e95936385af338ce402e657ec5aff8920ace5`:
+[Build 37348373271](https://github.com/RyanEid06/SpendWise/actions/runs/37348373271),
+[web/full native 37348386712](https://github.com/RyanEid06/SpendWise/actions/runs/37348386712)
+and [isolated 37348373245](https://github.com/RyanEid06/SpendWise/actions/runs/37348373245).
+Results: 329 unique Node checks (82 WP33), 37 web checks, ten performance cases,
+22 sequential native flows and all three isolated checkpoints. TypeScript/Vite,
+audits, sync, debug APK and deployed authenticated Gemini smoke passed.
+The full-native v2 receipt was downloaded and verified against SHA-256
+`85d835dc36de1659c5e0f241f4da0af3c4894fa9d1bd8f6c8d0c180c486d0bd9`;
+three changed processes, counters 1→2→3→4 and encrypted readiness were verified.
+Protected-storage init/open/read medians were 2,201.81/1,347.50/10.90 ms, with
+the same small-fixture observational limits as the first measurement below.
+
+PR #33 merged at `dc60070cf2a60f112e77a0f17c0e796fda194a96`, with a tree identical
+to the accepted head. Its [main Build 37352850969](https://github.com/RyanEid06/SpendWise/actions/runs/37352850969)
+passed, including deployed smoke. The user then authorized deletion of the
+completed branch; commits/PR/receipts are preserved. Historical intermediate
+results below remain labeled by their source, rather than describing pending work.
 
 ## Reviewed implementation
 
@@ -65,9 +90,10 @@ Checkout logs explicitly show this source SHA rather than a PR merge ref.
   diagnostics. Device-clock sanitization preserves new failures despite host
   clock drift. An isolated synthetic v2-full startup checkpoint precedes the
   next full run. The corrected isolated evidence is recorded below. Final
-  documentation commits are accepted only after exact-head checks in
-  [PR #33](https://github.com/RyanEid06/SpendWise/pull/33) pass; the final delivery
-  report records their SHA and run IDs without a self-referential commit cycle.
+  documentation checks were still pending at that intermediate checkpoint.
+  The final delivery section above now records successful exact-head checks in
+  [PR #33](https://github.com/RyanEid06/SpendWise/pull/33), without a
+  self-referential commit cycle.
 
 Corrected native collector head: `e6d2f07a731dad8f46a743123e9ea8d7c5d4226c`.
 All 82 WP33 contracts pass; the helper, isolated composition, new-failure and
@@ -124,13 +150,13 @@ native proof passed. Full native execution was restored only after that proof.
 | 6 Large History/Statistics correctness | Independent reference tests and ten real React/browser cases pass. |
 | 7 Backup/media reproducible baseline | Two measured Node runs and two full-media runs; archive round trips and every restored media byte checked. |
 | 8 Measured budgets | Committed measured envelopes and warning/severe policy; invalid coverage/non-finite/mismatch tests pass. |
-| 9 Retained WP25–WP32 regressions | Full Build/web/isolated checks and all 22 native flows pass on implementation head; corrected collector passes the original v2-full restore/startup checkpoint. Final exact-head suite is required through PR checks. |
+| 9 Retained WP25–WP32 regressions | Full final-head Build/web/isolated checks and all 22 sequential native flows pass; corrected collector passes both isolated and full-suite startup measurement. |
 | 10 TypeScript/Vite | Actual Build and E2E verify steps pass. |
 | 11 Dependency audits | Established production and full high-severity gates pass; moderate development findings disclosed. |
 | 12 Capacitor sync | Actual Build sync passes. |
 | 13 Debug APK | Actual JDK21/Gradle debug build passes. |
 | 14 Deployed authenticated Gemini smoke | Actual deployed smoke passes on implementation head. |
-| 15 Exact final-head green CI | Completion requires successful Build, web/full native and isolated checks on the final SHA; inspect source checkout logs and PR #33 checks before issuing the final delivery report. |
+| 15 Exact final-head green CI | All three final-head workflows pass on e10e959; source checkout logs and downloaded receipt revisions were verified. Subsequent merged-main Build also passes on the identical source tree. |
 | 16 No WP34 | Diff preserves version/release boundary; WP34 remains the documented future gate. |
 
 ## Rulings I made
