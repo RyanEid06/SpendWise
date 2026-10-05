@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { runBenchmarks } from './benchmark';
 import { compareBenchmark, type BenchmarkBaseline } from './budgets';
+import { runFullMediaBenchmark } from './fullMedia';
 
 process.env.TZ = 'UTC';
 const baseline = JSON.parse(await readFile('scripts/wp33/baselines/windows-node22.json', 'utf8')) as BenchmarkBaseline;
@@ -11,4 +12,6 @@ await writeFile('artifacts/wp33/ci-benchmark.json', JSON.stringify(report, null,
 await writeFile('artifacts/wp33/ci-budget-result.json', JSON.stringify(result, null, 2) + '\n');
 for (const warning of result.warnings) console.warn(warning);
 if (result.failures.length) throw new Error(result.failures.join('\n'));
+const fullMedia = await runFullMediaBenchmark();
+await writeFile('artifacts/wp33/ci-full-media.json', JSON.stringify(fullMedia, null, 2) + '\n');
 console.info(`WP33 benchmark gate passed; timing environment ${result.comparable ? 'comparable' : 'incomparable (warning only)'}.`);

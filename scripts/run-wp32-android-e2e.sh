@@ -185,7 +185,7 @@ reset_app
 run_flow import-v2-full .maestro/current/import-v2-full.yaml
 
 if [ "${WP33_NATIVE_BENCHMARK:-0}" = "1" ]; then
-  ADB_SERIAL="${ANDROID_SERIAL:-emulator-5554}" bash scripts/run-wp33-native-benchmark.sh \
+  WP33_NATIVE_FIXTURE="wp32-v2-full" ADB_SERIAL="${ANDROID_SERIAL:-emulator-5554}" bash scripts/run-wp33-native-benchmark.sh \
     "$RESULT_ROOT/wp33-native-benchmark.json"
 fi
 

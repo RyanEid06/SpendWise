@@ -96,4 +96,3 @@ export function referencePlanBackupV2Restore(
     currencyUpdated: adoptBackupCurrency ? manifest.settings.currencyCode : null,
   };
 }
-

@@ -11,6 +11,7 @@ export function assertSyntheticEmulator(input: { serial: string; qemu: string; a
 /** Collect actual instrumented SQLCipher open/read timings from a disposable debug emulator. */
 async function collectNativeBenchmark(output: string): Promise<void> {
   const serial = process.env.ADB_SERIAL ?? '';
+  if (process.env.WP33_NATIVE_FIXTURE !== 'wp32-v2-full') throw new Error('SYNTHETIC_FIXTURE_RECEIPT_REQUIRED');
   if (!/^emulator-\d+$/.test(serial)) throw new Error('SYNTHETIC_EMULATOR_REQUIRED: set ADB_SERIAL to the dedicated wp33-synthetic emulator.');
   const adbPath = process.env.ADB_BINARY ?? 'adb';
   const adb = (...args: string[]) => execFileSync(adbPath, ['-s', serial, ...args], { encoding: 'utf8', timeout: 20000, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -77,7 +78,7 @@ async function collectNativeBenchmark(output: string): Promise<void> {
       rows.push({ sample, state: report.state, timings: report.timings });
     }
     await mkdir(resolve(output, '..'), { recursive: true });
-    await writeFile(output, JSON.stringify({ format: 'spendwise-native-benchmark-v1', environment: { type: 'dedicated-synthetic-emulator', apiLevel }, timingPolicy: 'warning-only; instrumentation includes plugin overhead, no physical-device claim', rows }, null, 2) + '\n');
+    await writeFile(output, JSON.stringify({ format: 'spendwise-native-benchmark-v1', generatedAt: new Date().toISOString(), revision: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), app: initial.app, fixture: { identity: 'wp32-v2-full', expenses: 1, attachments: 1, provenance: 'dedicated-runner-successful-isolated-restore' }, environment: { type: 'dedicated-synthetic-emulator', apiLevel, avd, nodeVersion: process.versions.node }, timingPolicy: 'warning-only; instrumentation includes plugin overhead, no physical-device claim', rows }, null, 2) + '\n');
     console.info('WP33 native encrypted open/read measurements saved.');
   } finally { disconnect(); try { adb('forward', '--remove', `tcp:${port}`); } catch {} }
 }

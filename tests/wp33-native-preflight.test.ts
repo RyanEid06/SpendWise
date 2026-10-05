@@ -26,3 +26,11 @@ test('native probe is composed after isolated restore and before app-lock mutati
   const probe = readFileSync('scripts/wp33/native.ts', 'utf8');
   assert.doesNotMatch(probe, /locksettings|pm', 'clear|set-pin|disableEncryption/);
 });
+test('native receipt includes source and host-controlled synthetic fixture provenance', () => {
+  const probe = readFileSync('scripts/wp33/native.ts', 'utf8');
+  assert.match(probe, /revision:.*rev-parse/);
+  assert.match(probe, /WP33_NATIVE_FIXTURE/);
+  assert.match(probe, /fixture:.*wp32-v2-full/);
+  assert.match(probe, /nodeVersion: process\.versions\.node/);
+  assert.match(readFileSync('scripts/run-wp32-android-e2e.sh', 'utf8'), /WP33_NATIVE_FIXTURE="wp32-v2-full"/);
+});
