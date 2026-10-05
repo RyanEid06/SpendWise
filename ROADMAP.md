@@ -15,9 +15,10 @@ Git history; existing regression tests and native runners remain active.
 - A signed 2.0 trial was integrated; the latest public GitHub Release is still
   [v1.4.0](https://github.com/RyanEid06/SpendWise/releases/tag/v1.4.0), checked
   2026-10-04.
-- WP33 is implemented on `wp33/observability-performance`; final exact-head CI
-  acceptance is pending. WP34 has not started. Physical-device/TalkBack
-  validation remains separate.
+- WP33 implementation and measured baselines are on
+  `wp33/observability-performance`; receipts and the exact-source-head acceptance
+  gate are linked below and in [PR #33](https://github.com/RyanEid06/SpendWise/pull/33).
+  WP34 has not started. Physical-device/TalkBack validation remains separate.
 
 ## Completed work — what we added
 
@@ -377,9 +378,23 @@ rejected its timing receipt: counters were cumulative and the final snapshot
 repeated. The collector now preserves diagnostics, requires a changed process
 and exactly one new successful init/open/read completion, and derives per-boot
 durations with explicit rounding bounds. It sanitizes with the device clock so
-host clock drift cannot hide fresh failures. An isolated v2-full restore/startup
-checkpoint verifies this repair before full acceptance is repeated. No local
-SDK/emulator was available; valid native timing evidence remains pending. Native
+host clock drift cannot hide fresh failures. The
+[isolated v2-full restore/startup checkpoint](https://github.com/RyanEid06/SpendWise/actions/runs/37345596952)
+passes on `e6d2f07a731dad8f46a743123e9ea8d7c5d4226c`. Its verified artifact
+11361145196 has SHA-256
+`f16522e58759dccf8c0effd71870393b6b875655e3766ef520c0810cfd5a5d6b`;
+the compact source/environment/freshness receipt is retained in
+`scripts/wp33/baselines/native-api34-first-measurement.json`. All three rows
+prove changed processes, counters 1→2→3→4 and encrypted DB/media readiness.
+On API 34, a two-core/4 GiB named synthetic debug emulator with one expense and
+one photo, protected-storage initialization/open/read median milliseconds are
+1,943.61/933.81/12.39; observed ranges are 1,892.09–2,040.50,
+915.39–1,218.80 and 8.10–27.59. Rounding bounds are 0.02/0.03/0.04 ms per boot.
+These operation timings include plugin overhead and exclude process launch and
+UI rendering. Three initial samples do not establish a stable native regression
+threshold: native timing remains observational/warning-only, while stale,
+failed or incomplete measurements block the collector. No local SDK/emulator
+was available. Native
 large-ledger rendering, device reboot/OEM timing and physical-device performance
 are unmeasured. Existing WP32 migration, encrypted media, backup and Undo gates
 remain required.
@@ -393,8 +408,23 @@ sync, debug APK and deployed installation-authenticated Gemini smoke pass in
 [both isolated native checkpoints](https://github.com/RyanEid06/SpendWise/actions/runs/37318059229).
 Production audit has zero findings;
 the high-severity full audit passes with three moderate development-only
-Capacitor CLI/xcode/uuid findings. Full native acceptance and final documentation
-head CI remain pending. Android Build runs WP33 after retained
+Capacitor CLI/xcode/uuid findings. The
+[full native run](https://github.com/RyanEid06/SpendWise/actions/runs/37339897535)
+passes all 22 flows on that implementation head. The collector-only repair
+passes 82 WP33 contracts, typed bundling and its isolated native checkpoint;
+app/Android/backend/dependency source is unchanged by that repair.
+The repaired head also passes
+[Android Build](https://github.com/RyanEid06/SpendWise/actions/runs/37345597030)
+and [web E2E](https://github.com/RyanEid06/SpendWise/actions/runs/37345596981):
+329 unique Node checks, 37 web checks, ten performance cases and deployed smoke.
+Its first Build attempt failed at `packageDebug` without a detailed cause;
+the same-head isolated APK built successfully and only the failed Build job
+was retried. That retry passed without source changes, including packaging and
+deployed smoke. This was non-reproducible; the underlying packaging-worker
+cause remains unproven. Final
+delivery is gated by Build, web/full native and isolated checks on the exact
+documentation head, visible in [PR #33](https://github.com/RyanEid06/SpendWise/pull/33).
+Android Build runs WP33 after retained
 WP32/signing checks and before sync/build; WP32 E2E adds separate browser/native
 receipts. Safe compact artifacts have seven-day retention. Checkout selects
 the source PR head. WP34 and automatic merge/release remain outside this work.
