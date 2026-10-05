@@ -5,10 +5,14 @@ and the web. Financial records stay on the device. Optional AI analysis, Smart
 Capture and receipt scanning send selected data to the SpendWise backend/Gemini
 when invoked.
 
-The source is **2.0.0**, Android build **6** (`com.spendwise.app`). The signed 2.0
-trial is integrated on `main`; the latest public release is still
-[v1.4.0](https://github.com/RyanEid06/SpendWise/releases/tag/v1.4.0), checked
-2026-10-04. See [release instructions](ROADMAP.md#release-operations) for publishing and signing.
+The public release is **2.0.0**, Android build **6** (`com.spendwise.app`):
+[release notes](https://github.com/RyanEid06/SpendWise/releases/tag/v2.0.0) ·
+[download the signed APK](https://github.com/RyanEid06/SpendWise/releases/download/v2.0.0/SpendWise-v2.0.0.apk).
+It was published on 2026-10-04. `main` also contains the completed WP33 diagnostics
+and performance work, which is newer than that APK. Keep the existing release
+unchanged; any future APK update needs a version code above 6 and the same signing
+identity. See [safe feature work](ROADMAP.md#safe-feature-work-after-20) and
+[release instructions](ROADMAP.md#release-operations).
 
 ## Features
 
@@ -98,7 +102,10 @@ Full native E2E runs on manual dispatch or the `wp32-final-native` PR label.
 
 WP32 recorded **22/22 native flows together** and **54 web checks**. These are
 historical acceptance receipts, not claims about a new local run. Physical-device,
-TalkBack and final production validation remain separate. WP33/WP34 are pending.
+TalkBack and final production validation remain separate. WP33 is complete and
+merged: 329 unique Node checks, 37 web checks, ten performance cases and 22/22
+native flows passed on its exact final head. WP34 is deferred until the planned
+feature additions are ready; the existing public APK is not WP34-certified.
 
 ## Project layout and documentation
 
@@ -117,6 +124,7 @@ TalkBack and final production validation remain separate. WP33/WP34 are pending.
 - [Backup v3 format](ROADMAP.md#backup-v3-format-and-compatibility)
 - [Testing and acceptance](ROADMAP.md#tests-and-recorded-acceptance)
 - [Release runbook](ROADMAP.md#release-operations)
+- [Safe feature work after 2.0](ROADMAP.md#safe-feature-work-after-20)
 
 Completed work-package plans and superseded diagnostic/handoff reports are
 available in Git history. Generated builds, test reports, runtime state and

@@ -12,13 +12,17 @@ Git history; existing regression tests and native runners remain active.
   [Android Build baseline](https://github.com/RyanEid06/SpendWise/actions/runs/37234446017)
   passed before implementation. The signed 2.0 trial merged at `9be8b8f`.
 - WP25–WP32 implementation and WP32 automated acceptance are complete.
-- A signed 2.0 trial was integrated; the latest public GitHub Release is still
-  [v1.4.0](https://github.com/RyanEid06/SpendWise/releases/tag/v1.4.0), checked
-  2026-10-04.
-- WP33 implementation and measured baselines are on
-  `wp33/observability-performance`; receipts and the exact-source-head acceptance
-  gate are linked below and in [PR #33](https://github.com/RyanEid06/SpendWise/pull/33).
-  WP34 has not started. Physical-device/TalkBack validation remains separate.
+- Public release: [v2.0.0](https://github.com/RyanEid06/SpendWise/releases/tag/v2.0.0),
+  build 6, published 2026-10-04 from `9be8b8f405a4312b221222517623367ac2b446f2`.
+  This APK predates WP33 and remains unchanged.
+- WP33 is complete and merged through
+  [PR #33](https://github.com/RyanEid06/SpendWise/pull/33) at
+  `dc60070cf2a60f112e77a0f17c0e796fda194a96`. Its source tree is identical to the
+  verified final PR head `e10e95936385af338ce402e657ec5aff8920ace5`.
+  `wp33/observability-performance` is preserved.
+- Feature work resumes from the WP33 baseline. WP34 is explicitly deferred until
+  the user's planned additions are ready. Physical-device/TalkBack validation
+  and production certification remain separate.
 
 ## Completed work — what we added
 
@@ -446,7 +450,9 @@ the full 22-flow gate was restored afterward.
 
 ### WP34 — production security and release gate
 
-Depends on WP25–WP33. No feature work belongs in this gate.
+Depends on WP25–WP33 and the user's next feature additions. Deferred by the user
+on 2026-10-05 until those additions are ready. No feature work belongs in this
+gate itself; the existing public 2.0 release remains available in the meantime.
 
 - Apply practical main protection, PR/review requirements, green checks,
   force-push prevention, dependency alerts, code/static analysis and secret scanning.
@@ -472,12 +478,52 @@ Each gate needs evidence tied to the final source/APK. Failed or unverified
 controls require a fix or an explicitly approved residual risk and follow-up;
 unsupported numerical quality scores do not replace proof.
 
+## Safe feature work after 2.0
+
+The public `v2.0.0` tag/APK is the installation baseline; the merged WP33 source
+is the development baseline. Do not move the published tag or replace its APK.
+The prepared working branch is `codex/post-2.0-features`. For separate additions,
+start a descriptive `codex/<feature>` branch from the current green `main`, keep
+commits small and open a PR. Preserve the WP33 branch and its measured receipts.
+
+- Before testing changes with valuable data, export an encrypted full Backup v3
+  and keep it outside the development checkout. Git rollback restores code, not
+  a device database or changed backup format. Test with isolated synthetic
+  fixtures/emulators first. Never uninstall or clear the real app to replace it
+  with a differently signed debug APK.
+- Preserve encryption, authentication, migration/recovery, backup compatibility,
+  redaction, input bounds and Undo protections while adding features. Product
+  behavior may change when the user requests it; update behavior tests with the
+  approved change instead of disabling security or correctness assertions.
+- Use Node 22 and JDK 21. Run `npm run verify`, the affected regression suites and
+  `npm run test:wp33`. Run `npm run test:wp32` for rendered UI changes. Android
+  changes also need `npm run android:sync`, a debug build and affected isolated
+  native flows; use the existing `wp32-final-native` PR label for the full native
+  gate after focused checks pass. Keep normal CI checks green before merging.
+- Test storage/schema or backup-format changes against old fixtures and both
+  merge/replace recovery paths; use explicit migrations rather than destructive
+  resets. Keep deployed backend compatibility in mind when changing API contracts.
+- Keep measured baselines fixed unless a deliberate, reviewed remeasurement is
+  justified. Do not hide regressions by raising thresholds or omitting cases.
+- Before distributing any new APK, use a version code **at least 7**, a matching
+  new release tag/version and the existing permanent signing certificate. Keep
+  schema/backup versions independent of marketing versions. Verify in-place
+  update and preserve user data; debug builds are for development.
+
+WP33 final-head acceptance: [Android Build](https://github.com/RyanEid06/SpendWise/actions/runs/37348373271),
+[web/full native](https://github.com/RyanEid06/SpendWise/actions/runs/37348386712)
+and [three isolated checkpoints](https://github.com/RyanEid06/SpendWise/actions/runs/37348373245)
+all passed: 329 unique Node checks (82 WP33), 37 web checks, ten performance
+cases and 22 sequential native flows. This evidence is tied to `e10e959`; later
+features must be validated on their own head.
+
 ## Product constraints
 
 WP16 established the original product freeze. Completed UX refinement and
-WP25–WP32 hardening preserve the product shape below. The integrated 2.0.0/build 6
-signed trial does not add a new product feature set. WP33 observability is
-implemented separately on its branch; WP34 remains future work.
+WP25–WP32 hardening preserve the product shape below. The published 2.0.0/build 6
+APK retains that baseline. WP33 observability is merged into development source;
+the user may request further product changes before WP34. The constraints below
+describe the established behavior to review when making those changes.
 Remaining work and acceptance are recorded above.
 
 ### Frozen product shape
@@ -568,16 +614,24 @@ Android Gradle and the Settings screen both read this file.
 
 ### Current published release
 
-- Release: `v1.4.0`
-- Version code: `5`
-- Tagged commit: `c0d7522192af7e07cbb1f46c3a00145e8b94a988`
-- Official signed APK: `SpendWise-v1.4.0.apk`
-- Release pipeline: passed and published on 2026-09-30
+- Release: [v2.0.0](https://github.com/RyanEid06/SpendWise/releases/tag/v2.0.0)
+- Version code: `6`
+- Tagged commit: `9be8b8f405a4312b221222517623367ac2b446f2`
+- Official signed APK: [SpendWise-v2.0.0.apk](https://github.com/RyanEid06/SpendWise/releases/download/v2.0.0/SpendWise-v2.0.0.apk)
+- [Release pipeline](https://github.com/RyanEid06/SpendWise/actions/runs/37232831371):
+  passed and published on 2026-10-04 at 20:45:28Z
+- APK SHA-256: `dcff3b65b4784f7a90f53267f651aefbb84b80c3c39aa33e9b089b2b4f046549`
 
-Latest public-release metadata was checked on 2026-10-04. Source 2.0.0/build 6
-is integrated on `main` at `9be8b8f405a4312b221222517623367ac2b446f2` as a signed
-trial; it has not replaced the public v1.4.0 release. Automated acceptance and
-remaining manual checks are documented in [testing and acceptance](#tests-and-recorded-acceptance).
+Public metadata and the release signing job were checked on 2026-10-05. Package,
+2.0.0/build 6 and the permanent signing certificate passed the existing verifier.
+The APK was re-downloaded anonymously and its SHA-256 matched both the public
+asset digest and the APK in the verified signing artifact. The receipt identifies
+the tagged source above and certificate
+`e279124cd9d2cd6d4c191e2644fd71063993e42d13441a46759fa922f16d5965`.
+This release predates WP33; WP33 is merged for future development, with no change
+to the published tag/APK. Automated acceptance and remaining manual checks are
+documented in [testing and acceptance](#tests-and-recorded-acceptance). WP34 is
+deferred and no final production certification is claimed.
 
 
 ### One-time signing key setup
@@ -634,16 +688,18 @@ Expected certificate SHA-256:
 e279124cd9d2cd6d4c191e2644fd71063993e42d13441a46759fa922f16d5965
 ```
 
-The trial did not create a public release. Physical-device and TalkBack checks,
-This earlier WP32 receipt predates WP33 observability; WP34 production
-certification remains a separate future gate.
+The PR trial itself did not create a public release; the later `v2.0.0` tag
+published build 6 through the release workflow above. This earlier WP32 receipt
+predates WP33 observability. Physical-device/TalkBack checks and WP34 production
+certification remain a separate future gate.
 
 ### Normal CI
 
 PRs, manual dispatches and pushes to `main`/`maintenance/**` run the Node
 regression suite, Capacitor sync, `assembleDebug` and debug APK upload.
-Deployed Gemini authentication smoke runs only on pushes to `main` or version
-tags, not maintenance pushes or PRs. Signing secrets are not needed for debug
+Deployed Gemini authentication smoke runs on pushes to `main` or version tags,
+manual dispatch and the same-repository WP33 PR path, not maintenance pushes or
+ordinary feature PRs. Signing secrets are not needed for debug
 verification. The separate E2E workflow runs Playwright and conditionally Maestro;
 see [testing and acceptance](#tests-and-recorded-acceptance).
 
