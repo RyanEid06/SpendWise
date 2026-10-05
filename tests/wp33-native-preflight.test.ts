@@ -34,3 +34,12 @@ test('native receipt includes source and host-controlled synthetic fixture prove
   assert.match(probe, /nodeVersion: process\.versions\.node/);
   assert.match(readFileSync('scripts/run-wp32-android-e2e.sh', 'utf8'), /WP33_NATIVE_FIXTURE="wp32-v2-full"/);
 });
+test('native financial clear scrolls to the danger action and still proves deletion', () => {
+  const flow = readFileSync('.maestro/current/clear-financial-data.yaml', 'utf8');
+  assert.ok(flow.indexOf('scrollUntilVisible:') > flow.indexOf('Open Settings'));
+  assert.ok(flow.indexOf('scrollUntilVisible:') < flow.indexOf('tapOn: "Clear App Data'));
+  assert.match(flow, /assertVisible: "Clear Financial Data\?"/);
+  assert.match(flow, /assertVisible: "Financial data has been erased\."/);
+  assert.match(flow, /assertNotVisible: "WP32 One Photo/);
+  assert.match(flow, /assertNotVisible: "WP32 Eight Photos/);
+});

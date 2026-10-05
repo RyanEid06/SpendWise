@@ -384,6 +384,13 @@ deployed-smoke receipts are pending. Android Build runs WP33 after retained
 WP32/signing checks and before sync/build; WP32 E2E adds separate browser/native
 receipts. Safe compact artifacts have seven-day retention. Checkout selects
 the source PR head. WP34 and automatic merge/release remain outside this work.
+The first full native run reached clear-before-restore, then its unscrolled
+`Clear App Data` selector failed: the action existed below the viewport after
+the diagnostics section. Screenshot/accessibility evidence classifies this as
+a native navigation assumption. The flow now scrolls to the action and retains
+confirmation, erased-state and absent-expense assertions. A real browser check
+also reaches/executes clear after expanding diagnostics. The existing isolated
+clear-after-full-restore gate runs before retrying full native acceptance.
 
 ### WP34 — production security and release gate
 
