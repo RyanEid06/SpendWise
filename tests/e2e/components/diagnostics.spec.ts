@@ -16,3 +16,12 @@ for (const [language, heading, preview, clear] of [
     const download = page.waitForEvent('download'); await exportButton.click(); expect((await download).suggestedFilename()).toMatch(/^SpendWise-technical-diagnostics-.*\.json$/);
   });
 }
+
+test('startup failure still exposes technical diagnostics when preference storage cannot be read', async ({ page }) => {
+  await page.addInitScript(() => { Storage.prototype.getItem = () => { throw new Error('forbidden-private-storage-error'); }; });
+  await page.goto('/');
+  await expect(page.getByText('SpendWise could not safely open local data', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Inspect report' }).click();
+  await expect(page.getByTestId('technical-report')).toContainText('STORAGE_INIT_FAILED');
+  await expect(page.getByTestId('technical-report')).not.toContainText('forbidden');
+});

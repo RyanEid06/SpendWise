@@ -38,8 +38,10 @@ function renderStorageFailure(): void {
 }
 
 function bootstrapLanguage(): Language {
-  const value = localStorage.getItem('spendwise_language');
-  return value === 'fr' || value === 'ar' ? value : 'en';
+  try {
+    const value = localStorage.getItem('spendwise_language');
+    return value === 'fr' || value === 'ar' ? value : 'en';
+  } catch { return 'en'; }
 }
 
 async function openProtectedStorage(): Promise<void> {
