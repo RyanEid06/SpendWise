@@ -20,6 +20,8 @@ import {
   SPENDWISE_DATABASE_SCHEMA_VERSION,
 } from './databaseSchema';
 
+import { diagnostics } from '../services/diagnostics/diagnostics';
+
 const PLAINTEXT_DATABASE_NAME = 'spendwise';
 export const ENCRYPTED_DATABASE_NAME = 'spendwise_secure_v1';
 export const DATABASE_KEY_PURPOSE = 'spendwise.db.v1';
@@ -143,6 +145,7 @@ function writeMigration(
       updatedAt: Date.now(),
     } satisfies DatabaseMigrationRecord)
   );
+  diagnostics.setState({ migration: phase });
 }
 
 async function readSnapshot(db: SQLiteDBConnection): Promise<DatabaseSnapshot> {

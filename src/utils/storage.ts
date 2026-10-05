@@ -19,6 +19,7 @@ import { APP_VERSION_NAME } from './appVersion';
 import { AttachmentEditPayload, AttachmentStorage } from './attachmentStorage';
 import { LEGACY_FINANCIAL_KEYS, MAX_SAFE_FINANCIAL_VALUE } from './financialState';
 import { LocalDataStore } from './localDataStore';
+import { diagnostics, measureDiagnostic } from '../services/diagnostics/diagnostics';
 import { SetupState } from './setupState';
 import {
   BackupV2Preview,
@@ -93,7 +94,8 @@ export class StorageManager {
     // silently disable App Lock because a credential is missing or malformed.
 
     await LocalDataStore.init(localStorage);
-    await AttachmentStorage.ensureNativeEncryption();
+    await measureDiagnostic('media.init', () => AttachmentStorage.ensureNativeEncryption());
+    diagnostics.setState({ mediaEncrypted: LocalDataStore.isNativeSqlite(), cryptoAvailable: Boolean(globalThis.crypto?.subtle) });
     localStorage.setItem(STORAGE_KEYS.INITIALIZED, 'true');
     this.initialized = true;
     AttachmentStorage.scheduleMaintenance();

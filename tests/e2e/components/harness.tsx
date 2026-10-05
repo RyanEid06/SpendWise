@@ -12,6 +12,7 @@ import { UndoSnackbar } from '../../../src/components/UndoSnackbar';
 import { ExpenseDetailModal } from '../../../src/components/ExpenseDetailModal';
 import { LockScreen } from '../../../src/screens/LockScreen';
 import { StorageManager } from '../../../src/utils/storage';
+import { TechnicalDiagnostics } from '../../../src/features/settings/TechnicalDiagnostics';
 
 declare global {
   interface Window {
@@ -208,6 +209,7 @@ async function render() {
   root.render(
     <React.StrictMode>
       {testCase === 'settings' ? <SettingsHarness /> :
+       testCase === 'diagnostics' ? <TechnicalDiagnostics language={initialLanguage} /> :
        testCase === 'history' ? <HistoryHarness /> :
        testCase.startsWith('lock-') ? <LockHarness /> :
        <DialogHarness />}

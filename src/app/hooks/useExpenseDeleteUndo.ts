@@ -1,6 +1,7 @@
 import { Dispatch, SetStateAction, useCallback, useEffect, useRef, useState } from 'react';
 import { Expense } from '../../types';
 import { expenseService } from '../../features/expenses/ExpenseService';
+import { diagnostics } from '../../services/diagnostics/diagnostics';
 import {
   ExpenseDeleteUndoController,
   restorePendingExpenses,
@@ -33,8 +34,8 @@ export function useExpenseDeleteUndo({
       onCommit: async (entries) => {
         await expenseService.permanentDelete(entries.map((entry) => entry.expense.id));
       },
-      onCommitError: (entries, error) => {
-        console.error('Failed to commit staged expense deletion.', error);
+      onCommitError: (entries) => {
+        diagnostics.record({ operation: 'delete.commit', outcome: 'failure', code: 'DELETE_COMMIT_FAILED' });
         setExpenses((current) => restorePendingExpenses(current, entries));
         setCommitError(true);
       },

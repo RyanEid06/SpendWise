@@ -30,6 +30,7 @@ import { getSuggestedConversionRate, SUPPORTED_CURRENCIES } from '../utils/curre
 import { backupService } from '../features/backup/BackupService';
 import { expenseService } from '../features/expenses/ExpenseService';
 import { SettingsOverview, InlineSettingsSection } from '../features/settings/SettingsOverview';
+import { TechnicalDiagnostics } from '../features/settings/TechnicalDiagnostics';
 import { overviewCopy } from '../features/settings/settingsCopy';
 import { mediaService } from '../services/MediaService';
 import { ConfirmationModal } from '../components/ConfirmationModal';
@@ -884,6 +885,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       {notificationBlock}
 
       <SettingsOverview
+        technicalDiagnostics={<TechnicalDiagnostics language={currentLanguage} />}
         currentCurrencyCode={currentCurrencyCode}
         currentThemeMode={currentThemeMode}
         currentLanguage={currentLanguage}

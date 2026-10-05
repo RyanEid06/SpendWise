@@ -8,6 +8,8 @@ import {
 } from './security/SecureSessionService';
 import type { Language } from './types';
 import { StorageManager } from './utils/storage';
+import { TechnicalDiagnostics } from './features/settings/TechnicalDiagnostics';
+import { measureDiagnostic } from './services/diagnostics/diagnostics';
 import './index.css';
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
@@ -29,6 +31,7 @@ function renderStorageFailure(): void {
           Your existing financial data was not deleted. Close and reopen the app. If this continues,
           keep the current installation in place so the stored data remains available for recovery.
         </p>
+        <TechnicalDiagnostics language={bootstrapLanguage()} />
       </div>
     </div>
   );
@@ -40,7 +43,7 @@ function bootstrapLanguage(): Language {
 }
 
 async function openProtectedStorage(): Promise<void> {
-  await StorageManager.init();
+  await measureDiagnostic('storage.init', () => StorageManager.init());
   renderApp();
 }
 
@@ -89,7 +92,7 @@ function renderBootstrapLock(): void {
 
 async function bootstrap() {
   try {
-    const security = await secureSessionService.initialize();
+    const security = await measureDiagnostic('security.init', () => secureSessionService.initialize());
 
     if (
       security.securityMode === 'native' &&

@@ -1,4 +1,5 @@
 import { AuthenticatedApiClient } from '../security/AuthenticatedApiClient';
+import { diagnostics } from '../services/diagnostics/diagnostics';
 import {
   SpendWiseApiError,
   apiErrorFromResponse,
@@ -43,6 +44,7 @@ export async function apiFetchJson<T>(
   init: RequestInit = {},
   timeoutMs = 15000
 ): Promise<T> {
+  const startedAt = performance.now();
   try {
     const response = await apiFetch(path, init, timeoutMs);
     if (!response.ok) {
@@ -50,7 +52,9 @@ export async function apiFetchJson<T>(
     }
 
     try {
-      return (await response.json()) as T;
+      const result = (await response.json()) as T;
+      diagnostics.record({ operation: 'api.request', outcome: 'success', durationMs: performance.now() - startedAt });
+      return result;
     } catch {
       throw new SpendWiseApiError('invalid_response', {
         status: response.status,
@@ -58,6 +62,8 @@ export async function apiFetchJson<T>(
       });
     }
   } catch (error) {
-    throw normalizeApiException(error);
+    const normalized = normalizeApiException(error);
+    diagnostics.record({ operation: 'api.request', outcome: 'failure', code: normalized.kind, httpClass: normalized.status == null ? undefined : `${Math.floor(normalized.status / 100)}xx`, durationMs: performance.now() - startedAt });
+    throw normalized;
   }
 }
