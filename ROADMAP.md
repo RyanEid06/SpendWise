@@ -19,7 +19,8 @@ Git history; existing regression tests and native runners remain active.
   [PR #33](https://github.com/RyanEid06/SpendWise/pull/33) at
   `dc60070cf2a60f112e77a0f17c0e796fda194a96`. Its source tree is identical to the
   verified final PR head `e10e95936385af338ce402e657ec5aff8920ace5`.
-  `wp33/observability-performance` is preserved.
+  After merged-main Build passed, the user authorized removal of the local and
+  remote WP33 branch. Its commits, PR and measured receipts remain in history.
 - Feature work resumes from the WP33 baseline. WP34 is explicitly deferred until
   the user's planned additions are ready. Physical-device/TalkBack validation
   and production certification remain separate.
@@ -205,7 +206,9 @@ They are not disposable generated output. Install Node.js 22 dependencies with
 | Browser, accessibility, layout | `test:wp32:browser`, `test:wp32:accessibility`, `test:wp32:visual` |
 | APK receipt verification | `node --test tests/apk-signing-verification.test.cjs` |
 | Full native suite | `scripts/run-wp32-android-e2e.sh` with prepared current/legacy APKs and emulator |
-| Isolated native debug | `scripts/run-wp32-isolated-gate.sh` with `WP32_TARGET`; current CI matrix selects `import-v3-data` |
+| Isolated native debug | `scripts/run-wp32-isolated-gate.sh` with `WP32_TARGET`; CI runs `wp33-native-startup`, `clear-before-v3-data`, then `import-v3-data` |
+| Privacy/performance contracts and Node benchmarks | `npm run test:wp33` |
+| Large-ledger browser measurements | `npm run test:wp33:browser` |
 | Targeted backup debug | `scripts/run-wp32-backup-restore-targeted.sh`; does not replace full acceptance |
 
 Harness regressions need Bash; Windows defaults to
@@ -425,13 +428,19 @@ Its first Build attempt failed at `packageDebug` without a detailed cause;
 the same-head isolated APK built successfully and only the failed Build job
 was retried. That retry passed without source changes, including packaging and
 deployed smoke. This was non-reproducible; the underlying packaging-worker
-cause remains unproven. Final
-delivery is gated by Build, web/full native and isolated checks on the exact
-documentation head, visible in [PR #33](https://github.com/RyanEid06/SpendWise/pull/33).
+cause remains unproven. Final delivery passed on the exact source/documentation
+head `e10e959` in [PR #33](https://github.com/RyanEid06/SpendWise/pull/33):
+[Build](https://github.com/RyanEid06/SpendWise/actions/runs/37348373271),
+[web/full native](https://github.com/RyanEid06/SpendWise/actions/runs/37348386712)
+and [isolated gates](https://github.com/RyanEid06/SpendWise/actions/runs/37348373245).
+The subsequent merged-main
+[Build](https://github.com/RyanEid06/SpendWise/actions/runs/37352850969) also passed
+on `dc60070`, with an identical source tree.
 Android Build runs WP33 after retained
 WP32/signing checks and before sync/build; WP32 E2E adds separate browser/native
 receipts. Safe compact artifacts have seven-day retention. Checkout selects
-the source PR head. WP34 and automatic merge/release remain outside this work.
+the source PR head. The original WP33 scope excluded automatic merge/release;
+the user later authorized the merge and branch cleanup. WP34 stays deferred.
 The first full native run reached clear-before-restore, then its unscrolled
 `Clear App Data` selector failed: the action existed below the viewport after
 the diagnostics section. Screenshot/accessibility evidence classifies this as
@@ -484,7 +493,8 @@ The public `v2.0.0` tag/APK is the installation baseline; the merged WP33 source
 is the development baseline. Do not move the published tag or replace its APK.
 The prepared working branch is `codex/post-2.0-features`. For separate additions,
 start a descriptive `codex/<feature>` branch from the current green `main`, keep
-commits small and open a PR. Preserve the WP33 branch and its measured receipts.
+commits small and open a PR. Preserve the WP33 merged history and measured
+receipts; its completed branch was removed at the user's request after green CI.
 
 - Before testing changes with valuable data, export an encrypted full Backup v3
   and keep it outside the development checkout. Git rollback restores code, not
@@ -707,13 +717,14 @@ The debug APK is for internal testing/distribution only. For a permanent update 
 
 ### Publishing a permanent update
 
-Publish a version tag from `main` only after the final release gate and merged
-commit's CI are green. The following is the matching tag for the current metadata;
-do not run it merely to build a local trial:
+`v2.0.0` is already published; do not recreate or move it. For a future release,
+first update `version.json` and matching package metadata, raise Android's code
+above 6, then publish a new matching version tag from green `main`. For example,
+after setting version 2.0.1 and a valid higher code:
 
 ```powershell
-git tag v2.0.0
-git push origin v2.0.0
+git tag v2.0.1
+git push origin v2.0.1
 ```
 
 The tag must exactly match `version.json`. The release job will:
