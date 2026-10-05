@@ -391,6 +391,13 @@ a native navigation assumption. The flow now scrolls to the action and retains
 confirmation, erased-state and absent-expense assertions. A real browser check
 also reaches/executes clear after expanding diagnostics. The existing isolated
 clear-after-full-restore gate runs before retrying full native acceptance.
+That isolated gate then exposed a real feedback regression: clear completed
+(zero expenses/media and the success text in the accessibility tree), but the
+message was above the scrolled viewport. A strengthened browser viewport
+assertion reproduced it. Successful clear now focuses and scrolls its result
+after modal cleanup; other dialogs retain their focus-return behavior. The
+affected 52 Node and three browser clear/Backup v3 checks pass. Native proof
+continues at the same populated-restore/clear checkpoint.
 
 ### WP34 — production security and release gate
 

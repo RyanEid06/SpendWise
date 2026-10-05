@@ -15,6 +15,8 @@ test('diagnostics preview leaves the financial clear action reachable by scrolli
   await expect(confirm).toBeVisible();
   await confirm.getByRole('button', { name: 'Erase Financial Data', exact: true }).click();
   await expect(page.getByText('Financial data has been erased.', { exact: true })).toBeVisible();
+  await expect(page.getByText('Financial data has been erased.', { exact: true })).toBeInViewport();
+  await expect(page.getByRole('status').filter({ hasText: 'Financial data has been erased.' })).toBeFocused();
   await page.getByRole('button', { name: 'Back to previous screen', exact: true }).click();
   await page.getByRole('button', { name: 'History', exact: true }).click();
   await expect(page.getByText('WP33 scroll fixture')).toHaveCount(0);

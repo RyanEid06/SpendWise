@@ -101,6 +101,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   onReviewSetup,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const statusMessageRef = useRef<HTMLDivElement>(null);
+  const clearFeedbackPending = useRef(false);
   const copy = overviewCopy[currentLanguage];
 
   const [settingsPage, setSettingsPage] = useState<SettingsPage>('overview');
@@ -122,6 +124,15 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [pendingCurrencyCode, setPendingCurrencyCode] = useState<string | null>(null);
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
+
+  useEffect(() => {
+    if (showClearModal || !clearFeedbackPending.current || !statusMessageRef.current) return;
+    clearFeedbackPending.current = false;
+    // Clear can be reached after scrolling below the diagnostics section.
+    // Present its result after modal focus cleanup, without changing other dialogs.
+    statusMessageRef.current.focus({ preventScroll: true });
+    statusMessageRef.current.scrollIntoView({ block: 'center' });
+  }, [showClearModal, statusMessage]);
 
   const hasSavedPin = hasWebPin;
   const hasFinancialData = totalExpensesCount > 0 || totalBudgetsCount > 0;
@@ -460,7 +471,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const notificationBlock = (
     <>
       {statusMessage && (
-        <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 text-xs font-medium flex items-center justify-between gap-2">
+          <div ref={statusMessageRef} role="status" tabIndex={-1} className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 text-xs font-medium flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <span>{statusMessage}</span>
@@ -932,6 +943,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             try {
               if (!(await requireFresh('clear-app-data'))) return;
               await onClearAllData();
+                clearFeedbackPending.current = true;
               setShowClearModal(false);
               setStatusMessage(t(currentLanguage, 'financialDataCleared'));
               setErrorMessage(null);
