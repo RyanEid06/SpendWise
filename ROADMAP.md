@@ -8,7 +8,9 @@ Git history; existing regression tests and native runners remain active.
 ## Current status
 
 - Source: **2.0.0**, Android version code **6**, package `com.spendwise.app`.
-- Integrated main: `9be8b8f405a4312b221222517623367ac2b446f2`.
+- Main inspected for WP33: `5ed7acdf2ce84e11200f3cc6f67eae76088a2610`;
+  [Android Build baseline](https://github.com/RyanEid06/SpendWise/actions/runs/37234446017)
+  passed before implementation. The signed 2.0 trial merged at `9be8b8f`.
 - WP25–WP32 implementation and WP32 automated acceptance are complete.
 - A signed 2.0 trial was integrated; the latest public GitHub Release is still
   [v1.4.0](https://github.com/RyanEid06/SpendWise/releases/tag/v1.4.0), checked
@@ -370,17 +372,29 @@ Native collection is restricted to a named disposable `wp33-synthetic` debug
 emulator, after the normal isolated WP32 restore and before App Lock mutations.
 It reads only re-sanitized technical diagnostics and measures three actual
 cold encrypted open/read runs without changing credentials or bypassing crypto.
-No local SDK/emulator was available; actual CI receipt remains pending. Native
+The first full native run on `64093bf` passed all 22 flows, but inspection
+rejected its timing receipt: counters were cumulative and the final snapshot
+repeated. The collector now preserves diagnostics, requires a changed process
+and exactly one new successful init/open/read completion, and derives per-boot
+durations with explicit rounding bounds. It sanitizes with the device clock so
+host clock drift cannot hide fresh failures. An isolated v2-full restore/startup
+checkpoint verifies this repair before full acceptance is repeated. No local
+SDK/emulator was available; valid native timing evidence remains pending. Native
 large-ledger rendering, device reboot/OEM timing and physical-device performance
 are unmeasured. Existing WP32 migration, encrypted media, backup and Undo gates
 remain required.
 
-Local validation: 318/318 Node checks before the review follow-up, ten performance browser cases, extended
-TypeScript/Vite and Capacitor sync pass. Production audit has zero findings;
+Validation on implementation head `64093bf0b862cfce1c0dfae673eec40928638817`:
+321 unique Node checks (including 74 WP33 and ten signing checks), 37 web checks
+and ten five-sample performance browser cases pass. TypeScript/Vite, Capacitor
+sync, debug APK and deployed installation-authenticated Gemini smoke pass in
+[Android Build](https://github.com/RyanEid06/SpendWise/actions/runs/37318059276),
+[web E2E](https://github.com/RyanEid06/SpendWise/actions/runs/37318059277) and
+[both isolated native checkpoints](https://github.com/RyanEid06/SpendWise/actions/runs/37318059229).
+Production audit has zero findings;
 the high-severity full audit passes with three moderate development-only
-Capacitor CLI/xcode/uuid findings. The full WP32 gate passes 22 Node checks and
-36 executable web checks. Exact-head Android/native/
-deployed-smoke receipts are pending. Android Build runs WP33 after retained
+Capacitor CLI/xcode/uuid findings. Full native acceptance and final documentation
+head CI remain pending. Android Build runs WP33 after retained
 WP32/signing checks and before sync/build; WP32 E2E adds separate browser/native
 receipts. Safe compact artifacts have seven-day retention. Checkout selects
 the source PR head. WP34 and automatic merge/release remain outside this work.
@@ -396,8 +410,9 @@ That isolated gate then exposed a real feedback regression: clear completed
 message was above the scrolled viewport. A strengthened browser viewport
 assertion reproduced it. Successful clear now focuses and scrolls its result
 after modal cleanup; other dialogs retain their focus-return behavior. The
-affected 52 Node and three browser clear/Backup v3 checks pass. Native proof
-continues at the same populated-restore/clear checkpoint.
+affected 52 Node and three browser clear/Backup v3 checks pass. The native
+populated-restore/clear checkpoint now passes with all original assertions;
+the full 22-flow gate was restored afterward.
 
 ### WP34 — production security and release gate
 
@@ -431,7 +446,8 @@ unsupported numerical quality scores do not replace proof.
 
 WP16 established the original product freeze. Completed UX refinement and
 WP25–WP32 hardening preserve the product shape below. The integrated 2.0.0/build 6
-signed trial does not add a new product feature set; WP33/WP34 remain future work.
+signed trial does not add a new product feature set. WP33 observability is
+implemented separately on its branch; WP34 remains future work.
 Remaining work and acceptance are recorded above.
 
 ### Frozen product shape
@@ -589,7 +605,8 @@ e279124cd9d2cd6d4c191e2644fd71063993e42d13441a46759fa922f16d5965
 ```
 
 The trial did not create a public release. Physical-device and TalkBack checks,
-WP33 observability and WP34 production certification remain separate from CI.
+This earlier WP32 receipt predates WP33 observability; WP34 production
+certification remains a separate future gate.
 
 ### Normal CI
 

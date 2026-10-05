@@ -8,6 +8,15 @@ V14_APK="${V14_APK:-artifacts/android-e2e/apks/v14-debug.apk}"
 RESULT_ROOT="${RESULT_ROOT:-artifacts/android-isolated/${TARGET}}"
 FIXTURE_ROOT="${FIXTURE_ROOT:-artifacts/android-e2e/fixtures}"
 
+if [ "$TARGET" = "wp33-native-startup" ]; then
+  # Validate before installing traps, changing device settings or resetting data.
+  export ANDROID_SERIAL="${ANDROID_SERIAL:-emulator-5554}"
+  [[ "$ANDROID_SERIAL" =~ ^emulator-[0-9]+$ ]] || exit 2
+  [ "$(adb -s "$ANDROID_SERIAL" shell getprop ro.kernel.qemu | tr -d '\r')" = "1" ] || exit 2
+  wp33_avd="$(adb -s "$ANDROID_SERIAL" emu avd name | head -n 1 | tr -d '\r')"
+  [[ "$wp33_avd" =~ ^wp33-synthetic(-[A-Za-z0-9_-]+)?$ ]] || exit 2
+fi
+
 mkdir -p "$RESULT_ROOT"
 source scripts/wp32-android-helpers.sh
 
@@ -153,6 +162,13 @@ case "$TARGET" in
     install_current
     push_download "$FIXTURE_ROOT/wp32-v2-full.zip" wp32-v2-full.zip
     run_flow target-import-v2-full .maestro/current/import-v2-full.yaml
+    ;;
+  wp33-native-startup)
+    install_current
+    push_download "$FIXTURE_ROOT/wp32-v2-full.zip" wp32-v2-full.zip
+    run_flow target-import-v2-full .maestro/current/import-v2-full.yaml
+    WP33_NATIVE_FIXTURE="wp32-v2-full" ADB_SERIAL="$ANDROID_SERIAL" bash scripts/run-wp33-native-benchmark.sh \
+      "$RESULT_ROOT/wp33-native-benchmark.json"
     ;;
   app-lock-setup)
     install_current
