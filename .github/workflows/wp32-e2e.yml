@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Check Android harness syntax
         run: |
@@ -45,6 +47,18 @@ jobs:
       - name: Run WP32 executable web suite
         run: npm run test:wp32
 
+      - name: Run WP33 large-ledger browser measurements
+        run: npm run test:wp33:browser
+
+      - name: Upload safe WP33 browser receipt
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: wp33-browser-benchmark
+          path: artifacts/wp33/browser-summary.json
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Upload Playwright failure artifacts
         if: failure()
         uses: actions/upload-artifact@v7
@@ -65,12 +79,14 @@ jobs:
       VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
       MAESTRO_VERSION: "2.11.0"
       WP32_INSPECT_WEBVIEW: "1"
+      WP33_NATIVE_BENCHMARK: "1"
 
     steps:
       - name: Checkout full history
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Setup Node
         uses: actions/setup-node@v7
@@ -98,6 +114,8 @@ jobs:
           mkdir -p artifacts/android-e2e/apks artifacts/android-e2e/fixtures
           cp android/app/build/outputs/apk/debug/app-debug.apk             artifacts/android-e2e/apks/current-debug.apk
           npx tsx scripts/wp32-generate-portable-fixtures.ts             artifacts/android-e2e/fixtures
+          # Bundle the technical-only probe before the established disk cleanup.
+          ./node_modules/.bin/esbuild scripts/wp33/native.ts --bundle --platform=node --format=esm --outfile=artifacts/wp33/native-runner.mjs
 
       - name: Build v1.4 migration fixture APK
         shell: bash
@@ -189,6 +207,7 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: pixel_6
+          avd-name: wp33-synthetic-api34
           cores: 2
           ram-size: 4096M
           disk-size: 3G
@@ -197,6 +216,15 @@ jobs:
             -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
             -no-snapshot-save -camera-back none
           script: bash scripts/run-wp32-android-e2e.sh
+
+      - name: Upload WP33 native timing report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: wp33-native-performance
+          path: artifacts/android-e2e/results/wp33-native-benchmark.json
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Upload Android failure artifacts
         if: failure()

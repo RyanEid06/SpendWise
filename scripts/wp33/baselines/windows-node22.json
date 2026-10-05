@@ -1,0 +1,1191 @@
+{
+  "format": "spendwise-benchmark-baseline-v1",
+  "environment": {
+    "runtime": "node",
+    "nodeMajor": 22,
+    "nodeVersion": "22.23.3",
+    "platform": "win32",
+    "arch": "x64",
+    "osRelease": "10.0.26200",
+    "cpu": "13th Gen Intel(R) Core(TM) i7-13620H",
+    "cpuCount": 16,
+    "timezone": "UTC",
+    "storageMode": "isolated-web-memory-adapter",
+    "cryptoMode": "production-argon2id-and-webcrypto"
+  },
+  "fixture": {
+    "seed": 330026,
+    "version": 1,
+    "distribution": "ten-months",
+    "clockTimestamp": 1791201600000
+  },
+  "measuredRuns": [
+    {
+      "revision": "d5e44ce688d9264cf1f2d79a182c0b0e4c997c73",
+      "generatedAt": "2026-10-05T12:37:48.488Z",
+      "samples": 5
+    },
+    {
+      "revision": "d5e44ce688d9264cf1f2d79a182c0b0e4c997c73",
+      "generatedAt": "2026-10-05T12:39:15.415Z",
+      "samples": 5
+    }
+  ],
+  "policy": {
+    "warningMultiplier": 2,
+    "severeMultiplier": 6,
+    "severeCondition": "every-sample-exceeds-threshold"
+  },
+  "datasets": [
+    {
+      "size": 0,
+      "operations": [
+        {
+          "operation": "storage.web.init",
+          "medianMs": 0.03300000000001546,
+          "maxMs": 0.1249000000000251,
+          "madMs": 0.009650000000021919,
+          "warningMs": 0.2498000000000502,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "storage.web.read",
+          "medianMs": 0.005400000000037153,
+          "maxMs": 0.03530000000000655,
+          "madMs": 0.003250000000008413,
+          "warningMs": 0.0706000000000131,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "storage.web.persist",
+          "medianMs": 0.010400000000004184,
+          "maxMs": 0.04919999999998481,
+          "madMs": 0.00190000000000623,
+          "warningMs": 0.09839999999996962,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "ledger.initial",
+          "medianMs": 0.0055499999999995,
+          "maxMs": 0.012800000000027012,
+          "madMs": 0.0012499999999704414,
+          "warningMs": 0.026099999999644297,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.sort",
+          "medianMs": 0.0004500000000007276,
+          "maxMs": 0.0012000000000398359,
+          "madMs": 0.00014999999996234692,
+          "warningMs": 0.0026999999995496182,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.search",
+          "medianMs": 0.0008499999999855845,
+          "maxMs": 0.0019000000000346517,
+          "madMs": 0.0002499999999656666,
+          "warningMs": 0.004699999999559168,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.category",
+          "medianMs": 0.0006500000000073669,
+          "maxMs": 0.0011999999999829924,
+          "madMs": 0.00014999999999076863,
+          "warningMs": 0.0030999999999039574,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.date",
+          "medianMs": 0.0010000000000047748,
+          "maxMs": 0.0036000000000058208,
+          "madMs": 0.0002000000000066393,
+          "warningMs": 0.0072000000000116415,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.group.day",
+          "medianMs": 0.0004000000000132786,
+          "maxMs": 0.0008000000000265572,
+          "madMs": 0,
+          "warningMs": 0.0016000000000531145,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.group.category",
+          "medianMs": 0.0006999999999948159,
+          "maxMs": 0.033599999999978536,
+          "madMs": 0.00030000000000995897,
+          "warningMs": 0.06719999999995707,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "statistics.monthly",
+          "medianMs": 0.055900000000008276,
+          "maxMs": 0.06710000000003902,
+          "madMs": 0.00544999999999618,
+          "warningMs": 0.17719999999997071,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "statistics.all",
+          "medianMs": 0.059650000000004866,
+          "maxMs": 0.113900000000001,
+          "madMs": 0.009950000000003456,
+          "warningMs": 0.2387000000000512,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "statistics.ranking",
+          "medianMs": 0.0004500000000007276,
+          "maxMs": 0.0012000000000398359,
+          "madMs": 0.00005000000001587068,
+          "warningMs": 0.0024000000000796717,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "statistics.detail",
+          "medianMs": 0.4089500000000328,
+          "maxMs": 0.5696000000000367,
+          "madMs": 0.08060000000003242,
+          "warningMs": 1.7851000000004547,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "statistics.localAI",
+          "medianMs": 0.00919999999999277,
+          "maxMs": 0.04009999999999536,
+          "madMs": 0.0018999999999778083,
+          "warningMs": 0.08019999999999072,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.v3.create",
+          "medianMs": 24.63194999999996,
+          "maxMs": 28.051600000000008,
+          "madMs": 1.6101999999999634,
+          "warningMs": 68.58629999999948,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.v3.header",
+          "medianMs": 0.024249999999994998,
+          "maxMs": 0.06330000000002656,
+          "madMs": 0.011799999999936972,
+          "warningMs": 0.19009999999923366,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.v3.decrypt",
+          "medianMs": 22.28924999999998,
+          "maxMs": 24.689499999999953,
+          "madMs": 0.854150000000061,
+          "warningMs": 54.828300000000695,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.validate.parse",
+          "medianMs": 0.3040500000000179,
+          "maxMs": 0.47489999999993415,
+          "madMs": 0.032800000000065666,
+          "warningMs": 1.0017000000008238,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.restore.prepare",
+          "medianMs": 0.004000000000019099,
+          "maxMs": 0.008000000000038199,
+          "madMs": 0.0004500000000007276,
+          "warningMs": 0.016000000000076398,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.restore.replace",
+          "medianMs": 22.58314999999999,
+          "maxMs": 27.571000000000026,
+          "madMs": 1.1386499999999842,
+          "warningMs": 58.83009999999979,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.restore.merge",
+          "medianMs": 23.605349999999987,
+          "maxMs": 27.770399999999995,
+          "madMs": 1.6779999999999404,
+          "warningMs": 67.34669999999926,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "media.inventory.integrity",
+          "medianMs": 0.007649999999898682,
+          "maxMs": 0.01749999999992724,
+          "madMs": 0.0015999999998257408,
+          "warningMs": 0.03499999999985448,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "media.codec.small",
+          "medianMs": 0.18875000000002728,
+          "maxMs": 0.24310000000014043,
+          "madMs": 0.02384999999998172,
+          "warningMs": 0.6636999999998352,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "media.codec.large",
+          "medianMs": 10.227949999999964,
+          "maxMs": 11.78729999999996,
+          "madMs": 0.4766500000000633,
+          "warningMs": 26.17570000000069,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        }
+      ]
+    },
+    {
+      "size": 100,
+      "operations": [
+        {
+          "operation": "storage.web.init",
+          "medianMs": 0.10015000000009877,
+          "maxMs": 0.14370000000008076,
+          "madMs": 0.008500000000140062,
+          "warningMs": 0.3023000000018783,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "storage.web.read",
+          "medianMs": 0.075649999999996,
+          "maxMs": 0.10159999999996217,
+          "madMs": 0.0028999999999541615,
+          "warningMs": 0.20319999999992433,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "storage.web.persist",
+          "medianMs": 0.14665000000002237,
+          "maxMs": 0.21669999999994616,
+          "madMs": 0.003100000000017644,
+          "warningMs": 0.4333999999998923,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "ledger.initial",
+          "medianMs": 0.023499999999899046,
+          "maxMs": 0.08590000000003783,
+          "madMs": 0.010150000000066939,
+          "warningMs": 0.17180000000007567,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.sort",
+          "medianMs": 0.015099999999961256,
+          "maxMs": 0.07500000000004547,
+          "madMs": 0.0020999999999276042,
+          "warningMs": 0.15000000000009095,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.search",
+          "medianMs": 0.025749999999902684,
+          "maxMs": 0.031799999999975626,
+          "madMs": 0.0030499999999165084,
+          "warningMs": 0.08809999999880347,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.category",
+          "medianMs": 0.02245000000004893,
+          "maxMs": 0.054300000000012005,
+          "madMs": 0.008199999999987995,
+          "warningMs": 0.1432999999999538,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.date",
+          "medianMs": 0.03224999999997635,
+          "maxMs": 0.06660000000010768,
+          "madMs": 0.004000000000019099,
+          "warningMs": 0.13320000000021537,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.group.day",
+          "medianMs": 0.10540000000003147,
+          "maxMs": 0.143100000000004,
+          "madMs": 0.011750000000006366,
+          "warningMs": 0.35180000000013933,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.group.category",
+          "medianMs": 0.014499999999998181,
+          "maxMs": 0.018299999999953798,
+          "madMs": 0.0017000000000280124,
+          "warningMs": 0.04940000000033251,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "statistics.monthly",
+          "medianMs": 0.206450000000018,
+          "maxMs": 0.2744999999999891,
+          "madMs": 0.008950000000027103,
+          "warningMs": 0.5489999999999782,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "statistics.all",
+          "medianMs": 3.0317000000000007,
+          "maxMs": 3.426200000000108,
+          "madMs": 0.10805000000004839,
+          "warningMs": 7.360000000000582,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "statistics.ranking",
+          "medianMs": 0.0029499999999416104,
+          "maxMs": 0.009200000000191721,
+          "madMs": 0.00029999999992469384,
+          "warningMs": 0.018400000000383443,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "statistics.detail",
+          "medianMs": 4.960849999999937,
+          "maxMs": 5.375800000000027,
+          "madMs": 0.2075999999999567,
+          "warningMs": 12.412899999999354,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "statistics.localAI",
+          "medianMs": 0.16955000000007203,
+          "maxMs": 0.38209999999980937,
+          "madMs": 0.010000000000104592,
+          "warningMs": 0.7641999999996187,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.v3.create",
+          "medianMs": 30.695850000000064,
+          "maxMs": 32.56659999999988,
+          "madMs": 1.2440000000000282,
+          "warningMs": 76.31970000000047,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.v3.header",
+          "medianMs": 0.020099999999956708,
+          "maxMs": 0.033699999999953434,
+          "madMs": 0.0049999999999954525,
+          "warningMs": 0.10019999999985885,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.v3.decrypt",
+          "medianMs": 22.069399999999973,
+          "maxMs": 24.87760000000003,
+          "madMs": 0.6149500000000216,
+          "warningMs": 51.518200000000206,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.validate.parse",
+          "medianMs": 0.5543499999999995,
+          "maxMs": 0.6756000000000313,
+          "madMs": 0.03890000000001237,
+          "warningMs": 1.5755000000001473,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.restore.prepare",
+          "medianMs": 0.3520499999999629,
+          "maxMs": 0.375,
+          "madMs": 0.007749999999987267,
+          "warningMs": 0.797099999999773,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.restore.replace",
+          "medianMs": 25.499450000000024,
+          "maxMs": 27.50610000000006,
+          "madMs": 1.3067499999999654,
+          "warningMs": 66.67989999999963,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.restore.merge",
+          "medianMs": 26.927350000000047,
+          "maxMs": 29.898799999999937,
+          "madMs": 1.2997000000000298,
+          "warningMs": 69.45110000000045,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "media.inventory.integrity",
+          "medianMs": 0.129099999999994,
+          "maxMs": 0.17219999999997526,
+          "madMs": 0.00395000000003165,
+          "warningMs": 0.3443999999999505,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "media.codec.small",
+          "medianMs": 0.10144999999999982,
+          "maxMs": 0.1514999999999418,
+          "madMs": 0.014049999999997453,
+          "warningMs": 0.3714999999999691,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "media.codec.large",
+          "medianMs": 10.48960000000011,
+          "maxMs": 11.024899999999889,
+          "madMs": 0.20679999999981646,
+          "warningMs": 23.460799999998017,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        }
+      ]
+    },
+    {
+      "size": 1000,
+      "operations": [
+        {
+          "operation": "storage.web.init",
+          "medianMs": 0.6949500000001763,
+          "maxMs": 0.9017999999998665,
+          "madMs": 0.1534999999998945,
+          "warningMs": 3.2318999999990865,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "storage.web.read",
+          "medianMs": 0.5968500000000176,
+          "maxMs": 0.738399999999956,
+          "madMs": 0.08065000000010514,
+          "warningMs": 2.161500000001297,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "storage.web.persist",
+          "medianMs": 1.4420999999998685,
+          "maxMs": 1.7163000000000466,
+          "madMs": 0.13494999999988977,
+          "warningMs": 4.503599999998414,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "ledger.initial",
+          "medianMs": 0.05934999999999491,
+          "maxMs": 0.08189999999990505,
+          "madMs": 0.009300000000052933,
+          "warningMs": 0.230300000000625,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.sort",
+          "medianMs": 0.1534000000000333,
+          "maxMs": 0.20080000000007203,
+          "madMs": 0.030399999999985994,
+          "warningMs": 0.6715999999998985,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.search",
+          "medianMs": 0.2169499999998834,
+          "maxMs": 1.2158999999999196,
+          "madMs": 0.026199999999789725,
+          "warningMs": 2.431799999999839,
+          "hardMs": 7.295399999999518,
+          "reason": "Warning at twice the measured envelope; block only when every repeated sample exceeds six times that envelope on a matching environment."
+        },
+        {
+          "operation": "history.category",
+          "medianMs": 0.15390000000013515,
+          "maxMs": 0.18830000000002656,
+          "madMs": 0.007450000000062573,
+          "warningMs": 0.3972000000010212,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.date",
+          "medianMs": 0.18335000000001855,
+          "maxMs": 0.2747999999999138,
+          "madMs": 0.020200000000045293,
+          "warningMs": 0.6091000000005806,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.group.day",
+          "medianMs": 0.4147000000000389,
+          "maxMs": 0.43059999999991305,
+          "madMs": 0.009699999999952524,
+          "warningMs": 0.9457999999995081,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.group.category",
+          "medianMs": 0.15904999999997926,
+          "maxMs": 0.17409999999995307,
+          "madMs": 0.006200000000035288,
+          "warningMs": 0.392500000000382,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "statistics.monthly",
+          "medianMs": 0.40485000000001037,
+          "maxMs": 0.4816000000000713,
+          "madMs": 0.019650000000069667,
+          "warningMs": 1.0455000000008567,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "statistics.all",
+          "medianMs": 3.6682500000000573,
+          "maxMs": 4.015399999999772,
+          "madMs": 0.03590000000008331,
+          "warningMs": 8.030799999999545,
+          "hardMs": 24.092399999998634,
+          "reason": "Warning at twice the measured envelope; block only when every repeated sample exceeds six times that envelope on a matching environment."
+        },
+        {
+          "operation": "statistics.ranking",
+          "medianMs": 0.002549999999928332,
+          "maxMs": 0.0037000000002080924,
+          "madMs": 0.00020000000006348273,
+          "warningMs": 0.007500000000618456,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "statistics.detail",
+          "medianMs": 4.741199999999935,
+          "maxMs": 5.8245999999999185,
+          "madMs": 0.1471000000000231,
+          "warningMs": 11.649199999999837,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "statistics.localAI",
+          "medianMs": 0.9473999999997886,
+          "maxMs": 1.9373000000000502,
+          "madMs": 0.042749999999614374,
+          "warningMs": 3.8746000000001004,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.v3.create",
+          "medianMs": 71.84255000000007,
+          "maxMs": 88.8766999999998,
+          "madMs": 5.039849999999888,
+          "warningMs": 204.1632999999988,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.v3.header",
+          "medianMs": 0.060299999999870124,
+          "maxMs": 0.08290000000033615,
+          "madMs": 0.013950000000022555,
+          "warningMs": 0.2880000000000109,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.v3.decrypt",
+          "medianMs": 23.268750000000182,
+          "maxMs": 25.365899999999783,
+          "madMs": 0.7771000000000186,
+          "warningMs": 55.862700000000586,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.validate.parse",
+          "medianMs": 2.7952999999999975,
+          "maxMs": 2.887499999999818,
+          "madMs": 0.025249999999914507,
+          "warningMs": 5.893599999998969,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.restore.prepare",
+          "medianMs": 1.8952500000000327,
+          "maxMs": 2.888800000000174,
+          "madMs": 0.11515000000008513,
+          "warningMs": 5.777600000000348,
+          "hardMs": 17.332800000001043,
+          "reason": "Warning at twice the measured envelope; block only when every repeated sample exceeds six times that envelope on a matching environment."
+        },
+        {
+          "operation": "backup.restore.replace",
+          "medianMs": 34.23919999999998,
+          "maxMs": 39.84130000000005,
+          "madMs": 1.6573499999999513,
+          "warningMs": 88.36659999999938,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.restore.merge",
+          "medianMs": 41.23215000000005,
+          "maxMs": 46.18159999999989,
+          "madMs": 1.2161000000000968,
+          "warningMs": 97.05750000000126,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "media.inventory.integrity",
+          "medianMs": 0.6379000000001724,
+          "maxMs": 0.7759999999998399,
+          "madMs": 0.067450000000008,
+          "warningMs": 2.085200000000441,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "media.codec.small",
+          "medianMs": 0.11790000000019063,
+          "maxMs": 4.28859999999986,
+          "madMs": 0.04625000000032742,
+          "warningMs": 8.57719999999972,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "media.codec.large",
+          "medianMs": 9.29020000000014,
+          "maxMs": 11.69479999999976,
+          "madMs": 0.33560000000011314,
+          "warningMs": 23.38959999999952,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        }
+      ]
+    },
+    {
+      "size": 10000,
+      "operations": [
+        {
+          "operation": "storage.web.init",
+          "medianMs": 5.193599999999833,
+          "maxMs": 6.366100000000188,
+          "madMs": 0.19059999999967658,
+          "warningMs": 12.732200000000375,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "storage.web.read",
+          "medianMs": 4.750849999999673,
+          "maxMs": 6.315200000000004,
+          "madMs": 0.06794999999965512,
+          "warningMs": 12.630400000000009,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "storage.web.persist",
+          "medianMs": 11.629349999999931,
+          "maxMs": 13.197400000000016,
+          "madMs": 0.5829499999997552,
+          "warningMs": 30.254099999996924,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "ledger.initial",
+          "medianMs": 0.2722000000001117,
+          "maxMs": 0.3348999999998341,
+          "madMs": 0.004950000000235377,
+          "warningMs": 0.6697999999996682,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.sort",
+          "medianMs": 1.0292500000002747,
+          "maxMs": 1.0957000000003063,
+          "madMs": 0.04029999999966094,
+          "warningMs": 2.5420999999964806,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.search",
+          "medianMs": 1.6671499999999924,
+          "maxMs": 1.841700000000401,
+          "madMs": 0.06039999999984502,
+          "warningMs": 4.059099999998125,
+          "hardMs": 12.177299999994375,
+          "reason": "Warning at twice the measured envelope; block only when every repeated sample exceeds six times that envelope on a matching environment."
+        },
+        {
+          "operation": "history.category",
+          "medianMs": 1.3763000000001284,
+          "maxMs": 1.9416999999998552,
+          "madMs": 0.1801500000001397,
+          "warningMs": 4.914400000001933,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.date",
+          "medianMs": 1.7035500000001775,
+          "maxMs": 1.9966999999996915,
+          "madMs": 0.18024999999988722,
+          "warningMs": 5.570099999999002,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.group.day",
+          "medianMs": 2.705249999999751,
+          "maxMs": 3.196799999999712,
+          "madMs": 0.1738999999997759,
+          "warningMs": 7.497299999996812,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.group.category",
+          "medianMs": 1.0599999999999454,
+          "maxMs": 1.1902000000000044,
+          "madMs": 0.03239999999982501,
+          "warningMs": 2.508799999997791,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "statistics.monthly",
+          "medianMs": 2.27780000000007,
+          "maxMs": 2.699000000000069,
+          "madMs": 0.0239000000001397,
+          "warningMs": 5.398000000000138,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "statistics.all",
+          "medianMs": 11.766050000000178,
+          "maxMs": 12.524599999999737,
+          "madMs": 0.32340000000021973,
+          "warningMs": 27.412900000002992,
+          "hardMs": 82.23870000000898,
+          "reason": "Warning at twice the measured envelope; block only when every repeated sample exceeds six times that envelope on a matching environment."
+        },
+        {
+          "operation": "statistics.ranking",
+          "medianMs": 0.002549999999928332,
+          "maxMs": 0.0039000000001578883,
+          "madMs": 0.00014999999984866008,
+          "warningMs": 0.0078000000003157766,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "statistics.detail",
+          "medianMs": 4.964550000000145,
+          "maxMs": 6.79950000000008,
+          "madMs": 0.24125000000026375,
+          "warningMs": 13.59900000000016,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "statistics.localAI",
+          "medianMs": 9.335850000000164,
+          "maxMs": 10.453499999999622,
+          "madMs": 0.1923500000000331,
+          "warningMs": 20.979900000000725,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.v3.create",
+          "medianMs": 546.7451500000002,
+          "maxMs": 564.8196000000007,
+          "madMs": 10.87604999999985,
+          "warningMs": 1224.0028999999986,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.v3.header",
+          "medianMs": 0.18069999999988795,
+          "maxMs": 0.4257999999999811,
+          "madMs": 0.07180000000016662,
+          "warningMs": 1.2230000000017753,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.v3.decrypt",
+          "medianMs": 23.996500000000196,
+          "maxMs": 30.493800000000192,
+          "madMs": 1.2561000000005151,
+          "warningMs": 63.066200000006575,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.validate.parse",
+          "medianMs": 25.99669999999969,
+          "maxMs": 28.617699999999786,
+          "madMs": 0.8751499999998487,
+          "warningMs": 62.49519999999757,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.restore.prepare",
+          "medianMs": 28.68685000000005,
+          "maxMs": 42.097899999998845,
+          "madMs": 1.5133999999998196,
+          "warningMs": 84.19579999999769,
+          "hardMs": 252.58739999999307,
+          "reason": "Warning at twice the measured envelope; block only when every repeated sample exceeds six times that envelope on a matching environment."
+        },
+        {
+          "operation": "backup.restore.replace",
+          "medianMs": 123.45665000000008,
+          "maxMs": 133.9385000000002,
+          "madMs": 2.6802999999999884,
+          "warningMs": 279.0769,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.restore.merge",
+          "medianMs": 220.95400000000063,
+          "maxMs": 266.1406999999999,
+          "madMs": 7.285550000001422,
+          "warningMs": 532.2813999999998,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "media.inventory.integrity",
+          "medianMs": 0.7514499999997497,
+          "maxMs": 2.8519999999989523,
+          "madMs": 0.04564999999911379,
+          "warningMs": 5.7039999999979045,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "media.codec.small",
+          "medianMs": 0.17069999999966967,
+          "maxMs": 0.24539999999979045,
+          "madMs": 0.04539999999997235,
+          "warningMs": 0.8861999999990076,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "media.codec.large",
+          "medianMs": 9.719000000000051,
+          "maxMs": 13.615100000000893,
+          "madMs": 0.555899999999383,
+          "warningMs": 27.230200000001787,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        }
+      ]
+    },
+    {
+      "size": 25000,
+      "operations": [
+        {
+          "operation": "storage.web.init",
+          "medianMs": 14.571399999999812,
+          "maxMs": 15.397600000000239,
+          "madMs": 0.748450000000048,
+          "warningMs": 38.1242000000002,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "storage.web.read",
+          "medianMs": 15.4024500000005,
+          "maxMs": 25.225800000000163,
+          "madMs": 0.34465000000000146,
+          "warningMs": 50.451600000000326,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "storage.web.persist",
+          "medianMs": 31.19984999999997,
+          "maxMs": 41.719199999999546,
+          "madMs": 1.3593500000006316,
+          "warningMs": 83.43839999999909,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "ledger.initial",
+          "medianMs": 1.1020500000004176,
+          "maxMs": 1.814699999998993,
+          "madMs": 0.37660000000141736,
+          "warningMs": 6.723300000017844,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.sort",
+          "medianMs": 3.9203000000006796,
+          "maxMs": 6.470600000000559,
+          "madMs": 0.8383999999996377,
+          "warningMs": 17.90139999999701,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.search",
+          "medianMs": 5.671249999999418,
+          "maxMs": 9.8791999999994,
+          "madMs": 0.5281000000004497,
+          "warningMs": 19.7583999999988,
+          "hardMs": 59.2751999999964,
+          "reason": "Warning at twice the measured envelope; block only when every repeated sample exceeds six times that envelope on a matching environment."
+        },
+        {
+          "operation": "history.category",
+          "medianMs": 3.5728500000004715,
+          "maxMs": 4.1291999999994005,
+          "madMs": 0.1477500000009968,
+          "warningMs": 8.918700000012905,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.date",
+          "medianMs": 4.153900000000249,
+          "maxMs": 5.17909999999938,
+          "madMs": 0.32265000000006694,
+          "warningMs": 12.179600000001301,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.group.day",
+          "medianMs": 8.0258500000009,
+          "maxMs": 10.063200000000506,
+          "madMs": 0.3301999999994223,
+          "warningMs": 20.126400000001013,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "history.group.category",
+          "medianMs": 3.7015000000001237,
+          "maxMs": 4.267700000000332,
+          "madMs": 0.2282999999997628,
+          "warningMs": 10.142599999997401,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "statistics.monthly",
+          "medianMs": 5.737149999999929,
+          "maxMs": 6.604000000001179,
+          "madMs": 0.2154499999996915,
+          "warningMs": 14.059699999996155,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "statistics.all",
+          "medianMs": 23.1311999999989,
+          "maxMs": 26.999499999999898,
+          "madMs": 0.4394499999989421,
+          "warningMs": 53.998999999999796,
+          "hardMs": 161.9969999999994,
+          "reason": "Warning at twice the measured envelope; block only when every repeated sample exceeds six times that envelope on a matching environment."
+        },
+        {
+          "operation": "statistics.ranking",
+          "medianMs": 0.0026000000007115887,
+          "maxMs": 0.015199999999822467,
+          "madMs": 0.00010000000020227162,
+          "warningMs": 0.030399999999644933,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "statistics.detail",
+          "medianMs": 4.745899999999892,
+          "maxMs": 5.539999999999054,
+          "madMs": 0.25879999999961,
+          "warningMs": 12.597399999995105,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "statistics.localAI",
+          "medianMs": 21.688200000000506,
+          "maxMs": 23.1237000000001,
+          "madMs": 0.45060000000012224,
+          "warningMs": 48.78360000000248,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.v3.create",
+          "medianMs": 1600.659999999998,
+          "maxMs": 1823.256400000002,
+          "madMs": 207.63270000000102,
+          "warningMs": 5692.912400000008,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.v3.header",
+          "medianMs": 0.28435000000172295,
+          "maxMs": 2.6265999999995984,
+          "madMs": 0.05850000000282307,
+          "warningMs": 5.253199999999197,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.v3.decrypt",
+          "medianMs": 30.455649999999878,
+          "maxMs": 40.430499999998574,
+          "madMs": 5.5658000000021275,
+          "warningMs": 127.70090000002529,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.validate.parse",
+          "medianMs": 79.70050000000083,
+          "maxMs": 96.87649999999849,
+          "madMs": 12.565099999999802,
+          "warningMs": 310.1821999999993,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.restore.prepare",
+          "medianMs": 100.22789999999804,
+          "maxMs": 136.89080000000104,
+          "madMs": 17.11330000000089,
+          "warningMs": 405.8154000000068,
+          "hardMs": 1217.4462000000203,
+          "reason": "Warning at twice the measured envelope; block only when every repeated sample exceeds six times that envelope on a matching environment."
+        },
+        {
+          "operation": "backup.restore.replace",
+          "medianMs": 411.0185999999994,
+          "maxMs": 550.9213999999993,
+          "madMs": 14.5945499999998,
+          "warningMs": 1101.8427999999985,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "backup.restore.merge",
+          "medianMs": 828.7309999999998,
+          "maxMs": 938.2383000000009,
+          "madMs": 57.458050000001094,
+          "warningMs": 2346.9586000000127,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "media.inventory.integrity",
+          "medianMs": 2.3588999999992666,
+          "maxMs": 2.577400000001944,
+          "madMs": 0.14165000000139116,
+          "warningMs": 6.417600000015227,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "media.codec.small",
+          "medianMs": 0.16864999999961583,
+          "maxMs": 0.22299999999813735,
+          "madMs": 0.042250000000422006,
+          "warningMs": 0.8443000000042957,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        },
+        {
+          "operation": "media.codec.large",
+          "medianMs": 14.684800000000905,
+          "maxMs": 20.95850000000064,
+          "madMs": 1.3489500000014232,
+          "warningMs": 45.55700000001889,
+          "hardMs": null,
+          "reason": "Timing-sensitive or small workload: warning only at twice the measured envelope; correctness and coverage still block."
+        }
+      ]
+    }
+  ]
+}
