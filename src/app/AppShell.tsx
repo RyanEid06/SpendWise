@@ -153,6 +153,7 @@ export const AppShell: React.FC = () => {
         migrationIssue={appLock.migrationIssue}
         language={preferences.language}
         onUnlock={appLock.unlock}
+        autoUnlock={appLock.securityMode === 'native'}
       />
     );
   }

@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowLeft, Settings } from 'lucide-react';
 import { Language, Screen } from '../types';
 import { t } from '../utils/translations';
+import { SpendWiseLogo } from './SpendWiseLogo';
 
 const COPY = {
   en: { settings: 'Open Settings', back: 'Back to previous screen' },
@@ -46,12 +47,7 @@ export const AppTopBar: React.FC<{
               </button>
             )}
 
-            <img
-              src="/spendwise-original-icon.png"
-              alt=""
-              aria-hidden="true"
-              className="w-8 h-8 rounded-lg object-contain shrink-0"
-            />
+            <SpendWiseLogo className="h-9 w-9" />
 
             <div className="min-w-0">
               <div className="font-extrabold text-sm sm:text-base tracking-tight text-slate-900 dark:text-white leading-tight">

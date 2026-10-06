@@ -73,7 +73,7 @@ const makeMonth = (monthKey: string, amount: number, id: number): MonthlySpendin
 test('WP24 preserves canonical launcher identity and exactly four primary destinations', () => {
   assert.match(manifest, /android:icon="@mipmap\/ic_launcher"/);
   assert.match(manifest, /android:roundIcon="@mipmap\/ic_launcher_round"/);
-  assert.match(topBar, /src="\/spendwise-original-icon\.png"/);
+  assert.match(topBar, /<SpendWiseLogo className="h-9 w-9"/);
 
   for (const screen of ['home', 'history', 'insights', 'statistics']) {
     assert.match(navigation, new RegExp("screen: '" + screen + "'"));

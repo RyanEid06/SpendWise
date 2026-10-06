@@ -662,7 +662,8 @@ export class NativeEncryptedDatabaseService {
       await assertSpendWiseDatabaseIntegrity(destination);
       const snapshot = await readSnapshot(destination);
       validateFinancialState(snapshot.state);
-      if (journal?.phase !== 'active') {
+      const cleanupAlreadyComplete = journal?.phase === 'complete' && !sourceExists;
+      if (journal?.phase !== 'active' && !cleanupAlreadyComplete) {
         writeMigration(
           storage,
           'active',
@@ -704,6 +705,19 @@ export class NativeEncryptedDatabaseService {
     const sqlite = this.sqlite;
     if (!sqlite) throw new Error('DATABASE_SERVICE_NOT_OPEN');
 
+    const journal = safeReadMigration(storage);
+    const sourceExists =
+      (await sqlite.isDatabase(PLAINTEXT_DATABASE_NAME)).result === true;
+
+    // Normal steady-state startup has already opened, schema-checked, integrity-
+    // checked and validated the encrypted destination in open(). Once cleanup is
+    // durably complete and the plaintext source is gone, repeating a second full
+    // integrity scan + snapshot read here only adds unlock latency.
+    if (journal?.phase === 'complete' && !sourceExists) {
+      diagnostics.setState({ migration: 'complete' });
+      return;
+    }
+
     const destinationExists =
       (await sqlite.isDatabase(ENCRYPTED_DATABASE_NAME)).result === true;
     if (!destinationExists) throw new Error('ENCRYPTED_DATABASE_MISSING');
@@ -721,7 +735,6 @@ export class NativeEncryptedDatabaseService {
     const snapshot = await readSnapshot(destination);
     validateFinancialState(snapshot.state);
 
-    const journal = safeReadMigration(storage);
     if (
       !journal ||
       (journal.phase !== 'active' && journal.phase !== 'complete')
@@ -729,8 +742,6 @@ export class NativeEncryptedDatabaseService {
       throw new Error('DATABASE_MIGRATION_NOT_ACTIVE');
     }
 
-    const sourceExists =
-      (await sqlite.isDatabase(PLAINTEXT_DATABASE_NAME)).result === true;
     if (sourceExists) {
       try {
         await deleteDatabase(sqlite, PLAINTEXT_DATABASE_NAME, false);

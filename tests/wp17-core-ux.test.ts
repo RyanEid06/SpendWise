@@ -134,7 +134,7 @@ test('WP17 keeps exactly four primary destinations', () => {
 });
 
 test('WP19 restores the original normal, round, and adaptive launcher system', () => {
-  assert.match(topBarSource, /src="\/spendwise-original-icon\.png"/);
+  assert.match(topBarSource, /<SpendWiseLogo className="h-9 w-9"/);
   assert.match(manifestSource, /android:icon="@mipmap\/ic_launcher"/);
   assert.match(manifestSource, /android:roundIcon="@mipmap\/ic_launcher_round"/);
   assert.doesNotMatch(manifestSource, /spendwise_app_icon/);
