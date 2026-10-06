@@ -30,8 +30,7 @@ import { getSuggestedConversionRate, SUPPORTED_CURRENCIES } from '../utils/curre
 import { backupService } from '../features/backup/BackupService';
 import { expenseService } from '../features/expenses/ExpenseService';
 import { SettingsOverview, InlineSettingsSection } from '../features/settings/SettingsOverview';
-import { TechnicalDiagnostics } from '../features/settings/TechnicalDiagnostics';
-import { overviewCopy } from '../features/settings/settingsCopy';
+import { formatSettingsPhotoCount, overviewCopy } from '../features/settings/settingsCopy';
 import { mediaService } from '../services/MediaService';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import { ImportPreviewModal } from '../components/ImportPreviewModal';
@@ -128,8 +127,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   useEffect(() => {
     if (showClearModal || !clearFeedbackPending.current || !statusMessageRef.current) return;
     clearFeedbackPending.current = false;
-    // Clear can be reached after scrolling below the diagnostics section.
-    // Present its result after modal focus cleanup, without changing other dialogs.
+    // Present clear feedback after modal focus cleanup, without changing other dialogs.
     statusMessageRef.current.focus({ preventScroll: true });
     statusMessageRef.current.scrollIntoView({ block: 'center' });
   }, [showClearModal, statusMessage]);
@@ -876,8 +874,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     );
   }
 
-  const storageValue =
-    String(mediaSummary?.photoCount ?? 0) + ' ' + copy.photos + ' · ' + humanBytes(mediaSummary?.totalBytes ?? 0);
+  const storageValue = formatSettingsPhotoCount(mediaSummary?.photoCount ?? 0, currentLanguage);
 
   return (
     <div
@@ -896,7 +893,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       {notificationBlock}
 
       <SettingsOverview
-        technicalDiagnostics={<TechnicalDiagnostics language={currentLanguage} />}
         currentCurrencyCode={currentCurrencyCode}
         currentThemeMode={currentThemeMode}
         currentLanguage={currentLanguage}

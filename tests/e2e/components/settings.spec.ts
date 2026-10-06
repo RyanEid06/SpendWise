@@ -3,6 +3,8 @@ import { expect, test } from '@playwright/test';
 test('Settings overview renders real interactive sections and navigation actions', async ({ page }) => {
   await page.goto('/tests/e2e/components/index.html?case=settings');
   await expect(page.getByText('Appearance', { exact: true })).toBeVisible();
+  await expect(page.getByText('0 photos', { exact: true })).toBeVisible();
+  await expect(page.getByText('Technical diagnostics', { exact: true })).toHaveCount(0);
   await page.getByText('Appearance', { exact: true }).click();
   await expect(page.getByRole('button', { name: 'Dark' })).toBeVisible();
   await page.getByRole('button', { name: 'Dark' }).click();

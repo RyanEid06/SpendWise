@@ -55,7 +55,7 @@ const SettingsHarness = () => {
       currentLanguage={language}
       totalExpensesCount={2}
       isAppLockEnabled={false}
-      storageValue="0 photos · 0 B"
+      storageValue="0 photos"
       copy={overviewCopy[language]}
       expandedSection={expanded}
       onExpandedSectionChange={setExpanded}
