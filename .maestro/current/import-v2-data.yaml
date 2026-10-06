@@ -7,7 +7,7 @@ appId: com.spendwise.app
 - runFlow: ../helpers/onboard-current.yaml
 - tapOn: "Open Settings"
 - tapOn: "Backup & Restore.*"
-- tapOn: "Import Data.*"
+- tapOn: "Import data.*"
 - tapOn: "wp32-v2-data.zip"
 - assertVisible: "Backup restore v2"
 - tapOn:

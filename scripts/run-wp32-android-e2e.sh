@@ -151,12 +151,12 @@ run_flow media .maestro/current/media.yaml
 
 echo "== Secure Backup v3 exports =="
 run_flow export-v3-data .maestro/current/backup-export-data.yaml
-extract_backup_prefix "spendwise_backup_v3_data_" "$FIXTURE_ROOT/wp32-data.swb3"
+extract_backup_prefix "spendwise_encrypted_backup_data_" "$FIXTURE_ROOT/wp32-data.swb3"
 verify_swb3 "$FIXTURE_ROOT/wp32-data.swb3" false
 dismiss_share_sheet
 
 run_flow export-v3-full .maestro/current/backup-export-full.yaml
-extract_backup_prefix "spendwise_backup_v3_full_" "$FIXTURE_ROOT/wp32-full.swb3"
+extract_backup_prefix "spendwise_encrypted_backup_full_" "$FIXTURE_ROOT/wp32-full.swb3"
 verify_swb3 "$FIXTURE_ROOT/wp32-full.swb3" true
 dismiss_share_sheet
 
