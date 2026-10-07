@@ -25,7 +25,7 @@ test('WP33 diagnostics construct only allowlisted fields at runtime', () => {
   assert.equal(store.report().recentErrors.length, secrets.length);
   assert.equal(store.report().format, 'spendwise-technical-diagnostics-v1');
   assert.equal(store.report().app.version, '2.0.0');
-  assert.equal(store.report().schemaVersion, 1); assert.equal(store.report().backupVersion, 3);
+  assert.equal(store.report().schemaVersion, 2); assert.equal(store.report().backupVersion, 3);
   assert.equal(store.report().recentErrors[0].timestamp, now);
 });
 

@@ -47,6 +47,7 @@ export interface AttachmentDraft {
 }
 
 export interface AttachmentEditPayload {
+  recoveryDraftId?: string;
   newAttachments: AttachmentDraft[];
   removedAttachmentIds: string[];
 }

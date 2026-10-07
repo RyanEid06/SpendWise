@@ -1,0 +1,130 @@
+import { expect, test } from '@playwright/test';
+import { addExpense, startFresh } from './helpers';
+
+test.beforeEach(async ({ page }) => {
+  await page.route('**/api/auth/register', route => route.fulfill({ json: { installationId: 'wp05-fixture' } }));
+  await page.route('**/api/auth/challenge', route => route.fulfill({ json: { challengeId: 'fixture-challenge', payload: 'wp05-public-challenge', expiresAt: Date.now() + 60000 } }));
+  await page.route('**/api/auth/verify', route => route.fulfill({ json: { accessToken: 'wp05-synthetic-token', expiresAt: Date.now() + 60000, tokenType: 'Bearer' } }));
+});
+
+test('unfinished Add restores all meaningful fields after restart and clears after Save', async ({ page }) => {
+  await startFresh(page);
+  await page.getByRole('button', { name: 'Add Expense', exact: true }).click();
+  const editor = page.getByRole('dialog', { name: 'Add Expense' });
+  await editor.getByRole('spinbutton').fill('37.25');
+  await editor.getByRole('textbox', { name: /Description/ }).fill('WP05 private merchant');
+  await editor.getByRole('button', { name: 'Food & Beverage', exact: true }).click();
+  await editor.getByLabel('Date').fill('2026-10-03');
+  await editor.getByRole('textbox', { name: /Note/ }).fill('WP05 private note');
+  await expect(editor.getByTestId('draft-status')).toHaveText('Unfinished expense protected');
+  const values = await page.evaluate(() => Object.values(localStorage));
+  expect(values.join('')).not.toContain('WP05 private merchant');
+  expect(values.join('')).not.toContain('WP05 private note');
+  await page.reload();
+  await expect(editor).toBeVisible();
+  await expect(editor.getByRole('spinbutton')).toHaveValue('37.25');
+  await expect(editor.getByRole('textbox', { name: /Description/ })).toHaveValue('WP05 private merchant');
+  await expect(editor.getByLabel('Date')).toHaveValue('2026-10-03');
+  await expect(editor.getByRole('textbox', { name: /Note/ })).toHaveValue('WP05 private note');
+  await expect(editor.getByRole('button', { name: 'Food & Beverage', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await editor.getByRole('button', { name: 'Save Expense' }).click();
+  await expect(editor).toBeHidden();
+  await page.reload();
+  await expect(editor).toBeHidden();
+  await expect(page.getByText('WP05 private merchant', { exact: true })).toHaveCount(1);
+});
+
+test('interrupted Edit restores identity and attachment removals without creating an expense', async ({ page }) => {
+  await startFresh(page);
+  await addExpense(page, 'WP05 Original', '5');
+  await page.getByRole('button', { name: /^WP05 Original,/ }).click();
+  const editor = page.getByRole('dialog', { name: 'Edit Expense' });
+  await editor.getByRole('spinbutton').fill('31.75');
+  await editor.getByRole('textbox', { name: /Description/ }).fill('WP05 Edited');
+  await expect(editor.getByTestId('draft-status')).toHaveText('Unfinished expense protected');
+  await page.reload();
+  await expect(editor).toBeVisible();
+  await expect(editor.getByRole('spinbutton')).toHaveValue('31.75');
+  await editor.getByRole('button', { name: 'Update Expense' }).click();
+  await expect(editor).toBeHidden();
+  await page.reload();
+  const expenses = await page.evaluate(() => JSON.parse(localStorage.getItem('spendwise_expenses')!));
+  expect(expenses).toHaveLength(1);
+  expect(expenses[0]).toMatchObject({ id: 1, amount: 31.75, description: 'WP05 Edited', category: 'Food' });
+});
+
+test('interrupted Smart Capture restores its photo and offers manual retry without duplicate Apply', async ({ page }) => {
+  await startFresh(page);
+  let requests = 0;
+  let release!: () => void;
+  const pending = new Promise<void>(resolve => { release = resolve; });
+  const capture = { description: 'Coffee', merchantOrBrand: 'WP05 Cafe', category: 'Food', amount: 12.5, notes: 'Suggested note', confidence: 'high', uncertaintyReason: null, priceVisible: true, detectedCurrencyCode: 'USD', currencyMismatch: false };
+  await page.route('**/api/gemini/smart-capture', async route => {
+    requests++;
+    if (requests === 1) await pending;
+    await route.fulfill({ json: capture }).catch(() => {});
+  });
+  await page.getByRole('button', { name: 'Add Expense', exact: true }).click();
+  const editor = page.getByRole('dialog', { name: 'Add Expense' });
+  await editor.getByRole('spinbutton').fill('7.25');
+  await editor.getByTestId('tool-smart-button').click();
+  const chooser = page.waitForEvent('filechooser');
+  await editor.getByRole('button', { name: 'Choose Photo', exact: true }).click();
+  await (await chooser).setFiles('tests/fixtures/media/wp32-photo-01.jpg');
+  await editor.getByRole('button', { name: 'Analyze with Gemini', exact: true }).click();
+  await expect.poll(() => requests).toBe(1);
+  await expect(editor.getByTestId('draft-status')).toHaveText('Unfinished expense protected');
+  await page.reload();
+  await expect(editor.getByText('Analysis was interrupted. Retry when you are ready.')).toBeVisible();
+  expect(requests).toBe(1);
+  release();
+  await editor.getByRole('button', { name: 'Analyze with Gemini', exact: true }).click();
+  await editor.getByRole('button', { name: 'Apply to Expense Draft', exact: true }).click();
+  await expect(editor.getByRole('textbox', { name: /Description/ })).toHaveValue('Coffee (WP05 Cafe)');
+  await expect(editor.getByTestId('draft-status')).toHaveText('Unfinished expense protected');
+  await page.reload();
+  await editor.getByTestId('tool-smart-button').click();
+  await editor.getByRole('button', { name: 'Apply to Expense Draft', exact: true }).click();
+  await expect(editor.getByTestId('tool-photos-button')).toHaveText(/1/);
+  expect(requests).toBe(2);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('spendwise_expenses') || '[]'))).toHaveLength(0);
+});
+
+test('App Lock hides a protected draft until authentication and reopens it after unlock', async ({ page }) => {
+  await startFresh(page);
+  await page.evaluate(() => { localStorage.setItem('spendwise_lock_pin', '2468'); localStorage.setItem('spendwise_app_lock_enabled', 'true'); });
+  await page.reload();
+  await page.getByRole('textbox', { name: 'PIN' }).fill('2468');
+  await page.getByRole('button', { name: 'Unlock SpendWise', exact: true }).click();
+  await page.getByRole('button', { name: 'Add Expense', exact: true }).click();
+  const editor = page.getByRole('dialog', { name: 'Add Expense' });
+  await editor.getByRole('textbox', { name: /Description/ }).fill('WP05 locked secret');
+  await expect(editor.getByTestId('draft-status')).toHaveText('Unfinished expense protected');
+  await page.reload();
+  await expect(editor).toBeHidden();
+  await expect(page.getByText('WP05 locked secret')).toHaveCount(0);
+  await page.getByRole('textbox', { name: 'PIN' }).fill('2468');
+  await page.getByRole('button', { name: 'Unlock SpendWise', exact: true }).click();
+  await expect(editor.getByRole('textbox', { name: /Description/ })).toHaveValue('WP05 locked secret');
+});
+
+test('recovered photo remains available and intentional Cancel discards it', async ({ page }) => {
+  await startFresh(page);
+  await page.getByRole('button', { name: 'Add Expense', exact: true }).click();
+  const editor = page.getByRole('dialog', { name: 'Add Expense' });
+  await editor.getByRole('spinbutton').fill('16');
+  await editor.getByTestId('tool-photos-button').click();
+  const chooser = page.waitForEvent('filechooser');
+  await editor.getByRole('button', { name: 'Choose Photo', exact: true }).click();
+  await (await chooser).setFiles('tests/fixtures/media/wp32-photo-01.jpg');
+  await expect(editor.getByRole('button', { name: 'Remove photo', exact: true })).toHaveCount(1);
+  await expect(editor.getByTestId('draft-status')).toHaveText('Unfinished expense protected');
+  await page.reload();
+  await expect(editor.getByRole('button', { name: 'Remove photo', exact: true })).toHaveCount(1);
+  await expect(editor.locator('img').first()).toHaveJSProperty('naturalWidth', 1024);
+  await editor.getByRole('button', { name: 'Cancel', exact: true }).last().click();
+  await expect(editor).toBeHidden();
+  await page.reload();
+  await expect(editor).toBeHidden();
+  expect(await page.evaluate(() => localStorage.getItem('spendwise_encrypted_expense_draft_v1'))).toBeNull();
+});

@@ -230,7 +230,7 @@ async function render() {
        testCase === 'diagnostics' ? <TechnicalDiagnostics language={initialLanguage} /> :
        testCase === 'history' ? <HistoryHarness /> :
        testCase === 'amounts' ? <AmountHarness /> :
-       testCase === 'expense' ? <AddEditExpenseModal isOpen={true} language={initialLanguage} currencyCode="USD"
+       testCase === 'expense' ? <AddEditExpenseModal protectDraft={params.has('protect')} isOpen={true} language={initialLanguage} currencyCode="USD"
          initialExpense={params.get('edit') ? fixtures[0] : null} onSave={() => record('expense-save')} onClose={() => record('expense-close')} /> :
        testCase.startsWith('lock-') ? <LockHarness /> :
        <DialogHarness />}

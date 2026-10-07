@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AlertCircle, Camera, CheckCircle2, ImagePlus, Loader2, Sparkles, X } from 'lucide-react';
 import { Language, SmartCaptureResult } from '../types';
+import type { DraftToolState } from '../data/ExpenseDraft';
 import { apiFetchJson } from '../utils/api';
 import { getAiErrorMessage, SpendWiseApiError } from '../utils/apiErrors';
 import { AttachmentDraft, AttachmentStorage } from '../utils/attachmentStorage';
@@ -16,6 +17,8 @@ import {
 } from '../utils/imageAcquisition';
 
 interface SmartCaptureCardProps {
+  recoveryState?: DraftToolState<SmartCaptureResult> | null;
+  onDraftStateChange?: (state: DraftToolState<SmartCaptureResult>) => void;
   language: Language;
   currencyCode: string;
   disabled?: boolean;
@@ -116,6 +119,8 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
   disabled = false,
   onPreparingChange,
   onApply,
+  recoveryState,
+  onDraftStateChange,
 }) => {
   const preparationRequestIdRef = useRef(0);
   const requestIdRef = useRef(0);
@@ -123,8 +128,10 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
   const analysisInFlightRef = useRef(false);
   const preparedPreviewUrlRef = useRef<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [preparedDraft, setPreparedDraft] = useState<AttachmentDraft | null>(null);
-  const [result, setResult] = useState<SmartCaptureResult | null>(null);
+  const [preparedDraft, setPreparedDraft] = useState<AttachmentDraft | null>(recoveryState?.photo ?? null);
+  const [result, setResult] = useState<SmartCaptureResult | null>(recoveryState?.currencyCode === currencyCode && recoveryState?.language === language ? recoveryState.result : null);
+  const [interrupted, setInterrupted] = useState(recoveryState?.interrupted ?? false);
+  const previousContext = useRef({ currencyCode, language });
   const [isAcquiring, setIsAcquiring] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -135,12 +142,26 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
   }, [isPreparing, isAcquiring, onPreparingChange]);
 
   useLayoutEffect(() => {
+    if (previousContext.current.currencyCode === currencyCode && previousContext.current.language === language) return;
+    previousContext.current = { currencyCode, language };
     requestIdRef.current += 1;
     analysisInFlightRef.current = false;
     setResult(null);
     setError(null);
     setIsAnalyzing(false);
   }, [currencyCode, language]);
+
+  useEffect(() => {
+    onDraftStateChange?.({ photo: preparedDraft, result, interrupted: isAnalyzing || interrupted, currencyCode, language });
+  }, [preparedDraft, result, isAnalyzing, interrupted, currencyCode, language, onDraftStateChange]);
+
+  useEffect(() => {
+    if (!recoveryState?.photo) return;
+    const url = URL.createObjectURL(recoveryState.photo.blob);
+    preparedPreviewUrlRef.current = url;
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -160,6 +181,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
   };
 
   const resetSelection = () => {
+    setInterrupted(false);
     preparationRequestIdRef.current += 1;
     requestIdRef.current += 1;
     analysisInFlightRef.current = false;
@@ -233,6 +255,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
     }
 
     analysisInFlightRef.current = true;
+    setInterrupted(false);
     const requestId = ++requestIdRef.current;
     setIsAnalyzing(true);
     setError(null);
@@ -279,6 +302,9 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
 
   return (
     <section className="rounded-2xl border border-cyan-200 dark:border-cyan-900/70 bg-cyan-50/70 dark:bg-cyan-950/25 p-4 space-y-3">
+      {interrupted && <p role="status" className="text-xs text-cyan-900 dark:text-cyan-100">
+        {language === 'ar' ? 'توقف التحليل. أعد المحاولة عندما تكون جاهزاً.' : language === 'fr' ? 'Analyse interrompue. Réessayez quand vous êtes prêt.' : 'Analysis was interrupted. Retry when you are ready.'}
+      </p>}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3 min-w-0">
           <div className="w-10 h-10 rounded-xl bg-cyan-100 dark:bg-cyan-900/60 text-cyan-700 dark:text-cyan-300 flex items-center justify-center shrink-0">

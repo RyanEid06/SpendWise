@@ -1,0 +1,12 @@
+appId: com.spendwise.app
+---
+- extendedWaitUntil:
+    visible: "Edit Expense"
+    timeout: 30000
+- assertVisible: '31\.75, Amount \*'
+- assertVisible: "WP05 Native Edited, Description / Merchant .*"
+- tapOn: "Update Expense"
+- extendedWaitUntil:
+    visible: 'WP05 Native Edited, \$31\.75'
+    timeout: 30000
+- assertNotVisible: "Unfinished expense protected"

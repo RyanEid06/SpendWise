@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AlertCircle, Camera, CheckCircle2, ImagePlus, Loader2, X } from 'lucide-react';
 import { Language, ReceiptScanResult } from '../types';
+import type { DraftToolState } from '../data/ExpenseDraft';
 import { apiFetchJson } from '../utils/api';
 import { getAiErrorMessage, SpendWiseApiError } from '../utils/apiErrors';
 import { AttachmentDraft, AttachmentStorage } from '../utils/attachmentStorage';
@@ -16,6 +17,8 @@ import {
 } from '../utils/imageAcquisition';
 
 interface ReceiptScanCardProps {
+  recoveryState?: DraftToolState<ReceiptScanResult> | null;
+  onDraftStateChange?: (state: DraftToolState<ReceiptScanResult>) => void;
   language: Language;
   currencyCode: string;
   disabled?: boolean;
@@ -138,6 +141,8 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
   disabled = false,
   onPreparingChange,
   onApply,
+  recoveryState,
+  onDraftStateChange,
 }) => {
   const preparationRequestIdRef = useRef(0);
   const requestIdRef = useRef(0);
@@ -145,11 +150,13 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
   const analysisInFlightRef = useRef(false);
   const preparedPreviewUrlRef = useRef<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [preparedDraft, setPreparedDraft] = useState<AttachmentDraft | null>(null);
+  const [preparedDraft, setPreparedDraft] = useState<AttachmentDraft | null>(recoveryState?.photo ?? null);
   const [isAcquiring, setIsAcquiring] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
-  const [result, setResult] = useState<ReceiptScanResult | null>(null);
+  const [result, setResult] = useState<ReceiptScanResult | null>(recoveryState?.currencyCode === currencyCode && recoveryState?.language === language ? recoveryState.result : null);
+  const [interrupted, setInterrupted] = useState(recoveryState?.interrupted ?? false);
+  const previousContext = useRef({ currencyCode, language });
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -157,12 +164,26 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
   }, [isPreparing, isAcquiring, onPreparingChange]);
 
   useLayoutEffect(() => {
+    if (previousContext.current.currencyCode === currencyCode && previousContext.current.language === language) return;
+    previousContext.current = { currencyCode, language };
     requestIdRef.current += 1;
     analysisInFlightRef.current = false;
     setResult(null);
     setError(null);
     setIsScanning(false);
   }, [currencyCode, language]);
+
+  useEffect(() => {
+    onDraftStateChange?.({ photo: preparedDraft, result, interrupted: isScanning || interrupted, currencyCode, language });
+  }, [preparedDraft, result, isScanning, interrupted, currencyCode, language, onDraftStateChange]);
+
+  useEffect(() => {
+    if (!recoveryState?.photo) return;
+    const url = URL.createObjectURL(recoveryState.photo.blob);
+    preparedPreviewUrlRef.current = url;
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -182,6 +203,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
   };
 
   const resetSelection = () => {
+    setInterrupted(false);
     preparationRequestIdRef.current += 1;
     requestIdRef.current += 1;
     analysisInFlightRef.current = false;
@@ -255,6 +277,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
     }
 
     analysisInFlightRef.current = true;
+    setInterrupted(false);
     const requestId = ++requestIdRef.current;
     setIsScanning(true);
     setResult(null);
@@ -295,6 +318,9 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
 
   return (
     <section className="rounded-2xl border border-purple-200 dark:border-purple-800/60 bg-purple-50 dark:bg-purple-950/40 p-4 space-y-3">
+      {interrupted && <p role="status" className="text-xs text-purple-900 dark:text-purple-100">
+        {language === 'ar' ? 'توقف التحليل. أعد المحاولة عندما تكون جاهزاً.' : language === 'fr' ? 'Analyse interrompue. Réessayez quand vous êtes prêt.' : 'Analysis was interrupted. Retry when you are ready.'}
+      </p>}
       <div className="flex items-start gap-3 min-w-0">
         <div className="w-10 h-10 rounded-xl bg-purple-200/80 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 flex items-center justify-center shrink-0">
           <Camera className="w-5 h-5" />

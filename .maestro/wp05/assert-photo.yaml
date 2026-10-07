@@ -1,0 +1,7 @@
+appId: com.spendwise.app
+---
+- extendedWaitUntil:
+    visible: "Add Expense"
+    timeout: 30000
+- assertVisible: "Attach Photos · 1"
+- assertVisible: "Unfinished expense protected"

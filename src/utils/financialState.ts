@@ -1,6 +1,7 @@
 import { Expense, ExpenseAttachment, MonthlyBudget } from '../types';
 import { normalizeCategoryName } from './categories';
 import { DEFAULT_CURRENCY_CODE, SUPPORTED_CURRENCIES } from './currency';
+import { WEB_EXPENSE_DRAFT_KEY } from '../data/ExpenseDraft';
 
 export const LEGACY_FINANCIAL_KEYS = {
   EXPENSES: 'spendwise_expenses',
@@ -26,6 +27,7 @@ export interface FinancialState {
 }
 
 type SerializedState = {
+  draft?: string | null;
   expenses: string | null;
   budgets: string | null;
   attachments: string | null;
@@ -177,6 +179,7 @@ export function financialStatesEqual(a: FinancialState, b: FinancialState): bool
 
 function readSerializedState(storage: KeyValueStore): SerializedState {
   return {
+    draft: storage.getItem(WEB_EXPENSE_DRAFT_KEY),
     expenses: storage.getItem(LEGACY_FINANCIAL_KEYS.EXPENSES),
     budgets: storage.getItem(LEGACY_FINANCIAL_KEYS.BUDGETS),
     attachments: storage.getItem(LEGACY_FINANCIAL_KEYS.ATTACHMENTS),
@@ -200,6 +203,7 @@ function applySerializedState(storage: KeyValueStore, state: SerializedState): v
     [LEGACY_FINANCIAL_KEYS.ATTACHMENTS, state.attachments],
     [LEGACY_FINANCIAL_KEYS.CURRENCY, state.currency],
   ];
+  if ('draft' in state) entries.push([WEB_EXPENSE_DRAFT_KEY, state.draft ?? null]);
   for (const [key, value] of entries) {
     if (value === null) storage.removeItem(key);
     else storage.setItem(key, value);
@@ -225,10 +229,11 @@ export function recoverWebFinancialTransaction(storage: KeyValueStore): void {
   storage.removeItem(LEGACY_FINANCIAL_KEYS.WEB_TXN);
 }
 
-export function persistWebFinancialState(storage: KeyValueStore, input: FinancialState): void {
+export function persistWebFinancialState(storage: KeyValueStore, input: FinancialState, clearDraft = false): void {
   const state = validateFinancialState(cloneFinancialState(input));
   const original = readSerializedState(storage);
   const target = toSerializedState(state);
+  target.draft = clearDraft ? null : original.draft;
   const journal: WebFinancialJournal = { version: 1, phase: 'prepared', original, target };
   storage.setItem(LEGACY_FINANCIAL_KEYS.WEB_TXN, JSON.stringify(journal));
   try {

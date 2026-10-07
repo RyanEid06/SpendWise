@@ -36,6 +36,9 @@ import { useAppLockLifecycle } from './hooks/useAppLockLifecycle';
 import { selectMonthlyLedger } from './selectors/monthlyLedger';
 import type { StartupHomeFrameTiming } from './startup/StartupHomeFrameTiming';
 import { useStartupHomeFrameTiming } from './startup/useStartupHomeFrameTiming';
+import { useExpenseDraftRecovery } from './hooks/useExpenseDraftRecovery';
+import { SecureStartupScreen } from '../screens/SecureStartupScreen';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 
 interface AppShellProps {
   startupHomeFrameTiming?: StartupHomeFrameTiming;
@@ -76,6 +79,13 @@ export const AppShell: React.FC<AppShellProps> = ({ startupHomeFrameTiming }) =>
     onBackground: deleteUndo.undoPending,
     onLock: overlays.closeForLock,
   });
+
+  const recovery = useExpenseDraftRecovery({
+    enabled: !appLock.isLocked && setupMode === null,
+    expenses: ledger.expenses, currencyCode: ledger.currencyCode,
+    openAdd: overlays.openAddExpense, openEdit: overlays.openEditExpense,
+  });
+  const [recoveryActionError, setRecoveryActionError] = useState(false);
 
   useStartupHomeFrameTiming(
     startupHomeFrameTiming,
@@ -170,6 +180,22 @@ export const AppShell: React.FC<AppShellProps> = ({ startupHomeFrameTiming }) =>
         autoUnlock={appLock.securityMode === 'native'}
       />
     );
+  }
+
+  if (!recovery.ready) return <SecureStartupScreen language={preferences.language} />;
+
+  if (recovery.issue) {
+    const fr = preferences.language === 'fr', ar = preferences.language === 'ar';
+    return <ConfirmationModal isOpen title={ar ? 'مصروف غير مكتمل' : fr ? 'Dépense inachevée' : 'Unfinished expense'}
+      message={recoveryActionError
+        ? (ar ? 'تعذر حذف العمل. حاول مجدداً.' : fr ? 'Suppression impossible. Réessayez.' : 'Could not discard unfinished work. Retry.')
+        : recovery.issue === 'missing-expense'
+          ? (ar ? 'المصروف الأصلي لم يعد موجوداً. متابعة كمصروف جديد أو تجاهل العمل؟' : fr ? 'La dépense d’origine n’existe plus. Continuer comme nouvelle dépense ou supprimer ?' : 'The original expense no longer exists. Continue as a new expense or discard unfinished work?')
+          : (ar ? 'تعذر استعادة العمل بأمان. حاول مجدداً أو تجاهل العمل.' : fr ? 'Récupération sûre impossible. Réessayez ou supprimez le travail.' : 'Unfinished work could not be recovered safely. Retry or discard it.')}
+      confirmText={recovery.issue === 'missing-expense' ? (ar ? 'متابعة' : fr ? 'Continuer' : 'Continue') : (ar ? 'إعادة المحاولة' : fr ? 'Réessayer' : 'Retry')}
+      cancelText={ar ? 'تجاهل' : fr ? 'Supprimer' : 'Discard'}
+      onConfirm={recovery.issue === 'missing-expense' ? recovery.continueAsNew : recovery.retry}
+      onCancel={() => { void recovery.discard().catch(() => setRecoveryActionError(true)); }} />;
   }
 
   return (
@@ -326,6 +352,7 @@ export const AppShell: React.FC<AppShellProps> = ({ startupHomeFrameTiming }) =>
 
       {(overlays.showAddModal || overlays.editingExpense !== null) && (
         <AddEditExpenseModal
+          recoveryDraft={recovery.draft}
           isOpen={true}
           initialExpense={overlays.editingExpense}
           defaultDate={getDefaultTimestampForMonth(currentMY)}
@@ -343,8 +370,9 @@ export const AppShell: React.FC<AppShellProps> = ({ startupHomeFrameTiming }) =>
               await ledger.addExpense(input, deleteUndo.getPendingExpenseIds());
             }
             overlays.closeExpenseEditor();
+            recovery.closed();
           }}
-          onClose={overlays.closeExpenseEditor}
+          onClose={() => { overlays.closeExpenseEditor(); recovery.closed(); }}
         />
       )}
 

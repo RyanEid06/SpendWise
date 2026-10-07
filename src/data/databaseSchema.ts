@@ -1,8 +1,9 @@
 import type { SQLiteDBConnection } from '@capacitor-community/sqlite';
 
-export const SPENDWISE_DATABASE_SCHEMA_VERSION = 1;
+export const SPENDWISE_DATABASE_SCHEMA_VERSION = 2;
 
 export const SPENDWISE_SCHEMA_MIGRATIONS: Array<{ version: number; statements: string[] }> = [
+  // Version 1 is intentionally unchanged for existing installations.
   {
     version: 1,
     statements: [
@@ -39,6 +40,15 @@ export const SPENDWISE_SCHEMA_MIGRATIONS: Array<{ version: number; statements: s
       )`,
       'CREATE INDEX IF NOT EXISTS idx_expenses_transaction_date ON expenses(transaction_date)',
       'CREATE INDEX IF NOT EXISTS idx_expense_attachments_expense_id ON expense_attachments(expense_id)',
+    ],
+  },
+  {
+    version: 2,
+    statements: [
+      `CREATE TABLE IF NOT EXISTS expense_draft_media (
+        id TEXT PRIMARY KEY NOT NULL,
+        data TEXT NOT NULL
+      )`,
     ],
   },
 ];
