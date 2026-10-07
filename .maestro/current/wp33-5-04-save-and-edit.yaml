@@ -1,0 +1,19 @@
+appId: com.spendwise.app
+---
+- tapOn: "Save Expense"
+- tapOn: "Statistics"
+- tapOn: "All Time"
+- tapOn: "History"
+- tapOn: "Statistics"
+# After switching, the selected period is still All Time (not the 3-month default).
+- assertVisible: "Across 1 month"
+- tapOn: "Home"
+- tapOn: "WP04 Native Dining.*"
+- assertVisible: "Edit Expense"
+- tapOn: "Amount .*"
+- eraseText
+- inputText: "16.75"
+- tapOn: "Description / Merchant .*"
+- eraseText
+- inputText: "WP04 Native Edited"
+- assertVisible: "Update Expense"

@@ -1,0 +1,13 @@
+appId: com.spendwise.app
+---
+- launchApp:
+    stopApp: false
+- runFlow: ../helpers/onboard-current.yaml
+- tapOn: "Add Expense"
+- tapOn: "Amount .*"
+- inputText: "14.25"
+- tapOn: "Description / Merchant .*"
+- inputText: "WP04 Native Dining"
+# Save must be operable with the real Android keyboard still open.
+- assertVisible: "Save Expense"
+# Host runner now asserts an actually visible soft IME before the next phase.

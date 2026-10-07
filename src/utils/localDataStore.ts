@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import type { SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { Expense, ExpenseAttachment, MonthlyBudget } from '../types';
+import { normalizeCategoryName } from './categories';
 import { applySpendWiseSchema } from '../data/databaseSchema';
 import { nativeEncryptedDatabaseService } from '../data/NativeEncryptedDatabaseService';
 import { diagnostics, measureDiagnostic } from '../services/diagnostics/diagnostics';
@@ -102,7 +103,7 @@ export class LocalDataStoreImpl {
 
   getExpenses(): Expense[] {
     this.requireInitialized();
-    return this.state.expenses.map((item) => ({ ...item }));
+    return this.state.expenses.map((item) => ({ ...item, category: normalizeCategoryName(item.category) }));
   }
 
   getBudgets(): MonthlyBudget[] {

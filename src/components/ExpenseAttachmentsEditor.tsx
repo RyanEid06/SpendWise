@@ -23,6 +23,7 @@ import {
   type AcquiredPhoto,
 } from '../utils/imageAcquisition';
 import { ViewportPortal } from './ViewportPortal';
+import { useModalFocus } from './useModalFocus';
 
 interface ExpenseAttachmentsEditorProps {
   expenseId?: number;
@@ -80,7 +81,7 @@ export const ExpenseAttachmentsEditor: React.FC<ExpenseAttachmentsEditorProps> =
   const acquisitionInFlightRef = useRef(false);
   const cancelledPendingIdsRef = useRef<Set<string>>(new Set());
   const draftsRef = useRef(drafts);
-  const [selectedKind, setSelectedKind] = useState<ExpenseAttachmentKind>('proof');
+  const [selectedKind, setSelectedKind] = useState<ExpenseAttachmentKind>('receipt');
   const [isAcquiring, setIsAcquiring] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
   const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([]);
@@ -89,6 +90,7 @@ export const ExpenseAttachmentsEditor: React.FC<ExpenseAttachmentsEditorProps> =
   const [missingIds, setMissingIds] = useState<Set<string>>(new Set());
   const [draftUrls, setDraftUrls] = useState<string[]>([]);
   const [preview, setPreview] = useState<PreviewState | null>(null);
+  const previewRef = useModalFocus(undefined, Boolean(preview));
 
   draftsRef.current = drafts;
 
@@ -100,8 +102,8 @@ export const ExpenseAttachmentsEditor: React.FC<ExpenseAttachmentsEditorProps> =
   const totalVisible = visiblePersisted.length + drafts.length + pendingPhotos.length;
 
   useEffect(() => {
-    onPreparingChange?.(isPreparing);
-  }, [isPreparing, onPreparingChange]);
+    onPreparingChange?.(isPreparing || isAcquiring);
+  }, [isPreparing, isAcquiring, onPreparingChange]);
 
   useEffect(() => {
     return () => {
@@ -419,7 +421,6 @@ export const ExpenseAttachmentsEditor: React.FC<ExpenseAttachmentsEditorProps> =
       >
         <option value="purchase">{ta(language, 'kindPurchase')}</option>
         <option value="receipt">{ta(language, 'kindReceipt')}</option>
-        <option value="proof">{ta(language, 'kindProof')}</option>
       </select>
 
       <div className="grid grid-cols-2 gap-2">
@@ -454,6 +455,8 @@ export const ExpenseAttachmentsEditor: React.FC<ExpenseAttachmentsEditorProps> =
         <ViewportPortal>
         <div
           data-attachment-viewer="true"
+          ref={previewRef}
+          tabIndex={-1}
           className="fixed inset-0 z-[70] bg-black/90 flex items-center justify-center p-4"
           role="dialog"
           aria-modal="true"

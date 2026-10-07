@@ -70,8 +70,8 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
   }, [expenses]);
 
   const searchedExpenses = useMemo(
-    () => searchHistoryExpenses(expenses, searchQuery),
-    [expenses, searchQuery]
+    () => searchHistoryExpenses(expenses, searchQuery, language),
+    [expenses, searchQuery, language]
   );
 
   const dayExpenses = useMemo(

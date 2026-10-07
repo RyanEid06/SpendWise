@@ -15,6 +15,7 @@ import { StorageManager } from '../../../src/utils/storage';
 import { TechnicalDiagnostics } from '../../../src/features/settings/TechnicalDiagnostics';
 import { BudgetSummaryCards } from '../../../src/components/BudgetSummaryCards';
 import { TopExpensesSection } from '../../../src/components/TopExpensesSection';
+import { AddEditExpenseModal } from '../../../src/components/AddEditExpenseModal';
 
 declare global {
   interface Window {
@@ -229,6 +230,8 @@ async function render() {
        testCase === 'diagnostics' ? <TechnicalDiagnostics language={initialLanguage} /> :
        testCase === 'history' ? <HistoryHarness /> :
        testCase === 'amounts' ? <AmountHarness /> :
+       testCase === 'expense' ? <AddEditExpenseModal isOpen={true} language={initialLanguage} currencyCode="USD"
+         initialExpense={params.get('edit') ? fixtures[0] : null} onSave={() => record('expense-save')} onClose={() => record('expense-close')} /> :
        testCase.startsWith('lock-') ? <LockHarness /> :
        <DialogHarness />}
     </React.StrictMode>

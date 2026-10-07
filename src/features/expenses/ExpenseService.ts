@@ -1,4 +1,5 @@
 import { Expense, MonthlyBudget } from '../../types';
+import { normalizeCategoryName } from '../../utils/categories';
 import { AttachmentEditPayload } from '../../utils/attachmentStorage';
 import {
   convertCurrencyAmount,
@@ -51,6 +52,7 @@ export class ExpenseService {
   ): Promise<Expense> {
     const expense: Expense = {
       ...input,
+      category: normalizeCategoryName(input.category),
       id: this.expenses.nextId(),
       createdAt: Date.now(),
     };
@@ -75,6 +77,7 @@ export class ExpenseService {
     updated: Expense,
     attachmentChanges: AttachmentEditPayload
   ): Promise<void> {
+    updated = { ...updated, category: normalizeCategoryName(updated.category) };
     const previous = this.expenses.list().find((expense) => expense.id === updated.id);
     if (!previous) return;
 

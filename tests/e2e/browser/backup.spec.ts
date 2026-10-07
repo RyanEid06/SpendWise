@@ -88,10 +88,10 @@ test('Backup v3 data-only survives clear and replace restore', async ({ page }) 
   await page.getByRole('button', { name: 'Back', exact: true }).click();
   await page.getByRole('button', { name: 'Back to previous screen', exact: true }).click();
   await page.getByRole('button', { name: 'History' }).click();
-  await expect(page.getByText('WP32 Disaster Recovery')).toBeVisible();
-  await expect(page.getByText('WP32 Second Recovery')).toBeVisible();
+  await expect(page.getByRole('button', { name: /^WP32 Disaster Recovery,/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^WP32 Second Recovery,/ })).toBeVisible();
   await page.reload();
-  await expect(page.getByText('WP32 Disaster Recovery')).toBeVisible();
+  await expect(page.getByRole('button', { name: /^WP32 Disaster Recovery,/ })).toBeVisible();
 });
 
 test('wrong Backup v3 passphrase is surfaced without mutating ledger', async ({ page }) => {
@@ -123,5 +123,5 @@ test('wrong Backup v3 passphrase is surfaced without mutating ledger', async ({ 
   await page.getByRole('button', { name: 'Back', exact: true }).click();
   await page.getByRole('button', { name: 'Back to previous screen', exact: true }).click();
   await page.getByRole('button', { name: 'History' }).click();
-  await expect(page.getByText('WP32 Protected Ledger')).toBeVisible();
+  await expect(page.getByRole('button', { name: /^WP32 Protected Ledger,/ })).toBeVisible();
 });
