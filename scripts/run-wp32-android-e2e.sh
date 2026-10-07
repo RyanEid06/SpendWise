@@ -10,6 +10,7 @@ FIXTURE_ROOT="${FIXTURE_ROOT:-artifacts/android-e2e/fixtures}"
 
 mkdir -p "$RESULT_ROOT" "$FIXTURE_ROOT"
 source scripts/wp32-android-helpers.sh
+source scripts/wp33-5-04-native-continuity.sh
 
 capture_failure() {
   mkdir -p "$RESULT_ROOT/failure"
@@ -26,6 +27,7 @@ capture_failure() {
 }
 
 cleanup() {
+  restore_wp04_ime_setting || true
   adb shell cmd connectivity airplane-mode disable >/dev/null 2>&1 || true
   adb shell locksettings clear --old 2468 >/dev/null 2>&1 || true
   adb shell settings delete global hide_error_dialogs >/dev/null 2>&1 || true
@@ -104,6 +106,8 @@ run_flow fresh-persistence .maestro/current/fresh-persistence.yaml
 run_flow delete-undo .maestro/current/delete-undo.yaml
 run_flow delete-background .maestro/current/delete-background-verify.yaml
 run_flow offline-ai .maestro/current/offline-ai.yaml
+reset_app
+run_wp04_continuity
 
 echo "== Media boundaries and restart durability =="
 reset_app

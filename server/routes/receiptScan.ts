@@ -71,6 +71,7 @@ receiptScanRouter.post('/scan-receipt', async (req, res) => {
       '- Merchant should be the actual store/merchant name when readable, not an address, phone number, card number, or OCR dump.',
       '- Keep items concise and limited to useful visible line items.',
       '- Choose category only from the supplied SpendWise category list.',
+      '- Food is displayed as Food & Beverage: restaurant, cafe, takeaway, delivery and dining-related drinks. Groceries covers supermarket food/drink primarily bought for home. Return the stable Food identifier for dining; do not create a Drinks category.',
       '- Return null when uncertain and keep uncertaintyReason concise. Do not reveal chain-of-thought.',
       '',
       'Current SpendWise currency: ' + currencyCode,

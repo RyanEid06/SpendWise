@@ -8,12 +8,18 @@ import {
 } from '../types';
 import { MonthYear, getMonthKey, getMonthYearFromTimestamp, previousMonth } from './date';
 import { formatCurrency } from './currency';
+import { normalizeCategoryName } from './categories';
+import { getLocalizedCategoryName } from './translations';
 
 export class SpendingAnalyzer {
   computeHistoricalSummary(
     allExpenses: Expense[],
     targetMonth: MonthYear
   ): HistoricalSpendingSummary {
+    allExpenses = allExpenses.map(expense => {
+      const category = normalizeCategoryName(expense.category);
+      return category === expense.category ? expense : { ...expense, category };
+    });
     const currentMonthKey = getMonthKey(targetMonth);
     const prevMonthKey = getMonthKey(previousMonth(targetMonth));
 
@@ -187,8 +193,8 @@ export class SpendingAnalyzer {
           100;
         if (changePct > 20) {
           biggestChanges.push({
-            title: `${baseline.category} Spending Increase`,
-            explanation: `${baseline.category} spending increased by ${Math.round(
+            title: `${getLocalizedCategoryName(baseline.category, 'en')} Spending Increase`,
+            explanation: `${getLocalizedCategoryName(baseline.category, 'en')} spending increased by ${Math.round(
               changePct
             )}% compared with your previous month.`,
             numbers: `${formatCurrency(baseline.currentMonthTotal, currencyCode)} vs ${formatCurrency(
@@ -200,8 +206,8 @@ export class SpendingAnalyzer {
           });
         } else if (changePct < -20) {
           biggestChanges.push({
-            title: `${baseline.category} Spending Decrease`,
-            explanation: `${baseline.category} spending decreased by ${Math.round(
+            title: `${getLocalizedCategoryName(baseline.category, 'en')} Spending Decrease`,
+            explanation: `${getLocalizedCategoryName(baseline.category, 'en')} spending decreased by ${Math.round(
               Math.abs(changePct)
             )}% compared with your previous month.`,
             numbers: `${formatCurrency(baseline.currentMonthTotal, currencyCode)} vs ${formatCurrency(
@@ -223,14 +229,14 @@ export class SpendingAnalyzer {
       const typical = baseline?.typicalTransactionMedian || 0;
       if (typical > 0 && exp.amount >= typical * 2.2) {
         unusualExpenses.push({
-          title: `Higher Than Typical ${exp.category} Purchase`,
+          title: `Higher Than Typical ${getLocalizedCategoryName(exp.category, 'en')} Purchase`,
           explanation: `Your ${formatCurrency(
             exp.amount,
             currencyCode
           )} purchase for "${exp.description}" is significantly higher than your typical ${formatCurrency(
             typical,
             currencyCode
-          )} ${exp.category} transaction.`,
+          )} ${getLocalizedCategoryName(exp.category, 'en')} transaction.`,
           numbers: `${formatCurrency(exp.amount, currencyCode)} (typical: ${formatCurrency(
             typical,
             currencyCode
@@ -261,8 +267,8 @@ export class SpendingAnalyzer {
         const proportion = (baseline.currentMonthTotal / summary.currentMonthTotal) * 100;
         if (proportion >= 25) {
           areasToReview.push({
-            title: `High Share of Spending: ${baseline.category}`,
-            explanation: `${baseline.category} represents ${Math.round(
+            title: `High Share of Spending: ${getLocalizedCategoryName(baseline.category, 'en')}`,
+            explanation: `${getLocalizedCategoryName(baseline.category, 'en')} represents ${Math.round(
               proportion
             )}% of your total spending this month.`,
             numbers: `${Math.round(proportion)}% (${formatCurrency(

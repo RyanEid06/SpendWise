@@ -1,4 +1,5 @@
 import JSZip from 'jszip';
+import { normalizeCategoryName } from './categories';
 import type {
   BackupSettings,
   Expense,
@@ -245,7 +246,7 @@ function normalizeBackupExpense(item: ExpenseBackupItem): Expense {
     id: item.id,
     amount: item.amount,
     description: item.description.trim(),
-    category: item.category.trim(),
+    category: normalizeCategoryName(item.category),
     date: item.date,
     note: item.note?.trim() || null,
     createdAt: item.createdAt,
@@ -258,7 +259,7 @@ class DuplicateExpenseIndex {
   private readonly byContent = new Map<string, Map<number, Expense[]>>();
 
   private contentKey(item: Expense | ExpenseBackupItem): string {
-    return JSON.stringify([item.date, item.description.trim().toLowerCase(), item.category.trim().toLowerCase()]);
+    return JSON.stringify([item.date, item.description.trim().toLowerCase(), normalizeCategoryName(item.category).toLowerCase()]);
   }
 
   private addTo<K>(index: Map<K, Map<number, Expense[]>>, key: K, item: Expense): void {

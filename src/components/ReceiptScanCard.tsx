@@ -1,11 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AlertCircle, Camera, CheckCircle2, ImagePlus, Loader2, X } from 'lucide-react';
 import { Language, ReceiptScanResult } from '../types';
 import { apiFetchJson } from '../utils/api';
 import { getAiErrorMessage, SpendWiseApiError } from '../utils/apiErrors';
 import { AttachmentDraft, AttachmentStorage } from '../utils/attachmentStorage';
 import { photoAcquisitionErrorText, ta } from '../utils/attachmentTranslations';
-import { DEFAULT_CATEGORIES } from '../utils/categories';
+import { DEFAULT_CATEGORIES, normalizeCategoryName } from '../utils/categories';
 import { formatCurrency } from '../utils/currency';
 import { getLocalizedCategoryName, t } from '../utils/translations';
 import {
@@ -39,8 +39,8 @@ function parseReceiptScanResult(
 
   const category =
     typeof item.category === 'string' &&
-    DEFAULT_CATEGORIES.some((candidate) => candidate.name === item.category)
-      ? item.category
+    DEFAULT_CATEGORIES.some((candidate) => candidate.name === normalizeCategoryName(item.category as string))
+      ? normalizeCategoryName(item.category)
       : null;
   if (!category) return null;
 
@@ -153,8 +153,16 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    onPreparingChange?.(isPreparing);
-  }, [isPreparing, onPreparingChange]);
+    onPreparingChange?.(isPreparing || isAcquiring);
+  }, [isPreparing, isAcquiring, onPreparingChange]);
+
+  useLayoutEffect(() => {
+    requestIdRef.current += 1;
+    analysisInFlightRef.current = false;
+    setResult(null);
+    setError(null);
+    setIsScanning(false);
+  }, [currencyCode, language]);
 
   useEffect(() => {
     return () => {
@@ -317,7 +325,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
           type="button"
           disabled={disabled || isAcquiring || isScanning}
           onClick={() => void beginPhotoSelection('camera')}
-          className="min-h-[44px] rounded-xl border border-purple-300 dark:border-purple-800 bg-white/80 dark:bg-[#111928]/80 text-purple-800 dark:text-purple-200 text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+          className="min-h-[44px] rounded-xl border border-emerald-400 dark:border-emerald-700 bg-white dark:bg-[#111928] text-emerald-800 dark:text-emerald-200 text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50"
         >
           <Camera className="w-4 h-4" />
           <span>{ta(language, 'takePhoto')}</span>
@@ -326,7 +334,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
           type="button"
           disabled={disabled || isAcquiring || isScanning}
           onClick={() => void beginPhotoSelection('gallery')}
-          className="min-h-[44px] rounded-xl border border-purple-300 dark:border-purple-800 bg-white/80 dark:bg-[#111928]/80 text-purple-800 dark:text-purple-200 text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+          className="min-h-[44px] rounded-xl border border-emerald-400 dark:border-emerald-700 bg-white dark:bg-[#111928] text-emerald-800 dark:text-emerald-200 text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50"
         >
           {isAcquiring ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
           <span>{ta(language, 'choosePhoto')}</span>

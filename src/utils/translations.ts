@@ -294,7 +294,7 @@ export const TRANSLATIONS = {
     pinError: 'Incorrect passcode.',
 
     // Categories
-    catFood: 'Food',
+    catFood: 'Food & Beverage',
     catGroceries: 'Groceries',
     catTransportation: 'Transportation',
     catShopping: 'Shopping',
@@ -600,7 +600,7 @@ export const TRANSLATIONS = {
     pinError: 'Code PIN incorrect.',
 
     // Categories
-    catFood: 'Alimentation',
+    catFood: 'Restauration et boissons',
     catGroceries: 'Courses & Épicerie',
     catTransportation: 'Transports & Carburant',
     catShopping: 'Shopping & Achats',
@@ -906,7 +906,7 @@ export const TRANSLATIONS = {
     pinError: 'رمز المرور غير صحيح.',
 
     // Categories
-    catFood: 'طعام ومطاعم',
+    catFood: 'الطعام والمشروبات',
     catGroceries: 'بقالة وسوبرماركت',
     catTransportation: 'مواصلات ووقود',
     catShopping: 'تسوق ومشتريات',
@@ -943,6 +943,7 @@ export function getLocalizedMonthName(my: MonthYear, lang: Language): string {
 export function getLocalizedCategoryName(categoryName: string, lang: Language): string {
   const mapping: Record<string, TranslationKey> = {
     food: 'catFood',
+    'food & beverage': 'catFood',
     groceries: 'catGroceries',
     transportation: 'catTransportation',
     shopping: 'catShopping',

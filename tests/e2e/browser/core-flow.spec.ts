@@ -6,10 +6,10 @@ test('fresh onboarding -> budget -> expense -> reload persists', async ({ page }
   await setBudget(page);
   await addExpense(page, 'WP32 Persistence', '18.75');
   await page.getByRole('button', { name: 'History' }).click();
-  await expect(page.getByText('WP32 Persistence')).toBeVisible();
+  await expect(page.getByRole('button', { name: /^WP32 Persistence,/ })).toBeVisible();
 
   await page.reload();
-  await expect(page.getByText('WP32 Persistence')).toBeVisible();
+  await expect(page.getByRole('button', { name: /^WP32 Persistence,/ })).toBeVisible();
   await page.getByRole('button', { name: 'Home' }).click();
   await expect(page.getByText(/1,250|1250/).first()).toBeVisible();
 });
@@ -39,9 +39,9 @@ test('expense create -> read -> update remains durable', async ({ page }) => {
   await expect(editor).toBeHidden();
 
   await page.getByRole('button', { name: 'History' }).click();
-  await expect(page.getByText('WP32 CRUD Updated')).toBeVisible();
+  await expect(page.getByRole('button', { name: /^WP32 CRUD Updated,/ })).toBeVisible();
   await page.reload();
-  await expect(page.getByText('WP32 CRUD Updated')).toBeVisible();
+  await expect(page.getByRole('button', { name: /^WP32 CRUD Updated,/ })).toBeVisible();
 });
 
 test('delete -> Undo restores the expense', async ({ page }) => {
@@ -55,7 +55,7 @@ test('delete -> Undo restores the expense', async ({ page }) => {
   const undo = page.getByRole('button', { name: 'Undo', exact: true });
   await expect(undo).toBeVisible();
   await undo.click();
-  await expect(page.getByText('WP32 Undo')).toBeVisible();
+  await expect(page.getByRole('button', { name: /^WP32 Undo,/ })).toBeVisible();
 });
 
 test('Settings subpage back returns to Settings overview', async ({ page }) => {
@@ -95,5 +95,5 @@ test('AI backend interruption falls back locally without crashing or mutating th
   await expect(page.getByText('Local Statistical', { exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: 'History' }).click();
-  await expect(page.getByText('WP32 Offline AI')).toBeVisible();
+  await expect(page.getByRole('button', { name: /^WP32 Offline AI,/ })).toBeVisible();
 });

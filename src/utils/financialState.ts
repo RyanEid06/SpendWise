@@ -1,4 +1,5 @@
 import { Expense, ExpenseAttachment, MonthlyBudget } from '../types';
+import { normalizeCategoryName } from './categories';
 import { DEFAULT_CURRENCY_CODE, SUPPORTED_CURRENCIES } from './currency';
 
 export const LEGACY_FINANCIAL_KEYS = {
@@ -81,7 +82,7 @@ export function validateFinancialState(input: FinancialState): FinancialState {
       id: value.id,
       amount: value.amount,
       description: value.description,
-      category: value.category,
+      category: normalizeCategoryName(value.category),
       date: value.date,
       note: value.note ?? null,
       createdAt: value.createdAt,

@@ -15,7 +15,14 @@ export const DEFAULT_CATEGORIES: CategoryInfo[] = [
   { name: 'Other', iconEmoji: '🏷️', color: '#64748B', bgColor: 'rgba(100, 116, 139, 0.15)' }
 ];
 
+/** Food remains the stable persisted identifier for older databases/backups/servers. */
+export function normalizeCategoryName(name: string): string {
+  const trimmed = name.trim();
+  return ['food', 'food & beverage'].includes(trimmed.toLowerCase()) ? 'Food' : trimmed;
+}
+
 export function getCategoryInfo(name: string): CategoryInfo {
+  name = normalizeCategoryName(name);
   const found = DEFAULT_CATEGORIES.find(
     (c) => c.name.toLowerCase() === name.trim().toLowerCase()
   );

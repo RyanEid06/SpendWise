@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AlertCircle, Camera, CheckCircle2, ImagePlus, Loader2, Sparkles, X } from 'lucide-react';
 import { Language, SmartCaptureResult } from '../types';
 import { apiFetchJson } from '../utils/api';
@@ -7,7 +7,7 @@ import { AttachmentDraft, AttachmentStorage } from '../utils/attachmentStorage';
 import { photoAcquisitionErrorText, ta } from '../utils/attachmentTranslations';
 import { getLocalizedCategoryName, t } from '../utils/translations';
 import { formatCurrency } from '../utils/currency';
-import { DEFAULT_CATEGORIES } from '../utils/categories';
+import { DEFAULT_CATEGORIES, normalizeCategoryName } from '../utils/categories';
 import {
   choosePhotos,
   takePhoto,
@@ -29,7 +29,7 @@ function parseSmartCaptureResult(value: unknown, currentCurrencyCode: string): S
 
   if (
     typeof item.category !== 'string' ||
-    !DEFAULT_CATEGORIES.some((category) => category.name === item.category)
+    !DEFAULT_CATEGORIES.some((category) => category.name === normalizeCategoryName(item.category as string))
   ) {
     return null;
   }
@@ -89,7 +89,7 @@ function parseSmartCaptureResult(value: unknown, currentCurrencyCode: string): S
 
   return {
     description: optionalString(item.description, 240),
-    category: item.category,
+    category: normalizeCategoryName(item.category),
     amount,
     merchantOrBrand: optionalString(item.merchantOrBrand, 200),
     notes: optionalString(item.notes, 1000),
@@ -121,7 +121,6 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
   const requestIdRef = useRef(0);
   const acquisitionInFlightRef = useRef(false);
   const analysisInFlightRef = useRef(false);
-  const attachmentAppliedRef = useRef(false);
   const preparedPreviewUrlRef = useRef<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [preparedDraft, setPreparedDraft] = useState<AttachmentDraft | null>(null);
@@ -132,8 +131,16 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    onPreparingChange?.(isPreparing);
-  }, [isPreparing, onPreparingChange]);
+    onPreparingChange?.(isPreparing || isAcquiring);
+  }, [isPreparing, isAcquiring, onPreparingChange]);
+
+  useLayoutEffect(() => {
+    requestIdRef.current += 1;
+    analysisInFlightRef.current = false;
+    setResult(null);
+    setError(null);
+    setIsAnalyzing(false);
+  }, [currencyCode, language]);
 
   useEffect(() => {
     return () => {
@@ -163,7 +170,6 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
     setError(null);
     setIsPreparing(false);
     setIsAnalyzing(false);
-    attachmentAppliedRef.current = false;
   };
 
   const beginPhotoSelection = async (source: PhotoAcquisitionSource) => {
@@ -197,7 +203,6 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
     setError(null);
     setIsAnalyzing(false);
     setIsPreparing(true);
-      attachmentAppliedRef.current = false;
 
     await waitForPhotoUiPaint();
 
@@ -267,10 +272,9 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
   };
 
   const applyResult = () => {
-    if (!result) return;
-    const attachment = attachmentAppliedRef.current ? null : preparedDraft;
-    onApply(result, attachment);
-    attachmentAppliedRef.current = true;
+    if (!result || disabled || isAnalyzing || isPreparing) return;
+    // The form owns acceptance/deduplication, including a retry after freeing capacity.
+    onApply(result, preparedDraft);
   };
 
   return (
@@ -307,7 +311,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
           type="button"
           disabled={disabled || isAcquiring || isAnalyzing}
           onClick={() => void beginPhotoSelection('camera')}
-          className="min-h-[44px] rounded-xl border border-cyan-300 dark:border-cyan-800 bg-white/80 dark:bg-[#111928]/80 text-cyan-800 dark:text-cyan-200 text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+          className="min-h-[44px] rounded-xl border border-emerald-400 dark:border-emerald-700 bg-white dark:bg-[#111928] text-emerald-800 dark:text-emerald-200 text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50"
         >
           <Camera className="w-4 h-4" />
           <span>{ta(language, 'takePhoto')}</span>
@@ -316,7 +320,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
           type="button"
           disabled={disabled || isAcquiring || isAnalyzing}
           onClick={() => void beginPhotoSelection('gallery')}
-          className="min-h-[44px] rounded-xl border border-cyan-300 dark:border-cyan-800 bg-white/80 dark:bg-[#111928]/80 text-cyan-800 dark:text-cyan-200 text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+          className="min-h-[44px] rounded-xl border border-emerald-400 dark:border-emerald-700 bg-white dark:bg-[#111928] text-emerald-800 dark:text-emerald-200 text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50"
         >
           {isAcquiring ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
           <span>{ta(language, 'choosePhoto')}</span>
@@ -408,6 +412,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
           <button
             type="button"
             onClick={applyResult}
+            disabled={disabled || isAnalyzing || isPreparing}
             className="w-full min-h-[44px] rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-extrabold"
           >
             {t(language, 'smartCaptureReviewExpense')}

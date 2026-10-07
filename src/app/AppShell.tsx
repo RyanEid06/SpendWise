@@ -10,6 +10,8 @@ import {
 } from '../utils/date';
 import { SetupState } from '../utils/setupState';
 import { Navigation } from '../components/Navigation';
+import { RetainedScreen } from '../components/RetainedScreen';
+import { useTabScroll } from './navigation/useTabScroll';
 import { ViewportPortal } from '../components/ViewportPortal';
 import { AppTopBar } from '../components/AppTopBar';
 import { UndoSnackbar } from '../components/UndoSnackbar';
@@ -41,6 +43,7 @@ interface AppShellProps {
 
 export const AppShell: React.FC<AppShellProps> = ({ startupHomeFrameTiming }) => {
   const navigation = useAppNavigation();
+  useTabScroll(navigation.currentScreen);
   const overlays = useAppOverlays();
   const preferences = useThemeLanguage();
   const ledger = useExpenseLedger();
@@ -197,7 +200,7 @@ export const AppShell: React.FC<AppShellProps> = ({ startupHomeFrameTiming }) =>
               : 'calc(9rem + env(safe-area-inset-bottom, 0px))',
         }}
       >
-        {navigation.currentScreen === 'home' && (
+        <RetainedScreen active={navigation.currentScreen === 'home'}>
           <DashboardScreen
             currentMonthYear={currentMY}
             startingMoney={monthly.startingMoney}
@@ -214,9 +217,9 @@ export const AppShell: React.FC<AppShellProps> = ({ startupHomeFrameTiming }) =>
             onSetBudgetClick={overlays.openBudgetModal}
             onExpenseClick={overlays.openEditExpense}
           />
-        )}
+        </RetainedScreen>
 
-        {navigation.currentScreen === 'history' && (
+        <RetainedScreen active={navigation.currentScreen === 'history'}>
           <HistoryScreen
             currentMonthYear={currentMY}
             expenses={monthly.monthlyExpenses}
@@ -228,9 +231,9 @@ export const AppShell: React.FC<AppShellProps> = ({ startupHomeFrameTiming }) =>
             onDeleteExpense={(expense) => { deleteUndo.stageDelete(expense); }}
             onAddExpenseClick={overlays.openAddExpense}
           />
-        )}
+        </RetainedScreen>
 
-        {navigation.currentScreen === 'insights' && (
+        <RetainedScreen active={navigation.currentScreen === 'insights'}>
           <AiInsightsScreen
             currentMonthYear={currentMY}
             analysisResult={ai.result}
@@ -242,9 +245,9 @@ export const AppShell: React.FC<AppShellProps> = ({ startupHomeFrameTiming }) =>
             onNextMonth={() => setCurrentMY((previous) => nextMonth(previous))}
             onAnalyzeClick={ai.analyze}
           />
-        )}
+        </RetainedScreen>
 
-        {navigation.currentScreen === 'statistics' && (
+        <RetainedScreen active={navigation.currentScreen === 'statistics'}>
           <StatisticsScreen
             expenses={ledger.expenses}
             budgets={ledger.budgets}
@@ -253,7 +256,7 @@ export const AppShell: React.FC<AppShellProps> = ({ startupHomeFrameTiming }) =>
             language={preferences.language}
             onNavigateToExpense={overlays.openExpenseDetail}
           />
-        )}
+        </RetainedScreen>
 
         {navigation.currentScreen === 'settings' && (
           <SettingsScreen

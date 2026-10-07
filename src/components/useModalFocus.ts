@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef } from 'react';
 
 const focusableSelector = 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-/** Keep keyboard focus in a backup dialog and return it when the dialog closes. */
+/** The topmost visible modal owns keyboard focus; return it on close. */
 export function useModalFocus(initialSelector = focusableSelector, open = true) {
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -16,6 +16,9 @@ export function useModalFocus(initialSelector = focusableSelector, open = true) 
     (dialog.querySelector<HTMLElement>(initialSelector) ?? dialog).focus({ preventScroll: true });
     const trapFocus = (event: KeyboardEvent) => {
       if (event.key !== 'Tab') return;
+      const topmost = [...document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]')]
+        .filter(element => element.getClientRects().length > 0).at(-1);
+      if (topmost && topmost !== dialog) return;
       const controls = [...dialog.querySelectorAll<HTMLElement>(focusableSelector)]
         .filter(element => element.getClientRects().length > 0);
       const first = controls[0];

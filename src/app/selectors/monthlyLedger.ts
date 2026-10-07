@@ -1,6 +1,6 @@
 import { CategorySpend, Expense, MonthlyBudget } from '../../types';
 import { MonthYear, getEndOfMonthTimestamp, getMonthKey, getStartOfMonthTimestamp } from '../../utils/date';
-import { getCategoryInfo } from '../../utils/categories';
+import { getCategoryInfo, normalizeCategoryName } from '../../utils/categories';
 
 export interface MonthlyLedgerSelection {
   monthlyExpenses: Expense[];
@@ -34,7 +34,8 @@ export function selectMonthlyLedger(
 
   const grouped: Record<string, number> = {};
   for (const expense of monthlyExpenses) {
-    grouped[expense.category] = (grouped[expense.category] || 0) + expense.amount;
+    const category = normalizeCategoryName(expense.category);
+    grouped[category] = (grouped[category] || 0) + expense.amount;
   }
 
   const categoryBreakdown: CategorySpend[] = Object.entries(grouped)

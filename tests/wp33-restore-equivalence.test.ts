@@ -11,7 +11,13 @@ function manifest(state: FinancialState): BackupV2Manifest {
 }
 function equivalent(source: FinancialState, existing: FinancialState, replace = false) {
   const input = manifest(source); const before = JSON.stringify({ input, existing });
-  assert.deepEqual(planBackupV2Restore(input, existing, replace), referencePlanBackupV2Restore(input, existing, replace));
+  const reference = referencePlanBackupV2Restore(input, existing, replace);
+  // WP04 intentionally canonicalizes the dining identity. Preserve the immutable
+  // planner and compare every other value, ID, order and duplicate decision exactly.
+  reference.nextExpenses = reference.nextExpenses.map(expense => ({ ...expense,
+    category: ['food', 'food & beverage'].includes(expense.category.trim().toLowerCase()) ? 'Food' : expense.category,
+  }));
+  assert.deepEqual(planBackupV2Restore(input, existing, replace), reference);
   assert.equal(JSON.stringify({ input, existing }), before);
 }
 for (const size of [0, 100, 1000, 5000]) {
