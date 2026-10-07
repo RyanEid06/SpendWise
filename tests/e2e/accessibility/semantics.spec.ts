@@ -39,7 +39,10 @@ test('critical navigation and forms expose accessible names', async ({ page }) =
   await expect(page.getByText(/CSV is plaintext/)).toBeVisible();
   await page.getByText('Create encrypted backup', { exact: true }).click();
   const backupDialog = page.getByRole('dialog');
-  await expect(backupDialog.locator('input[type="password"]').first()).toBeFocused();
+  const photos = backupDialog.getByRole('switch', { name: 'Include photos' });
+  await expect(photos).toBeFocused();
+  await photos.press('Tab');
+  await expect(backupDialog.getByLabel('Backup password', { exact: true })).toBeFocused();
 });
 
 test('Arabic RTL keeps semantic navigation operable', async ({ page }) => {
