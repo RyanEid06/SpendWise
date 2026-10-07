@@ -13,6 +13,7 @@ export interface NativeAuthenticationResult {
   status: NativeAuthenticationStatus;
   code?: string;
   message?: string;
+  postAuthKeyVerifyDurationMs?: number;
 }
 
 export interface NativeKeyResult {

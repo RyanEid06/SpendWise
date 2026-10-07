@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Fingerprint, Lock } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Language } from '../types';
 import { t } from '../utils/translations';
+import { SpendWiseLogo } from '../components/SpendWiseLogo';
 import {
   clearLockThrottle,
   readLockThrottleState,
@@ -18,6 +18,7 @@ interface LockScreenProps {
   migrationIssue: string | null;
   language: Language;
   onUnlock: (credential?: string) => Promise<SecureSessionActionResult>;
+  autoUnlock?: boolean;
 }
 
 const COPY = {
@@ -27,9 +28,10 @@ const COPY = {
     repairPrompt: 'SpendWise found an incomplete legacy lock state. Verify with Android device authentication to repair it without silently disabling App Lock.',
     webPrompt: 'Enter your SpendWise PIN. On web, this is a local privacy lock rather than encrypted device storage.',
     webRepair: 'The saved web lock credential is missing or malformed. SpendWise will not silently disable App Lock.',
-    nativeButton: 'Authenticate & Unlock',
+    nativeButton: 'Unlock SpendWise',
     migrateButton: 'Upgrade & Unlock',
     repairButton: 'Repair & Unlock',
+    unlocking: 'Unlocking…',
     cancel: 'Authentication was cancelled.',
     unavailable: 'Set a secure Android screen lock or strong biometric, then try again.',
     keyProblem: 'The protected device key is unavailable. SpendWise kept App Lock enabled and did not discard security state.',
@@ -43,9 +45,10 @@ const COPY = {
     repairPrompt: 'SpendWise a détecté un état de verrouillage hérité incomplet. Vérifiez avec Android pour le réparer sans désactiver silencieusement le verrouillage.',
     webPrompt: 'Saisissez votre PIN SpendWise. Sur le web, il s’agit d’un verrou de confidentialité local et non d’un stockage chiffré.',
     webRepair: 'Le verrou web enregistré est manquant ou invalide. SpendWise ne désactivera pas silencieusement le verrouillage.',
-    nativeButton: 'Authentifier et déverrouiller',
+    nativeButton: 'Déverrouiller SpendWise',
     migrateButton: 'Mettre à niveau et déverrouiller',
     repairButton: 'Réparer et déverrouiller',
+    unlocking: 'Déverrouillage…',
     cancel: 'Authentification annulée.',
     unavailable: 'Configurez un verrouillage Android sécurisé ou une biométrie forte, puis réessayez.',
     keyProblem: 'La clé protégée de l’appareil est indisponible. SpendWise a conservé le verrouillage et son état de sécurité.',
@@ -59,9 +62,10 @@ const COPY = {
     repairPrompt: 'وجد SpendWise حالة قفل قديمة غير مكتملة. استخدم مصادقة Android لإصلاحها من دون تعطيل قفل التطبيق بصمت.',
     webPrompt: 'أدخل رمز SpendWise. على الويب هذا قفل خصوصية محلي وليس تخزينًا مشفّرًا على الجهاز.',
     webRepair: 'بيانات قفل الويب مفقودة أو غير صالحة. لن يعطّل SpendWise قفل التطبيق بصمت.',
-    nativeButton: 'المصادقة وفتح التطبيق',
+    nativeButton: 'فتح SpendWise',
     migrateButton: 'الترقية وفتح التطبيق',
     repairButton: 'الإصلاح وفتح التطبيق',
+    unlocking: 'جارٍ فتح SpendWise…',
     cancel: 'تم إلغاء المصادقة.',
     unavailable: 'اضبط قفل شاشة Android آمنًا أو مصادقة حيوية قوية ثم أعد المحاولة.',
     keyProblem: 'مفتاح الجهاز المحمي غير متاح. أبقى SpendWise قفل التطبيق مفعّلًا ولم يحذف حالة الأمان.',
@@ -76,16 +80,19 @@ export const LockScreen: React.FC<LockScreenProps> = ({
   migrationIssue,
   language,
   onUnlock,
+  autoUnlock = false,
 }) => {
   const copy = COPY[language];
-  const [pin, setPin] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [now, setNow] = useState(Date.now());
   const pinMode =
     unlockMode === 'web' ||
     unlockMode === 'legacy-web-migration' ||
     unlockMode === 'legacy-native-migration';
+  const canAutoUnlock = autoUnlock && !pinMode && unlockMode !== 'web-repair';
+  const [pin, setPin] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(canAutoUnlock);
+  const [now, setNow] = useState(Date.now());
+  const autoAttempted = useRef(false);
   const throttle = pinMode ? readLockThrottleState() : { failedAttempts: 0, blockedUntil: 0 };
   const remainingMs = remainingLockDelayMs(throttle, now);
   const isThrottled = pinMode && remainingMs > 0;
@@ -124,7 +131,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({
           ? copy.repairButton
           : t(language, 'unlockBtn');
 
-  const messageFor = (result: SecureSessionActionResult): string => {
+  const messageFor = useCallback((result: SecureSessionActionResult): string => {
     if (result.code === 'cancelled') return copy.cancel;
     if (result.code === 'unavailable') return copy.unavailable;
     if (
@@ -135,11 +142,11 @@ export const LockScreen: React.FC<LockScreenProps> = ({
     if (result.code === 'repair_required') return copy.repairRequired;
     if (result.code === 'migration_pending') return copy.migrationPending;
     return copy.generic;
-  };
+  }, [copy]);
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (busy || unlockMode === 'web-repair') return;
+  const performUnlock = useCallback(async () => {
+    if (busy && !canAutoUnlock) return;
+    if (unlockMode === 'web-repair') return;
 
     if (pinMode) {
       const currentNow = Date.now();
@@ -164,11 +171,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({
       if (result.ok) {
         if (pinMode) clearLockThrottle();
         setPin('');
-        if (result.warning === 'migration_pending') {
-          // The hook removes the lock screen after the preserved legacy unlock.
-          // The durable pending state remains visible in App Lock settings.
-          setError(copy.migrationPending);
-        }
+        if (result.warning === 'migration_pending') setError(copy.migrationPending);
         return;
       }
 
@@ -183,25 +186,38 @@ export const LockScreen: React.FC<LockScreenProps> = ({
     } finally {
       setBusy(false);
     }
+  }, [busy, canAutoUnlock, copy.migrationPending, language, messageFor, onUnlock, pin, pinMode, unlockMode]);
+
+  useEffect(() => {
+    if (!canAutoUnlock || autoAttempted.current) return;
+    autoAttempted.current = true;
+    void performUnlock();
+  }, [canAutoUnlock, performUnlock]);
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (busy || isThrottled) return;
+    void performUnlock();
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors">
-      <div className="bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-800 rounded-3xl p-8 max-w-sm w-full text-center space-y-6 shadow-2xl">
-        <div className="w-18 h-18 rounded-3xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-sm">
-          {pinMode ? <Lock className="w-9 h-9" /> : <Fingerprint className="w-9 h-9" />}
-        </div>
+    <div
+      className="fixed inset-0 z-50 flex min-h-screen items-center justify-center bg-slate-50 p-4 text-slate-900 transition-colors dark:bg-[#05080C] dark:text-slate-100"
+      data-testid="secure-lock-surface"
+    >
+      <div className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-7 text-center shadow-xl dark:border-slate-800 dark:bg-[#111928] sm:p-8">
+        <SpendWiseLogo className="mx-auto h-24 w-24 sm:h-28 sm:w-28" />
 
-        <div className="space-y-1.5">
-          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+        <div className="mt-5 space-y-1.5">
+          <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
             {t(language, 'lockTitle')}
           </h2>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-xs mx-auto leading-relaxed">
+          <p className="mx-auto max-w-xs text-xs leading-relaxed text-slate-500 dark:text-slate-400 sm:text-sm">
             {description}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           {pinMode && (
             <div className="space-y-2">
               <input
@@ -217,10 +233,10 @@ export const LockScreen: React.FC<LockScreenProps> = ({
                   setPin(event.target.value.replace(/\D/g, ''));
                   setError(null);
                 }}
-                className="w-full text-center tracking-widest text-lg font-bold py-3.5 px-4 rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-400 placeholder:text-xs placeholder:tracking-normal focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-inner disabled:opacity-50"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-center text-lg font-bold tracking-widest text-slate-900 shadow-inner placeholder:text-xs placeholder:tracking-normal placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 dark:border-slate-700 dark:bg-[#0B0F19] dark:text-white"
               />
               {throttleMessage ? (
-                <p className="text-xs text-amber-600 dark:text-amber-400 font-bold">
+                <p className="text-xs font-bold text-amber-600 dark:text-amber-400">
                   {throttleMessage}
                 </p>
               ) : null}
@@ -228,7 +244,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({
           )}
 
           {(error || migrationIssue) && (
-            <p className="text-xs text-rose-500 dark:text-rose-400 font-medium">
+            <p className="text-xs font-medium text-rose-500 dark:text-rose-400">
               {error || copy.generic}
             </p>
           )}
@@ -236,14 +252,15 @@ export const LockScreen: React.FC<LockScreenProps> = ({
           <button
             type="submit"
             disabled={busy || isThrottled || unlockMode === 'web-repair'}
-            className="w-full min-h-[48px] flex items-center justify-center py-3.5 px-4 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold text-sm shadow-sm transition-all cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex min-h-[48px] w-full cursor-pointer items-center justify-center gap-2.5 rounded-2xl bg-emerald-500 px-4 py-3.5 text-sm font-extrabold text-slate-950 shadow-sm transition-all hover:bg-emerald-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <span>{busy ? '…' : buttonText}</span>
+            {busy ? <span className="sw-secure-spinner sw-secure-spinner-dark" aria-hidden="true" /> : null}
+            <span>{busy ? copy.unlocking : buttonText}</span>
           </button>
         </form>
 
         {pinMode && unlockMode !== 'legacy-native-migration' && (
-          <p className="text-[11px] text-slate-400 dark:text-slate-500">
+          <p className="mt-5 text-[11px] text-slate-400 dark:text-slate-500">
             {t(language, 'pinHint')}
           </p>
         )}

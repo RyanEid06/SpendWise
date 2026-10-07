@@ -183,3 +183,24 @@ textarea {
 .sw-skip-link:focus-visible {
   transform: translateY(0);
 }
+
+/* WP33.5-01 secure startup/authentication progress indicator. */
+@keyframes swSecureSpin {
+  to { transform: rotate(360deg); }
+}
+
+.sw-secure-spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  border: 2px solid rgb(148 163 184 / 0.35);
+  border-top-color: #10b981;
+  border-radius: 9999px;
+  animation: swSecureSpin 0.8s linear infinite;
+}
+
+.sw-secure-spinner-dark {
+  border-color: rgb(15 23 42 / 0.22);
+  border-top-color: #052e16;
+}
