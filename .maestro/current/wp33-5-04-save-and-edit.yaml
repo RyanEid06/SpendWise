@@ -1,6 +1,7 @@
 appId: com.spendwise.app
 ---
 - tapOn: "Save Expense"
+- assertVisible: 'WP04 Native Dining, \$14\.25'
 - tapOn: "Statistics"
 - tapOn: "All Time"
 - tapOn: "History"
@@ -11,11 +12,12 @@ appId: com.spendwise.app
 - tapOn: "WP04 Native Dining.*"
 - assertVisible: "Edit Expense"
 # The broad Amount label also matches a non-clickable uppercase text node.
-# Target the observed EditText value, then prove the edit before moving focus.
-- tapOn: '14\.25'
+# Android exposes a populated EditText as value followed by its accessible label.
+# Match that whole field text, then prove the edit before moving focus.
+- tapOn: '14\.25, Amount \*'
 - eraseText
 - inputText: "16.75"
-- assertVisible: '16\.75'
+- assertVisible: '16\.75, Amount \*'
 - tapOn: "Description / Merchant .*"
 - eraseText
 - inputText: "WP04 Native Edited"

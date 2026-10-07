@@ -6,7 +6,7 @@ appId: com.spendwise.app
 - tapOn: "Add Expense"
 - tapOn: "Amount .*"
 - inputText: "14.25"
-- assertVisible: '14\.25'
+- assertVisible: '14\.25, Amount \*'
 - tapOn: "Description / Merchant .*"
 - inputText: "WP04 Native Dining"
 # Save must be operable with the real Android keyboard still open.
