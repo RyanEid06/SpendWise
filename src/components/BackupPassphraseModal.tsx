@@ -143,22 +143,27 @@ export const BackupPassphraseModal: React.FC<{
             </p>
 
             {mode === 'create' && onIncludePhotosChange && (
-              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] p-3.5">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="min-w-0">
-                    <div className="text-sm font-bold text-slate-900 dark:text-white">{text.includePhotos}</div>
-                    <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+              <button
+                id="backup-include-photos"
+                type="button"
+                role="switch"
+                aria-checked={includePhotos}
+                aria-label={text.includePhotos}
+                aria-describedby="backup-include-photos-help"
+                disabled={busy}
+                onClick={() => onIncludePhotosChange(!includePhotos)}
+                className="w-full rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0B0F19] p-3.5 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 disabled:opacity-50"
+              >
+                <span className="flex items-center justify-between gap-4">
+                  <span className="min-w-0">
+                    <span className="block text-sm font-bold text-slate-900 dark:text-white">{text.includePhotos}</span>
+                    <span id="backup-include-photos-help" className="block mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
                       {includePhotos ? text.includePhotosOn : text.includePhotosOff}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={includePhotos}
-                    aria-label={text.includePhotos}
-                    disabled={busy}
-                    onClick={() => onIncludePhotosChange(!includePhotos)}
-                    className={`relative min-w-[52px] w-12 h-7 rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 disabled:opacity-50 ${
+                    </span>
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className={`relative shrink-0 w-[52px] h-7 rounded-full border transition-colors ${
                       includePhotos
                         ? 'bg-emerald-500 border-emerald-500'
                         : 'bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600'
@@ -172,9 +177,9 @@ export const BackupPassphraseModal: React.FC<{
                           : 'left-0.5 rtl:left-auto rtl:right-0.5'
                       }`}
                     />
-                  </button>
-                </div>
-              </div>
+                  </span>
+                </span>
+              </button>
             )}
 
             <div className="rounded-2xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 p-3 flex gap-2">

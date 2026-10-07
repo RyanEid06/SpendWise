@@ -62,6 +62,17 @@ test('Include photos has a 48px touch target and toggles by keyboard', async ({ 
   await expect(toggle).toHaveAttribute('aria-checked', 'true');
 });
 
+test('Tapping the Include photos label selects a photo-inclusive backup', async ({ page }) => {
+  await page.goto('/tests/e2e/components/index.html?case=backup-create');
+  const toggle = page.getByRole('switch', { name: 'Include photos' });
+  await page.getByText('Include photos', { exact: true }).click();
+  await expect(toggle).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByText('Private attached photos will be included.', { exact: false })).toBeVisible();
+  await expect(toggle).toHaveAccessibleDescription(/Private attached photos will be included/);
+  await page.getByText('Include photos', { exact: true }).click();
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
+});
+
 test('Backup fields remain reachable above the actions at keyboard-sized height', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 480 });
   await page.goto('/tests/e2e/components/index.html?case=backup-create');

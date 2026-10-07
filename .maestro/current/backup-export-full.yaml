@@ -5,6 +5,9 @@ appId: com.spendwise.app
 - tapOn: "Backup & Restore.*"
 - tapOn: "Create encrypted backup.*"
 - tapOn: "Include photos"
+- assertVisible:
+    id: "backup-include-photos"
+    checked: true
 # Android WebView accessibility does not expose password placeholder text.
 # Tapping the visible wrapped label focuses the corresponding input.
 - tapOn:
