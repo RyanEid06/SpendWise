@@ -10,6 +10,29 @@ const bash = process.env.WP32_BASH || (process.platform === 'win32'
   ? 'C:/Program Files/Git/bin/bash.exe' : 'bash');
 const shellPath = (value: string) => value.replace(/\\/g, '/');
 
+test('isolated full-backup round trip rejects unsafe devices before any mutation', () => {
+  for (const input of [
+    { serial: 'physical-phone', qemu: '0', avd: 'wp33-synthetic-api34' },
+    { serial: 'emulator-5554', qemu: '0', avd: 'wp33-synthetic-api34' },
+    { serial: 'emulator-5554', qemu: '1', avd: 'personal-emulator' },
+  ]) {
+    const result = spawnSync(bash, ['-c', `
+adb() {
+  printf 'ADB_CALL:%s\\n' "$*" >&2
+  if [[ "$*" == *ro.kernel.qemu ]]; then printf '%s\\n' "$WP32_TEST_QEMU";
+  elif [[ "$*" == *'emu avd name' ]]; then printf '%s\\nOK\\n' "$WP32_TEST_AVD";
+  else return 91; fi
+}
+export -f adb
+bash scripts/run-wp32-isolated-gate.sh
+`], { encoding: 'utf8', env: { ...process.env, WP32_TARGET: 'backup-export-full',
+      ANDROID_SERIAL: input.serial, WP32_TEST_QEMU: input.qemu, WP32_TEST_AVD: input.avd } });
+    assert.equal(result.status, 2, result.stderr);
+    assert.doesNotMatch(result.stderr, /uninstall|install|pm clear|settings|locksettings|screencap|uiautomator|logcat|connectivity|KEYCODE/);
+    if (input.serial === 'physical-phone') assert.doesNotMatch(result.stderr, /ADB_CALL/);
+  }
+});
+
 function generateFixtures(directory: string) {
   const result = spawnSync(process.execPath, [
     'node_modules/tsx/dist/cli.mjs', 'scripts/wp32-generate-portable-fixtures.ts', directory,

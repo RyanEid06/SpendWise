@@ -88,7 +88,9 @@ export const BackupPassphraseModal: React.FC<{
   const [confirm, setConfirm] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
-  const dialogRef = useModalFocus('input[type="password"], input[type="text"]');
+  const dialogRef = useModalFocus(mode === 'create' && onIncludePhotosChange
+    ? '#backup-include-photos'
+    : 'input[type="password"], input[type="text"]');
 
   useEffect(() => {
     return () => {

@@ -53,6 +53,7 @@ for (const language of ['en', 'fr', 'ar']) {
 test('Include photos has a 48px touch target and toggles by keyboard', async ({ page }) => {
   await page.goto('/tests/e2e/components/index.html?case=backup-create');
   const toggle = page.getByRole('switch', { name: 'Include photos' });
+  await expect(toggle).toBeFocused();
   await expect(toggle).toHaveAttribute('aria-checked', 'false');
   const bounds = await toggle.boundingBox();
   expect(bounds!.height).toBeGreaterThanOrEqual(48);
@@ -60,6 +61,8 @@ test('Include photos has a 48px touch target and toggles by keyboard', async ({ 
   await toggle.focus();
   await toggle.press('Space');
   await expect(toggle).toHaveAttribute('aria-checked', 'true');
+  await toggle.press('Tab');
+  await expect(page.getByLabel('Backup password', { exact: true })).toBeFocused();
 });
 
 test('Tapping the Include photos label selects a photo-inclusive backup', async ({ page }) => {
