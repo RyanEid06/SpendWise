@@ -26,6 +26,9 @@ export const overviewCopy = {
     version: 'Version',
     build: 'Build',
     photos: 'photos',
+    photoSingle: 'photo',
+    photoPlural: 'photos',
+    photoDual: 'photos',
     storagePageSub: 'Private SpendWise photo storage and integrity.',
     backupPageSub: 'Create portable backups, restore data, or export CSV.',
     appLockPageSub: 'Control PIN protection and automatic locking.',
@@ -81,6 +84,9 @@ export const overviewCopy = {
     version: 'Version',
     build: 'Build',
     photos: 'photos',
+    photoSingle: 'photo',
+    photoPlural: 'photos',
+    photoDual: 'photos',
     storagePageSub: 'Stockage privé des photos SpendWise et intégrité.',
     backupPageSub: 'Créez des sauvegardes, restaurez des données ou exportez un CSV.',
     appLockPageSub: 'Gérez le code PIN et le verrouillage automatique.',
@@ -136,6 +142,9 @@ export const overviewCopy = {
     version: 'الإصدار',
     build: 'البنية',
     photos: 'صور',
+    photoSingle: 'صورة',
+    photoPlural: 'صور',
+    photoDual: 'صورتان',
     storagePageSub: 'تخزين صور SpendWise الخاصة وفحص سلامتها.',
     backupPageSub: 'أنشئ نسخاً احتياطية أو استعد البيانات أو صدّر CSV.',
     appLockPageSub: 'تحكم برمز PIN والقفل التلقائي.',
@@ -170,3 +179,16 @@ export const overviewCopy = {
 
 
 export type SettingsOverviewCopy = (typeof overviewCopy)[Language];
+
+export function formatSettingsPhotoCount(count: number, language: Language): string {
+  const safeCount = Number.isFinite(count) ? Math.max(0, Math.trunc(count)) : 0;
+  const copy = overviewCopy[language];
+  if (language === 'ar') {
+    if (safeCount === 0) return `0 ${copy.photoPlural}`;
+    if (safeCount === 1) return `1 ${copy.photoSingle}`;
+    if (safeCount === 2) return `2 ${copy.photoDual}`;
+    if (safeCount >= 3 && safeCount <= 10) return `${safeCount} ${copy.photoPlural}`;
+    return `${safeCount} ${copy.photoSingle}`;
+  }
+  return `${safeCount} ${safeCount === 1 ? copy.photoSingle : copy.photoPlural}`;
+}

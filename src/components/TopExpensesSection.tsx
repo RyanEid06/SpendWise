@@ -60,7 +60,7 @@ export const TopExpensesSection: React.FC<TopExpensesSectionProps> = ({
                     onExpenseClick(expense);
                   }
                 }}
-                className={`min-h-[56px] flex items-center justify-between gap-2 p-3 rounded-2xl border hover:border-slate-300 dark:hover:border-slate-700 transition-all cursor-pointer active:scale-[0.99] group ${
+                className={`min-h-[56px] grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 p-3 rounded-2xl border hover:border-slate-300 dark:hover:border-slate-700 transition-all cursor-pointer active:scale-[0.99] group ${
                   index === 0
                     ? 'bg-amber-50/60 dark:bg-amber-950/15 border-amber-200/80 dark:border-amber-900/50'
                     : index === 1
@@ -68,7 +68,7 @@ export const TopExpensesSection: React.FC<TopExpensesSectionProps> = ({
                       : 'bg-stone-50/70 dark:bg-[#0B0F19] border-stone-200/80 dark:border-stone-800/80'
                 }`}
               >
-                <div className="flex items-center space-x-3 rtl:space-x-reverse min-w-0">
+                <div className="min-w-0 flex items-center space-x-2 min-[390px]:space-x-3 rtl:space-x-reverse">
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center font-extrabold text-xs shrink-0 ${
                     index === 0
                       ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300'
@@ -87,7 +87,11 @@ export const TopExpensesSection: React.FC<TopExpensesSectionProps> = ({
                   </div>
                 </div>
 
-                <div dir="ltr" className="min-w-0 max-w-[45%] font-extrabold text-sm sm:text-base tabular-nums text-slate-900 dark:text-white text-right rtl:text-left [overflow-wrap:anywhere] leading-tight">
+                <div
+                  dir="ltr"
+                  data-home-amount="single-line"
+                  className="shrink-0 whitespace-nowrap font-extrabold text-[13px] min-[360px]:text-sm sm:text-base tabular-nums text-slate-900 dark:text-white text-right rtl:text-left leading-tight"
+                >
                   {formatCurrency(expense.amount, currencyCode)}
                 </div>
               </div>

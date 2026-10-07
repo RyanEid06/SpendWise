@@ -3,7 +3,7 @@ import { apiFetchJson } from '../utils/api';
 import { getAiErrorMessage } from '../utils/apiErrors';
 import {
   BarChart3,
-  Calendar,
+  CalendarDays,
   Sparkles,
   ArrowUpRight,
   Receipt,
@@ -44,6 +44,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
 }) => {
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('LAST_3_MONTHS');
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  const [showAllLargestExpenses, setShowAllLargestExpenses] = useState(false);
 
   // AI Trend Explanation state
   const [aiExplanation, setAiExplanation] = useState<AiTrendExplanationResult | null>(null);
@@ -138,6 +139,9 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
     () => rankLargestExpensesByMonth(stats.monthlyStats),
     [stats.monthlyStats]
   );
+  const visibleLargestExpenses = showAllLargestExpenses
+    ? rankedLargestExpenses
+    : rankedLargestExpenses.slice(0, 3);
 
   return (
     <div className="space-y-4 pb-28 animate-screen-enter">
@@ -166,6 +170,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                 setSelectedPeriod(p.key);
                 setAiExplanation(null);
                 setAiError(null);
+                setShowAllLargestExpenses(false);
               }}
               className={`min-h-[48px] px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 active:scale-95 ${
                 isSelected
@@ -359,7 +364,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                 <div key={item.monthKey} className="space-y-1.5 p-3 rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/70 dark:border-slate-800/60">
                   <div className="flex flex-wrap items-start justify-between gap-2 text-xs">
                     <div className="flex items-start space-x-2 rtl:space-x-reverse min-w-0">
-                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                      <CalendarDays className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" aria-hidden="true" />
                       <span className="font-bold text-slate-900 dark:text-white">{localizedMonthName}{item.isPartialMonth && <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400"> {'\u00B7'} {t(language, 'partialMonthLabel')}</span>}</span>
                     </div>
                     <span dir="ltr" className="min-w-0 max-w-full font-extrabold tabular-nums text-sm text-slate-900 dark:text-white text-right rtl:text-left [overflow-wrap:anywhere] leading-tight">
@@ -438,7 +443,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
           </p>
         ) : (
           <div className="space-y-2.5">
-            {rankedLargestExpenses.map(({ rank, month, expense }) => {
+            {visibleLargestExpenses.map(({ rank, month, expense }) => {
               const [year, monthNumber] = month.monthKey.split('-').map(Number);
               const monthLabel = getLocalizedMonthName({ year, month: monthNumber }, language);
               const categoryInfo = getCategoryInfo(expense.category);
@@ -469,7 +474,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                   onClick={() => onNavigateToExpense?.(expense)}
                   role={isNavigable ? 'button' : undefined}
                   tabIndex={isNavigable ? 0 : undefined}
-                  aria-label={'#' + rank + ', ' + expense.description + ', ' + monthLabel + ', ' + formatCurrency(expense.amount, currencyCode)}
+                  aria-label={String(rank) + ', ' + expense.description + ', ' + monthLabel + ', ' + formatCurrency(expense.amount, currencyCode)}
                   onKeyDown={(event) => {
                     if (!onNavigateToExpense) return;
                     if (event.key === 'Enter' || event.key === ' ') {
@@ -481,7 +486,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                 >
                   <div className="min-w-0 flex-1 flex items-start gap-2.5">
                     <div className={'min-w-8 h-7 px-1.5 rounded-full flex items-center justify-center font-extrabold text-[11px] tabular-nums shrink-0 ' + rankTone}>
-                      {'#' + rank}
+                      {rank}
                     </div>
                     <span className="text-xl shrink-0" aria-hidden="true">{categoryInfo.iconEmoji}</span>
                     <div className="min-w-0 flex-1">
@@ -505,6 +510,16 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                 </div>
               );
             })}
+            {rankedLargestExpenses.length > 3 && (
+              <button
+                type="button"
+                onClick={() => setShowAllLargestExpenses((current) => !current)}
+                aria-expanded={showAllLargestExpenses}
+                className="w-full min-h-[44px] rounded-xl text-xs font-bold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/25 transition-colors"
+              >
+                {t(language, showAllLargestExpenses ? 'showTopThree' : 'showAll')}
+              </button>
+            )}
           </div>
         )}
       </div>
