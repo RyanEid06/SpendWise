@@ -129,11 +129,30 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   useEffect(() => {
     if (showClearModal || pendingV3Backup || pendingV2Backup || pendingImportBackup ||
       !(clearFeedbackPending.current || restoreFeedbackPending.current) || !statusMessageRef.current) return;
+    const isRestoreFeedback = restoreFeedbackPending.current;
     clearFeedbackPending.current = false;
     restoreFeedbackPending.current = false;
     // Present successful destructive/restore feedback after dialog focus cleanup.
-    statusMessageRef.current.focus({ preventScroll: true });
-    statusMessageRef.current.scrollIntoView({ block: 'center' });
+    const feedback = statusMessageRef.current;
+    const presentFeedback = () => {
+      if (!feedback.isConnected || statusMessageRef.current !== feedback) return;
+      feedback.focus({ preventScroll: true });
+      feedback.scrollIntoView({ block: 'center' });
+    };
+    if (!isRestoreFeedback) {
+      presentFeedback();
+      return;
+    }
+    // Android WebView can keep a stale native accessibility snapshot even when
+    // the restored summary is visible and focused in the DOM. Focus the stable
+    // main landmark first, then announce the summary on the next rendered frame.
+    const main = document.getElementById('main-content');
+    main?.focus({ preventScroll: true });
+    const frame = requestAnimationFrame(() => {
+      if (main && document.activeElement !== main) return;
+      presentFeedback();
+    });
+    return () => cancelAnimationFrame(frame);
   }, [showClearModal, statusMessage, pendingV3Backup, pendingV2Backup, pendingImportBackup]);
 
   const hasSavedPin = hasWebPin;

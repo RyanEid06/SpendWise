@@ -47,6 +47,27 @@ test('Backup v3 data-only survives clear and replace restore', async ({ page }) 
   await page.keyboard.press('Tab');
   await expect(previewCancel).toBeFocused();
   await preview.getByRole('button', { name: 'Replace', exact: true }).first().click();
+  // A native WebView can retain a stale accessibility snapshot after restore.
+  // Observe the real focus transition through the main landmark before the
+  // restored summary receives focus on a later rendered frame.
+  await page.evaluate(() => {
+    const events: Array<{ target: string; frame: number }> = [];
+    let frame = 0;
+    const countFrame = () => {
+      frame += 1;
+      requestAnimationFrame(countFrame);
+    };
+    requestAnimationFrame(countFrame);
+    document.addEventListener('focusin', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      if (target.id === 'main-content') events.push({ target: 'main', frame });
+      if (target.getAttribute('role') === 'status' && target.textContent?.includes('Backup restored:')) {
+        events.push({ target: 'restore-summary', frame });
+      }
+    });
+    (window as typeof window & { restoreFocusEvents: typeof events }).restoreFocusEvents = events;
+  });
   await preview.getByRole('button', { name: 'Replace', exact: true }).last().click();
 
   // Maestro's native selector matches the entire visible label. Exercise that
@@ -56,6 +77,13 @@ test('Backup v3 data-only survives clear and replace restore', async ({ page }) 
   expect(summaryPattern).toBeTruthy();
   await expect(page.getByText(new RegExp(`^(?:${summaryPattern})$`))).toBeVisible();
   await expect(page.getByRole('status').filter({ hasText: 'Backup restored: 2 expenses, 0 photos' })).toBeFocused();
+  const focusEvents = await page.evaluate(() =>
+    (window as typeof window & { restoreFocusEvents: Array<{ target: string; frame: number }> }).restoreFocusEvents
+  );
+  const mainFocus = focusEvents.find((event) => event.target === 'main');
+  const summaryFocus = focusEvents.find((event) => event.target === 'restore-summary');
+  expect(mainFocus, 'restore refreshes native accessibility through the main landmark').toBeDefined();
+  expect(summaryFocus!.frame).toBeGreaterThan(mainFocus!.frame);
 
   await page.getByRole('button', { name: 'Back', exact: true }).click();
   await page.getByRole('button', { name: 'Back to previous screen', exact: true }).click();
