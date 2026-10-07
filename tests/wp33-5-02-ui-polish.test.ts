@@ -12,13 +12,11 @@ const setup = readFileSync('src/screens/SetupWizardScreen.tsx', 'utf8');
 const translations = readFileSync('src/utils/translations.ts', 'utf8');
 
 test('WP33.5-02 Home amount owns its column and cannot wrap', () => {
-  assert.match(home, /grid-cols-\[minmax\(0,1fr\)_auto\]/);
-  assert.match(home, /data-home-amount="single-line"/);
-  const amountStart = home.indexOf('data-home-amount="single-line"');
-  const amountBlock = home.slice(amountStart, home.indexOf('{formatCurrency(expense.amount, currencyCode)}', amountStart));
-  assert.match(amountBlock, /whitespace-nowrap/);
-  assert.match(amountBlock, /shrink-0/);
-  assert.doesNotMatch(amountBlock, /overflow-wrap:anywhere/);
+  assert.match(home, /SingleLineAmount/);
+  const amount = readFileSync('src/components/SingleLineAmount.tsx', 'utf8');
+  assert.match(amount, /data-home-amount="single-line"/);
+  assert.match(amount, /whitespace-nowrap/);
+  assert.doesNotMatch(amount, /overflow-wrap:anywhere/);
   assert.match(home, /expense\.description[\s\S]*truncate/);
 });
 

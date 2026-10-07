@@ -102,6 +102,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const restoreInputRef = useRef<HTMLInputElement>(null);
   const statusMessageRef = useRef<HTMLDivElement>(null);
   const clearFeedbackPending = useRef(false);
+  const restoreFeedbackPending = useRef(false);
   const copy = overviewCopy[currentLanguage];
 
   const [settingsPage, setSettingsPage] = useState<SettingsPage>('overview');
@@ -126,12 +127,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [confirmPin, setConfirmPin] = useState('');
 
   useEffect(() => {
-    if (showClearModal || !clearFeedbackPending.current || !statusMessageRef.current) return;
+    if (showClearModal || pendingV3Backup || pendingV2Backup || pendingImportBackup ||
+      !(clearFeedbackPending.current || restoreFeedbackPending.current) || !statusMessageRef.current) return;
     clearFeedbackPending.current = false;
-    // Present clear feedback after modal focus cleanup, without changing other dialogs.
+    restoreFeedbackPending.current = false;
+    // Present successful destructive/restore feedback after dialog focus cleanup.
     statusMessageRef.current.focus({ preventScroll: true });
     statusMessageRef.current.scrollIntoView({ block: 'center' });
-  }, [showClearModal, statusMessage]);
+  }, [showClearModal, statusMessage, pendingV3Backup, pendingV2Backup, pendingImportBackup]);
 
   const hasSavedPin = hasWebPin;
   const hasFinancialData = totalExpensesCount > 0 || totalBudgetsCount > 0;
@@ -319,6 +322,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       setPendingV3Backup(null);
       onBackupRestored();
       await refreshMediaSummary();
+      restoreFeedbackPending.current = true;
       setStatusMessage(
         copy.imported + ': ' + summary.expensesImported + ' ' + copy.expenses + ', ' +
         summary.photosImported + ' ' + copy.photos
@@ -344,6 +348,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       const summary = await backupService.restoreLegacy(pendingImportBackup, replaceExisting);
       setPendingImportBackup(null);
       onBackupRestored();
+      restoreFeedbackPending.current = true;
       setStatusMessage(
         summary.wasReplaced
           ? t(currentLanguage, 'replaceRestoreBtn') + ': ' + summary.expensesImported
@@ -368,6 +373,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       setPendingV2Backup(null);
       onBackupRestored();
       await refreshMediaSummary();
+      restoreFeedbackPending.current = true;
       setStatusMessage(copy.imported + ': ' + summary.expensesImported + ' ' + copy.expenses + ', ' + summary.photosImported + ' ' + copy.photos);
       setErrorMessage(summary.warnings.length ? copy.backupWarning : null);
     } catch (error) {

@@ -7,6 +7,7 @@ const lock = readFileSync('src/screens/LockScreen.tsx', 'utf8');
 const startup = readFileSync('src/screens/SecureStartupScreen.tsx', 'utf8');
 const logo = readFileSync('src/components/SpendWiseLogo.tsx', 'utf8');
 const appShell = readFileSync('src/app/AppShell.tsx', 'utf8');
+const homeFrameTiming = readFileSync('src/app/startup/StartupHomeFrameTiming.ts', 'utf8');
 const plugin = readFileSync(
   'android/app/src/main/java/com/spendwise/app/SpendWiseSecurityPlugin.java',
   'utf8'
@@ -31,8 +32,8 @@ test('WP33.5-01 paints privacy-safe branded startup before async security work',
 test('WP33.5-01 successful authentication keeps secure UI up until protected storage is ready', () => {
   const unlockStart = main.indexOf('const result = await secureSessionService.unlock(credential)');
   const failureGuard = main.indexOf('if (!result.ok) return result;', unlockStart);
-  const storageOpen = main.indexOf('await openProtectedStorage(postAuthenticationStartedAt)', failureGuard);
-  const renderHome = main.indexOf('renderApp(firstUsableStartedAt)', main.indexOf('async function openProtectedStorage'));
+  const storageOpen = main.indexOf('await openProtectedStorage(homeFrameTiming)', failureGuard);
+  const renderHome = main.indexOf('renderApp(homeFrameTiming)', main.indexOf('async function openProtectedStorage'));
   const storageInit = main.indexOf("measureDiagnostic('storage.init'", main.indexOf('async function openProtectedStorage'));
 
   assert.ok(unlockStart >= 0);
@@ -94,7 +95,10 @@ test('WP33.5-01 records segmented post-auth startup timing without financial pay
   }
   assert.match(plugin, /postAuthKeyVerifyDurationMs/);
   assert.match(main, /measureDiagnostic\('startup\.secure_init'/);
-  assert.match(main, /operation: 'startup\.home_frame'/);
+  assert.match(homeFrameTiming, /operation: 'startup\.home_frame'/);
+  assert.match(main, /elapsedSinceAuthentication\(authSucceededAtElapsedRealtimeMs\)/);
+  assert.match(appShell, /useStartupHomeFrameTiming\(/);
+  assert.match(appShell, /setupMode === null && !appLock\.isLocked && navigation\.currentScreen === 'home'/);
 });
 
 test('WP33.5-01 steady-state cleanup optimization only skips duplicate validation after durable completion', () => {

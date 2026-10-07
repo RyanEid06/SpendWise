@@ -112,6 +112,16 @@ test('Media Library ordering is deterministic and truly undated legacy media is 
   assert.deepEqual(groups.at(-1)?.items.map((item) => item.id), ['undated']);
 });
 
+test('Media Library rejects out-of-range legacy dates and uses the safe fallback', () => {
+  const day = new Date(2026, 9, 6, 12).getTime();
+  const groups = groupMediaByExpenseDate([
+    attachment('fallback', 1, day),
+    attachment('undated', 2, 1e16),
+  ], [expense(1, 1e16), expense(2, 1e16)]);
+  assert.deepEqual(groups.map((group) => group.key), [localKey(day), 'unknown']);
+  assert.equal(groups[1].timestamp, null);
+});
+
 test('Backup v3 cryptographic implementation is still Argon2id + AES-256-GCM and untouched by UI routing', () => {
   const backupV3 = readFileSync('src/utils/backupV3.ts', 'utf8');
   const storage = readFileSync('src/utils/storage.ts', 'utf8');

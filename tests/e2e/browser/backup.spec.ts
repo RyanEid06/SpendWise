@@ -55,7 +55,7 @@ test('Backup v3 data-only survives clear and replace restore', async ({ page }) 
   const summaryPattern = nativeFlow.match(/visible: "(Backup restored[^"]*)"/)?.[1];
   expect(summaryPattern).toBeTruthy();
   await expect(page.getByText(new RegExp(`^(?:${summaryPattern})$`))).toBeVisible();
-  await expect(restoreButton).toBeFocused();
+  await expect(page.getByRole('status').filter({ hasText: 'Backup restored: 2 expenses, 0 photos' })).toBeFocused();
 
   await page.getByRole('button', { name: 'Back', exact: true }).click();
   await page.getByRole('button', { name: 'Back to previous screen', exact: true }).click();

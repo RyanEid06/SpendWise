@@ -50,7 +50,7 @@ public class SpendWiseSecurityPlugin extends Plugin {
     private static final int AUTH_VALIDITY_SECONDS = 5;
 
     private interface AuthSuccess {
-        void run();
+        void run(long authSucceededAtElapsedRealtimeMs);
     }
 
     private String aliasFor(int version) {
@@ -217,8 +217,9 @@ public class SpendWiseSecurityPlugin extends Plugin {
                     public void onAuthenticationSucceeded(
                         BiometricPrompt.AuthenticationResult result
                     ) {
+                        long authSucceededAtElapsedRealtimeMs = SystemClock.elapsedRealtime();
                         super.onAuthenticationSucceeded(result);
-                        success.run();
+                        success.run(authSucceededAtElapsedRealtimeMs);
                     }
 
                     @Override
@@ -259,8 +260,26 @@ public class SpendWiseSecurityPlugin extends Plugin {
             call,
             call.getString("title", "SpendWise"),
             call.getString("reason", "Authenticate to continue"),
-            () -> call.resolve(authResult("success", null, null))
+            authSucceededAtElapsedRealtimeMs -> {
+                JSObject result = authResult("success", null, null);
+                result.put("authSucceededAtElapsedRealtimeMs", authSucceededAtElapsedRealtimeMs);
+                call.resolve(result);
+            }
         );
+    }
+
+    @PluginMethod
+    public void elapsedSinceAuthentication(PluginCall call) {
+        Object value = call.getData().opt("authSucceededAtElapsedRealtimeMs");
+        long now = SystemClock.elapsedRealtime();
+        double startedAt = value instanceof Number ? ((Number) value).doubleValue() : -1;
+        if (!Double.isFinite(startedAt) || startedAt < 0 || startedAt != Math.floor(startedAt) || startedAt > now) {
+            call.reject("Invalid authentication timestamp.", "INVALID_AUTHENTICATION_TIMESTAMP");
+            return;
+        }
+        JSObject result = new JSObject();
+        result.put("durationMs", now - (long) startedAt);
+        call.resolve(result);
     }
 
     @PluginMethod
@@ -361,6 +380,9 @@ public class SpendWiseSecurityPlugin extends Plugin {
         long authSucceededAtElapsedRealtime
     ) {
         if (authSucceededAtElapsedRealtime > 0) {
+            if ("success".equals(result.getString("status"))) {
+                result.put("authSucceededAtElapsedRealtimeMs", authSucceededAtElapsedRealtime);
+            }
             result.put(
                 "postAuthKeyVerifyDurationMs",
                 Math.max(
@@ -467,11 +489,11 @@ public class SpendWiseSecurityPlugin extends Plugin {
             call,
             call.getString("title", "Unlock SpendWise"),
             call.getString("reason", "Authenticate to continue"),
-            () -> verifyKeyNow(
+            authSucceededAtElapsedRealtimeMs -> verifyKeyNow(
                 call,
                 version,
                 true,
-                SystemClock.elapsedRealtime()
+                authSucceededAtElapsedRealtimeMs
             )
         );
     }
@@ -615,7 +637,7 @@ public class SpendWiseSecurityPlugin extends Plugin {
                 call,
                 call.getString("title", "Unlock SpendWise"),
                 call.getString("reason", "Protect local SpendWise data"),
-                action::run
+                authSucceededAtElapsedRealtimeMs -> action.run()
             );
         } else {
             action.run();
@@ -654,7 +676,7 @@ public class SpendWiseSecurityPlugin extends Plugin {
                 call,
                 call.getString("title", "Unlock SpendWise"),
                 call.getString("reason", "Protect local SpendWise data"),
-                action::run
+                authSucceededAtElapsedRealtimeMs -> action.run()
             );
         } else {
             action.run();
@@ -714,7 +736,7 @@ public class SpendWiseSecurityPlugin extends Plugin {
                 call,
                 call.getString("title", "Unlock SpendWise"),
                 call.getString("reason", "Open protected local data"),
-                action::run
+                authSucceededAtElapsedRealtimeMs -> action.run()
             );
         } else {
             action.run();

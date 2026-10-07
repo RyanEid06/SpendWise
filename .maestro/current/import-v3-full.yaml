@@ -6,7 +6,8 @@ appId: com.spendwise.app
 - tapOn: "Restore backup.*"
 - tapOn: "wp32-full.swb3"
 - assertVisible: "Unlock encrypted backup"
-- tapOn: "Backup password"
+- tapOn:
+    id: "backup-password"
 - inputText: "wp32-public-fixture-passphrase"
 - pressKey: enter
 - extendedWaitUntil:

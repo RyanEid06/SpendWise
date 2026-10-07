@@ -4,4 +4,4 @@ appId: com.spendwise.app
     stopApp: false
 - assertVisible: "SpendWise is Locked"
 - assertVisible: "Authentication was cancelled."
-- tapOn: "Authenticate & Unlock"
+- tapOn: "Unlock SpendWise"

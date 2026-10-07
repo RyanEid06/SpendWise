@@ -120,8 +120,8 @@ export const BackupPassphraseModal: React.FC<{
         ref={dialogRef}
         tabIndex={-1}
       >
-        <div className="w-full max-w-md max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2rem)] rounded-3xl bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-800 overflow-y-auto shadow-2xl">
-          <div className="sticky top-0 z-10 p-4 flex justify-between items-center border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-[#111928]/95 backdrop-blur">
+        <div className="w-full max-w-md max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2rem)] flex flex-col rounded-3xl bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-2xl">
+          <div className="shrink-0 z-10 p-4 flex justify-between items-center border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-[#111928]/95 backdrop-blur">
             <div id="backup-passphrase-title" className="flex items-center gap-2 font-bold text-slate-900 dark:text-white min-w-0">
               <KeyRound className="w-5 h-5 shrink-0" />
               <span className="truncate">{mode === 'create' ? text.createTitle : text.restoreTitle}</span>
@@ -137,7 +137,7 @@ export const BackupPassphraseModal: React.FC<{
             </button>
           </div>
 
-          <div className="p-5 space-y-5">
+          <div className="min-h-0 overflow-y-auto p-5 space-y-5">
             <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
               {mode === 'create' ? text.createIntro : text.restoreIntro}
             </p>
@@ -182,10 +182,11 @@ export const BackupPassphraseModal: React.FC<{
               <p className="text-xs text-amber-900 dark:text-amber-200 leading-relaxed">{text.unrecoverable}</p>
             </div>
 
-            <label className="block space-y-2">
-              <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{text.password}</span>
+            <div className="block space-y-2">
+              <label htmlFor="backup-password" className="block text-sm font-bold text-slate-800 dark:text-slate-200">{text.password}</label>
               <div className="relative">
                 <input
+                  id="backup-password"
                   type={inputType}
                   autoComplete={mode === 'create' ? 'new-password' : 'current-password'}
                   value={passphrase}
@@ -206,12 +207,13 @@ export const BackupPassphraseModal: React.FC<{
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
-            </label>
+            </div>
 
             {mode === 'create' && (
-              <label className="block space-y-2">
-                <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{text.confirm}</span>
+              <label htmlFor="backup-password-confirm" className="block space-y-2">
+                <span className="block text-sm font-bold text-slate-800 dark:text-slate-200">{text.confirm}</span>
                 <input
+                  id="backup-password-confirm"
                   type={inputType}
                   autoComplete="new-password"
                   value={confirm}
@@ -233,7 +235,7 @@ export const BackupPassphraseModal: React.FC<{
             )}
           </div>
 
-          <div className="sticky bottom-0 p-4 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-[#111928]/95 backdrop-blur flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+          <div className="shrink-0 p-4 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-[#111928]/95 backdrop-blur flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
             <button
               type="button"
               disabled={busy}

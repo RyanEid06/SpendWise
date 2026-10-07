@@ -22,7 +22,7 @@ export type SecureKeyFailureKind =
   | 'error';
 
 export type SecureKeyResult<T = undefined> =
-  | { ok: true; value: T }
+  | { ok: true; value: T; authSucceededAtElapsedRealtimeMs?: number }
   | { ok: false; kind: SecureKeyFailureKind; code?: string; message?: string };
 
 export interface SecureKeyService {
@@ -81,6 +81,15 @@ function recordPostAuthKeyTiming(result: NativeAuthenticationResult): void {
   diagnostics.record({ operation: 'security.post_auth_key', outcome: 'success', durationMs: duration });
 }
 
+function authenticationTiming(result: NativeAuthenticationResult): {
+  authSucceededAtElapsedRealtimeMs?: number;
+} {
+  const timestamp = result.authSucceededAtElapsedRealtimeMs;
+  return typeof timestamp === 'number' && Number.isSafeInteger(timestamp) && timestamp >= 0
+    ? { authSucceededAtElapsedRealtimeMs: timestamp }
+    : {};
+}
+
 export class AndroidSecureKeyService implements SecureKeyService {
   private readonly sessionSecrets = new Map<string, Uint8Array>();
   private lastVerifiedAt = 0;
@@ -130,6 +139,7 @@ export class AndroidSecureKeyService implements SecureKeyService {
       return {
         ok: true,
         value: { version: 1, keyVersion, authenticationRequired },
+        ...authenticationTiming(verified),
       };
     } catch {
       await this.adapter.deleteKey(keyVersion).catch(() => ({ deleted: false }));
@@ -243,7 +253,7 @@ export class AndroidSecureKeyService implements SecureKeyService {
             }
       );
       if (!primed.ok) return primed;
-      return { ok: true, value: current };
+      return { ok: true, value: current, ...authenticationTiming(verified) };
     } catch {
       return { ok: false, kind: 'error', code: 'KEY_VERIFY_FAILED' };
     }

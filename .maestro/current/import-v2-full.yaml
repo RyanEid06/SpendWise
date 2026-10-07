@@ -9,7 +9,7 @@ appId: com.spendwise.app
 - tapOn: "Backup & Restore.*"
 - tapOn: "Import data.*"
 - tapOn: "wp32-v2-full.zip"
-- assertVisible: "Backup restore v2"
+- assertVisible: "Backup restore"
 - tapOn:
     text: "Merge"
     index: 1

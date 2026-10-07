@@ -6,8 +6,8 @@ export interface MediaLibraryGroup {
   items: ExpenseAttachment[];
 }
 
-function validTimestamp(value: number | undefined | null): value is number {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0;
+export function validMediaTimestamp(value: number | undefined | null): value is number {
+  return typeof value === 'number' && value > 0 && Number.isFinite(new Date(value).getTime());
 }
 
 function localDateKey(timestamp: number): string {
@@ -24,16 +24,16 @@ export function groupMediaByExpenseDate(
 ): MediaLibraryGroup[] {
   const expenseDates = new Map(
     expenses
-      .filter((expense) => validTimestamp(expense.date))
+      .filter((expense) => validMediaTimestamp(expense.date))
       .map((expense) => [expense.id, expense.date] as const)
   );
 
   const ordered = attachments
     .map((attachment) => {
       const expenseDate = expenseDates.get(attachment.expenseId);
-      const preferredTimestamp = validTimestamp(expenseDate)
+      const preferredTimestamp = validMediaTimestamp(expenseDate)
         ? expenseDate
-        : validTimestamp(attachment.createdAt)
+        : validMediaTimestamp(attachment.createdAt)
           ? attachment.createdAt
           : null;
       return { attachment, preferredTimestamp };

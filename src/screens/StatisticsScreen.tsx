@@ -515,7 +515,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                 type="button"
                 onClick={() => setShowAllLargestExpenses((current) => !current)}
                 aria-expanded={showAllLargestExpenses}
-                className="w-full min-h-[44px] rounded-xl text-xs font-bold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/25 transition-colors"
+                className="w-full min-h-[48px] rounded-xl text-xs font-bold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/25 transition-colors"
               >
                 {t(language, showAllLargestExpenses ? 'showTopThree' : 'showAll')}
               </button>

@@ -5,7 +5,7 @@ import { AttachmentStorage } from '../utils/attachmentStorage';
 import type { MediaIntegrityReport } from '../utils/mediaIntegrity';
 import { StorageManager } from '../utils/storage';
 import { exportBlobFile } from '../utils/fileExport';
-import { groupMediaByExpenseDate } from '../utils/mediaLibraryGrouping';
+import { groupMediaByExpenseDate, validMediaTimestamp } from '../utils/mediaLibraryGrouping';
 import { ViewportPortal } from '../components/ViewportPortal';
 import { useSensitivePrivacySurface } from '../app/hooks/useSensitivePrivacySurface';
 
@@ -46,7 +46,7 @@ const localeByLanguage: Record<Language, string> = {
 };
 
 function formatMediaDate(timestamp: number, language: Language, compact = false): string {
-  if (!Number.isFinite(timestamp) || timestamp <= 0) return '';
+  if (!validMediaTimestamp(timestamp)) return copy[language].unknownDate;
   const date = new Date(timestamp);
   const includeYear = !compact || date.getFullYear() !== new Date().getFullYear();
   return new Intl.DateTimeFormat(localeByLanguage[language], {

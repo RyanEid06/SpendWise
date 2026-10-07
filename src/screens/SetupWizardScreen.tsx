@@ -438,7 +438,7 @@ export const SetupWizardScreen: React.FC<Props> = ({
               </div>
 
               <div
-                className="min-h-[64px] bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-800 rounded-2xl px-3 py-2.5 flex items-start gap-2 rtl:flex-row-reverse"
+                className="min-h-[64px] bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-800 rounded-2xl px-3 py-2.5 flex items-start gap-2"
                 data-legal-agreement="terms-privacy"
               >
                 <label

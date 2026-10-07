@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Language, ThemeMode } from '../../types';
 import { preferencesRepository } from '../../data/PreferencesRepository';
 import { analysisCacheService } from '../../services/AnalysisCacheService';
+import { androidAppearanceAdapter } from '../../platform/android/AndroidAppearanceAdapter';
 
 export function resolveDarkMode(mode: ThemeMode, systemPrefersDark: boolean): boolean {
   if (mode === 'DARK') return true;
@@ -16,6 +17,12 @@ export function directionForLanguage(language: Language): 'rtl' | 'ltr' {
 export function useThemeLanguage() {
   const [themeMode, setThemeModeState] = useState<ThemeMode>(() => preferencesRepository.getThemeMode());
   const [language, setLanguageState] = useState<Language>(() => preferencesRepository.getLanguage());
+
+  useEffect(() => {
+    // The mirror contains only appearance and is restored before native launch.
+    // This also runs after refreshFromStorage applies restored backup settings.
+    void androidAppearanceAdapter.setThemeMode(themeMode);
+  }, [themeMode]);
 
   useEffect(() => {
     const root = document.documentElement;

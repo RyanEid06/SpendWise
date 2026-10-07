@@ -150,7 +150,8 @@ test('WP19 keeps budget state communication while removing the redundant alert c
   assert.doesNotMatch(budgetSource, /Spending Alerts Card|AlertCircle|CheckCircle2/);
   assert.match(budgetSource, /isApproachingLimit/);
   assert.match(budgetSource, /approachingLimitBadge/);
-  assert.match(budgetSource, /grid grid-cols-2 gap-2/);
+  assert.match(budgetSource, /'grid-cols-1' : 'grid-cols-2'/);
+  assert.match(budgetSource, /SingleLineAmount/);
   assert.doesNotMatch(budgetSource, /grid-cols-1 min-\[390px\]:grid-cols-2/);
 });
 

@@ -10,7 +10,9 @@ import {
 import type { Language, ThemeMode } from './types';
 import { StorageManager } from './utils/storage';
 import { TechnicalDiagnostics } from './features/settings/TechnicalDiagnostics';
-import { diagnostics, measureDiagnostic } from './services/diagnostics/diagnostics';
+import { measureDiagnostic } from './services/diagnostics/diagnostics';
+import { androidSecurityAdapter } from './platform/android/AndroidSecurityAdapter';
+import { StartupHomeFrameTiming } from './app/startup/StartupHomeFrameTiming';
 import './index.css';
 
 function bootstrapLanguage(): Language {
@@ -46,25 +48,12 @@ applyBootstrapAppearance();
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 
-function recordFirstUsableFrame(startedAt: number): void {
-  window.requestAnimationFrame(() => {
-    window.requestAnimationFrame(() => {
-      diagnostics.record({
-        operation: 'startup.home_frame',
-        outcome: 'success',
-        durationMs: performance.now() - startedAt,
-      });
-    });
-  });
-}
-
-function renderApp(firstUsableStartedAt?: number): void {
+function renderApp(homeFrameTiming?: StartupHomeFrameTiming): void {
   root.render(
     <React.StrictMode>
-      <App />
+      <App startupHomeFrameTiming={homeFrameTiming} />
     </React.StrictMode>
   );
-  if (firstUsableStartedAt !== undefined) recordFirstUsableFrame(firstUsableStartedAt);
 }
 
 function renderSecureStartup(): void {
@@ -86,11 +75,11 @@ function renderStorageFailure(): void {
   );
 }
 
-async function openProtectedStorage(firstUsableStartedAt = performance.now()): Promise<void> {
+async function openProtectedStorage(homeFrameTiming?: StartupHomeFrameTiming): Promise<void> {
   await measureDiagnostic('startup.secure_init', () =>
     measureDiagnostic('storage.init', () => StorageManager.init())
   );
-  renderApp(firstUsableStartedAt);
+  renderApp(homeFrameTiming);
 }
 
 async function unlockAndOpen(
@@ -111,9 +100,16 @@ async function unlockAndOpen(
     };
   }
 
-  const postAuthenticationStartedAt = performance.now();
+  const authSucceededAtElapsedRealtimeMs = result.authSucceededAtElapsedRealtimeMs;
+  // Native authentication and Home sampling use the same Android monotonic
+  // clock. Older bridges can omit timing without blocking a successful unlock.
+  const homeFrameTiming = authSucceededAtElapsedRealtimeMs === undefined
+    ? undefined
+    : new StartupHomeFrameTiming(() =>
+        androidSecurityAdapter.elapsedSinceAuthentication(authSucceededAtElapsedRealtimeMs)
+      );
   try {
-    await openProtectedStorage(postAuthenticationStartedAt);
+    await openProtectedStorage(homeFrameTiming);
     return result;
   } catch {
     renderStorageFailure();

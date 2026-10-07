@@ -58,6 +58,7 @@ export interface SecureSessionActionResult {
   code: SecureSessionActionCode;
   warning?: 'migration_pending';
   detailCode?: string;
+  authSucceededAtElapsedRealtimeMs?: number;
 }
 
 export interface SecureSessionSnapshot {
@@ -94,6 +95,18 @@ function actionFromKeyFailure(result: SecureKeyResult<unknown>): SecureSessionAc
     ok: false,
     code: mapping[result.kind],
     detailCode: result.code,
+  };
+}
+
+function successfulKeyAction(
+  result: Extract<SecureKeyResult<unknown>, { ok: true }>
+): SecureSessionActionResult {
+  return {
+    ok: true,
+    code: 'success',
+    ...(result.authSucceededAtElapsedRealtimeMs === undefined ? {} : {
+      authSucceededAtElapsedRealtimeMs: result.authSucceededAtElapsedRealtimeMs,
+    }),
   };
 }
 
@@ -270,7 +283,7 @@ export class DefaultSecureSessionService {
         if (legacy.kind !== 'none') this.legacyLock.clearPin();
         this.state = 'unlocked';
         this.lastAuthenticatedAt = Date.now();
-        return { ok: true, code: 'success' };
+        return successfulKeyAction(result);
       }
 
       if (legacy.kind === 'valid') {
@@ -286,7 +299,7 @@ export class DefaultSecureSessionService {
           this.legacyLock.clearPin();
           this.state = 'unlocked';
           this.lastAuthenticatedAt = Date.now();
-          return { ok: true, code: 'success' };
+          return successfulKeyAction(migrationResult);
         }
 
         // The legacy PIN was valid. Preserve it and preserve access to this
@@ -322,7 +335,7 @@ export class DefaultSecureSessionService {
       this.legacyLock.clearPin();
       this.state = 'unlocked';
       this.lastAuthenticatedAt = Date.now();
-      return { ok: true, code: 'success' };
+      return successfulKeyAction(repairResult);
     }
 
     const verifier = this.stateStore.getWebPinVerifier();

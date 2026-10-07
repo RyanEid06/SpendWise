@@ -32,8 +32,14 @@ import { useExpenseDeleteUndo } from './hooks/useExpenseDeleteUndo';
 import { useAiAnalysis } from './hooks/useAiAnalysis';
 import { useAppLockLifecycle } from './hooks/useAppLockLifecycle';
 import { selectMonthlyLedger } from './selectors/monthlyLedger';
+import type { StartupHomeFrameTiming } from './startup/StartupHomeFrameTiming';
+import { useStartupHomeFrameTiming } from './startup/useStartupHomeFrameTiming';
 
-export const AppShell: React.FC = () => {
+interface AppShellProps {
+  startupHomeFrameTiming?: StartupHomeFrameTiming;
+}
+
+export const AppShell: React.FC<AppShellProps> = ({ startupHomeFrameTiming }) => {
   const navigation = useAppNavigation();
   const overlays = useAppOverlays();
   const preferences = useThemeLanguage();
@@ -67,6 +73,11 @@ export const AppShell: React.FC = () => {
     onBackground: deleteUndo.undoPending,
     onLock: overlays.closeForLock,
   });
+
+  useStartupHomeFrameTiming(
+    startupHomeFrameTiming,
+    setupMode === null && !appLock.isLocked && navigation.currentScreen === 'home'
+  );
 
   const goHome = useCallback(() => {
     navigation.selectPrimaryScreen('home');

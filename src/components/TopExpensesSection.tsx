@@ -4,6 +4,7 @@ import { Expense, Language } from '../types';
 import { getCategoryInfo } from '../utils/categories';
 import { formatCurrency } from '../utils/currency';
 import { getLocalizedCategoryName, t } from '../utils/translations';
+import { SingleLineAmount } from './SingleLineAmount';
 
 interface TopExpensesSectionProps {
   topExpenses: Expense[];
@@ -60,7 +61,7 @@ export const TopExpensesSection: React.FC<TopExpensesSectionProps> = ({
                     onExpenseClick(expense);
                   }
                 }}
-                className={`min-h-[56px] grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 p-3 rounded-2xl border hover:border-slate-300 dark:hover:border-slate-700 transition-all cursor-pointer active:scale-[0.99] group ${
+                className={`min-h-[56px] grid grid-cols-[minmax(4rem,1fr)_minmax(0,auto)] items-center gap-2 p-3 rounded-2xl border hover:border-slate-300 dark:hover:border-slate-700 transition-all cursor-pointer active:scale-[0.99] group ${
                   index === 0
                     ? 'bg-amber-50/60 dark:bg-amber-950/15 border-amber-200/80 dark:border-amber-900/50'
                     : index === 1
@@ -87,13 +88,10 @@ export const TopExpensesSection: React.FC<TopExpensesSectionProps> = ({
                   </div>
                 </div>
 
-                <div
-                  dir="ltr"
-                  data-home-amount="single-line"
+                <SingleLineAmount
+                  value={formatCurrency(expense.amount, currencyCode)}
                   className="shrink-0 whitespace-nowrap font-extrabold text-[13px] min-[360px]:text-sm sm:text-base tabular-nums text-slate-900 dark:text-white text-right rtl:text-left leading-tight"
-                >
-                  {formatCurrency(expense.amount, currencyCode)}
-                </div>
+                />
               </div>
             );
           })}

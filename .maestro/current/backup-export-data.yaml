@@ -6,8 +6,10 @@ appId: com.spendwise.app
 - tapOn: "Create encrypted backup.*"
 # Android WebView accessibility does not expose password placeholder text.
 # Tapping the visible wrapped label focuses the corresponding input.
-- tapOn: "Backup password"
+- tapOn:
+    id: "backup-password"
 - inputText: "wp32-public-fixture-passphrase"
-- tapOn: "Confirm password"
+- tapOn:
+    id: "backup-password-confirm"
 - inputText: "wp32-public-fixture-passphrase"
 - pressKey: enter
