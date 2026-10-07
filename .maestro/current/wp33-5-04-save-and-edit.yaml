@@ -10,9 +10,12 @@ appId: com.spendwise.app
 - tapOn: "Home"
 - tapOn: "WP04 Native Dining.*"
 - assertVisible: "Edit Expense"
-- tapOn: "Amount .*"
+# The broad Amount label also matches a non-clickable uppercase text node.
+# Target the observed EditText value, then prove the edit before moving focus.
+- tapOn: '14\.25'
 - eraseText
 - inputText: "16.75"
+- assertVisible: '16\.75'
 - tapOn: "Description / Merchant .*"
 - eraseText
 - inputText: "WP04 Native Edited"

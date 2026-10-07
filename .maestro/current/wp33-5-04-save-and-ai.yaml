@@ -3,6 +3,7 @@ appId: com.spendwise.app
 - tapOn: "Update Expense"
 - tapOn: "History"
 - assertVisible: "WP04 Native Edited.*"
+- assertVisible: '.*\$16\.75.*'
 - tapOn: "AI Insights"
 - setAirplaneMode: enabled
 - tapOn: "Analyze My Spending"
