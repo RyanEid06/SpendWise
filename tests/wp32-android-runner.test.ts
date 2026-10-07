@@ -109,18 +109,18 @@ APP_ID=com.spendwise.app
 source scripts/wp32-android-helpers.sh
 adb() {
   if [[ "$*" == 'shell run-as com.spendwise.app find cache -type f' ]]; then
-    printf 'cache/spendwise_backup_v3_full_2026-10-03.swb3\\r\\ncache/spendwise_backup_v3_data_2026-10-03.swb3\\r\\ncache/unrelated.swb3\\r\\n'
-  elif [[ "$*" == 'exec-out run-as com.spendwise.app cat cache/spendwise_backup_v3_data_2026-10-03.swb3' ]]; then
+    printf 'cache/spendwise_encrypted_backup_full_2026-10-03.swb3\\r\\ncache/spendwise_encrypted_backup_data_2026-10-03.swb3\\r\\ncache/unrelated.swb3\\r\\n'
+  elif [[ "$*" == 'exec-out run-as com.spendwise.app cat cache/spendwise_encrypted_backup_data_2026-10-03.swb3' ]]; then
     printf 'DATA_ONLY'
-  elif [[ "$*" == 'exec-out run-as com.spendwise.app cat cache/spendwise_backup_v3_full_2026-10-03.swb3' ]]; then
+  elif [[ "$*" == 'exec-out run-as com.spendwise.app cat cache/spendwise_encrypted_backup_full_2026-10-03.swb3' ]]; then
     printf 'FULL_WITH_PHOTOS'
   else
     echo "Unexpected adb arguments: $*" >&2
     return 1
   fi
 }
-extract_backup_prefix spendwise_backup_v3_data_ "$WP32_DATA"
-extract_backup_prefix spendwise_backup_v3_full_ "$WP32_FULL"
+extract_backup_prefix spendwise_encrypted_backup_data_ "$WP32_DATA"
+extract_backup_prefix spendwise_encrypted_backup_full_ "$WP32_FULL"
 `], { encoding: 'utf8', env: { ...process.env, WP32_DATA: shellPath(data), WP32_FULL: shellPath(full) } });
     assert.equal(result.status, 0, result.stderr);
     assert.equal(readFileSync(data, 'utf8'), 'DATA_ONLY');

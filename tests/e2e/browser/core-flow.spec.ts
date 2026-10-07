@@ -62,7 +62,7 @@ test('Settings subpage back returns to Settings overview', async ({ page }) => {
   await startFresh(page);
   await openSettings(page);
   await page.getByText('Backup & Restore', { exact: true }).click();
-  await expect(page.getByText('Backup v3 · Data only')).toBeVisible();
+  await expect(page.getByText('Create encrypted backup')).toBeVisible();
   await page.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(page.getByText('Backup & Restore', { exact: true })).toBeVisible();
 });

@@ -37,7 +37,7 @@ test('critical navigation and forms expose accessible names', async ({ page }) =
   await openSettings(page);
   await page.getByText('Backup & Restore', { exact: true }).click();
   await expect(page.getByText(/CSV is plaintext/)).toBeVisible();
-  await page.getByText('Backup v3 · Data only', { exact: true }).click();
+  await page.getByText('Create encrypted backup', { exact: true }).click();
   const backupDialog = page.getByRole('dialog');
   await expect(backupDialog.locator('input[type="password"]').first()).toBeFocused();
 });

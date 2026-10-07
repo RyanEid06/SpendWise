@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Download, HardDrive, Image as ImageIcon, RefreshCw, ShieldCheck, X } from 'lucide-react';
+import { ArrowLeft, Download, Image as ImageIcon, RefreshCw, ShieldCheck, X } from 'lucide-react';
 import type { ExpenseAttachment, Language } from '../types';
 import { AttachmentStorage } from '../utils/attachmentStorage';
 import type { MediaIntegrityReport } from '../utils/mediaIntegrity';
 import { StorageManager } from '../utils/storage';
 import { exportBlobFile } from '../utils/fileExport';
-import { formatDate } from '../utils/date';
+import { groupMediaByExpenseDate } from '../utils/mediaLibraryGrouping';
 import { ViewportPortal } from '../components/ViewportPortal';
 import { useSensitivePrivacySurface } from '../app/hooks/useSensitivePrivacySurface';
 
@@ -17,7 +17,7 @@ const copy = {
     empty: 'No SpendWise photos yet', emptySub: 'Photos attached to expenses will appear here.',
     purchase: 'Purchase', receipt: 'Receipt', proof: 'Proof', linked: 'Linked expense',
     created: 'Added', size: 'File size', dimensions: 'Dimensions', export: 'Share / export',
-    close: 'Close', unknown: 'Unknown expense', date: 'Date', shareTitle: 'SpendWise photo',
+    close: 'Close', unknown: 'Unknown expense', date: 'Date', unknownDate: 'Unknown date', shareTitle: 'SpendWise photo',
   },
   fr: {
     title: 'Médiathèque', sub: 'Photos conservées en privé par SpendWise', back: 'Retour',
@@ -26,7 +26,7 @@ const copy = {
     empty: 'Aucune photo SpendWise', emptySub: 'Les photos jointes aux dépenses apparaîtront ici.',
     purchase: 'Achat', receipt: 'Reçu', proof: 'Preuve', linked: 'Dépense liée',
     created: 'Ajoutée', size: 'Taille du fichier', dimensions: 'Dimensions', export: 'Partager / exporter',
-    close: 'Fermer', unknown: 'Dépense inconnue', date: 'Date', shareTitle: 'Photo SpendWise',
+    close: 'Fermer', unknown: 'Dépense inconnue', date: 'Date', unknownDate: 'Date inconnue', shareTitle: 'Photo SpendWise',
   },
   ar: {
     title: 'مكتبة الوسائط', sub: 'الصور المحفوظة بشكل خاص داخل SpendWise', back: 'رجوع',
@@ -35,9 +35,26 @@ const copy = {
     empty: 'لا توجد صور SpendWise بعد', emptySub: 'ستظهر هنا الصور المرفقة بالمصاريف.',
     purchase: 'شراء', receipt: 'إيصال', proof: 'إثبات', linked: 'المصروف المرتبط',
     created: 'أضيفت', size: 'حجم الملف', dimensions: 'الأبعاد', export: 'مشاركة / تصدير',
-    close: 'إغلاق', unknown: 'مصروف غير معروف', date: 'التاريخ', shareTitle: 'صورة SpendWise',
+    close: 'إغلاق', unknown: 'مصروف غير معروف', date: 'التاريخ', unknownDate: 'تاريخ غير معروف', shareTitle: 'صورة SpendWise',
   },
 } as const;
+
+const localeByLanguage: Record<Language, string> = {
+  en: 'en-US',
+  fr: 'fr-FR',
+  ar: 'ar-LB',
+};
+
+function formatMediaDate(timestamp: number, language: Language, compact = false): string {
+  if (!Number.isFinite(timestamp) || timestamp <= 0) return '';
+  const date = new Date(timestamp);
+  const includeYear = !compact || date.getFullYear() !== new Date().getFullYear();
+  return new Intl.DateTimeFormat(localeByLanguage[language], {
+    month: 'long',
+    day: 'numeric',
+    ...(includeYear ? { year: 'numeric' as const } : {}),
+  }).format(date);
+}
 
 function humanBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -90,6 +107,14 @@ export const MediaLibraryScreen: React.FC<{ language: Language; onClose: () => v
   const [selected, setSelected] = useState<ExpenseAttachment | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const expenses = useMemo(() => StorageManager.getExpenses(), [attachments]);
+  const expensesById = useMemo(
+    () => new Map(expenses.map((expense) => [expense.id, expense] as const)),
+    [expenses]
+  );
+  const mediaGroups = useMemo(
+    () => groupMediaByExpenseDate(attachments, expenses),
+    [attachments, expenses]
+  );
 
   const refresh = async () => {
     setAttachments(AttachmentStorage.getAllAttachments().sort((a, b) => b.createdAt - a.createdAt));
@@ -103,7 +128,7 @@ export const MediaLibraryScreen: React.FC<{ language: Language; onClose: () => v
     return () => window.removeEventListener('spendwise-native-back', handler);
   }, [selected, onClose]);
 
-  const selectedExpense = selected ? expenses.find((expense) => expense.id === selected.expenseId) : null;
+  const selectedExpense = selected ? expensesById.get(selected.expenseId) || null : null;
 
   const shareSelected = async () => {
     if (!selected) return;
@@ -165,22 +190,34 @@ export const MediaLibraryScreen: React.FC<{ language: Language; onClose: () => v
           <div className="text-xs text-slate-500">{text.emptySub}</div>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-2">
-          {attachments.map((item) => {
-            const expense = expenses.find((value) => value.id === item.expenseId);
-            return (
-              <button key={item.id} type="button" onClick={() => setSelected(item)}
-                className="text-left rtl:text-right rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111928] active:scale-[0.99]">
-                <LazyAttachmentImage item={item} className="aspect-square" />
-                <div className="p-2.5 space-y-1">
-                  <div className="text-xs font-bold truncate">{expense?.description || text.unknown}</div>
-                  <div className="text-[10px] text-slate-500 flex justify-between gap-1">
-                    <span>{text[item.kind]}</span><span>{humanBytes(item.byteSize)}</span>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
+        <div className="space-y-5">
+          {mediaGroups.map((group) => (
+            <section key={group.key} aria-label={group.timestamp ? formatMediaDate(group.timestamp, language, true) : text.unknownDate}>
+              <div className="mb-2 flex items-center gap-3">
+                <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-200 shrink-0">
+                  {group.timestamp ? formatMediaDate(group.timestamp, language, true) : text.unknownDate}
+                </h3>
+                <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1" aria-hidden="true" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {group.items.map((item) => {
+                  const expense = expensesById.get(item.expenseId);
+                  return (
+                    <button key={item.id} type="button" onClick={() => setSelected(item)}
+                      className="text-left rtl:text-right rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111928] active:scale-[0.99]">
+                      <LazyAttachmentImage item={item} className="aspect-square" />
+                      <div className="p-2.5 space-y-1">
+                        <div className="text-xs font-bold truncate">{expense?.description || text.unknown}</div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 flex justify-between gap-1">
+                          <span>{text[item.kind]}</span><span>{humanBytes(item.byteSize)}</span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
         </div>
       )}
 
@@ -195,8 +232,8 @@ export const MediaLibraryScreen: React.FC<{ language: Language; onClose: () => v
             <LazyAttachmentImage item={selected} className="aspect-square" />
             <div className="p-4 space-y-2 text-xs">
               <div className="flex justify-between"><span className="text-slate-500">{text.linked}</span><span>{selectedExpense?.description || text.unknown}</span></div>
-              {selectedExpense && <div className="flex justify-between"><span className="text-slate-500">{text.date}</span><span>{formatDate(selectedExpense.date)}</span></div>}
-              <div className="flex justify-between"><span className="text-slate-500">{text.created}</span><span>{formatDate(selected.createdAt)}</span></div>
+              {selectedExpense && <div className="flex justify-between gap-4"><span className="text-slate-500 dark:text-slate-400">{text.date}</span><span className="text-end">{formatMediaDate(selectedExpense.date, language) || text.unknownDate}</span></div>}
+              <div className="flex justify-between gap-4"><span className="text-slate-500 dark:text-slate-400">{text.created}</span><span className="text-end">{formatMediaDate(selected.createdAt, language) || text.unknownDate}</span></div>
               <div className="flex justify-between"><span className="text-slate-500">{text.size}</span><span>{humanBytes(selected.byteSize)}</span></div>
               <div className="flex justify-between"><span className="text-slate-500">{text.dimensions}</span><span>{selected.width} × {selected.height}</span></div>
               <button type="button" onClick={() => void shareSelected()} className="w-full min-h-[48px] rounded-2xl bg-emerald-500 text-slate-950 font-extrabold flex items-center justify-center gap-2 mt-3">

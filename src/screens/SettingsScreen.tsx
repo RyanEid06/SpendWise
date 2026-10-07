@@ -14,7 +14,6 @@ import {
   FileSpreadsheet,
   FileText,
   Globe,
-  Image as ImageIcon,
   Images,
   Info,
   Lock,
@@ -100,6 +99,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   onReviewSetup,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const restoreInputRef = useRef<HTMLInputElement>(null);
   const statusMessageRef = useRef<HTMLDivElement>(null);
   const clearFeedbackPending = useRef(false);
   const copy = overviewCopy[currentLanguage];
@@ -116,7 +116,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [isBackupBusy, setIsBackupBusy] = useState(false);
   const [pendingImportBackup, setPendingImportBackup] = useState<SpendWiseBackup | null>(null);
   const [pendingV2Backup, setPendingV2Backup] = useState<{ file: File; preview: BackupV2Preview } | null>(null);
-  const [pendingV3ExportMode, setPendingV3ExportMode] = useState<'data' | 'full' | null>(null);
+  const [showEncryptedBackup, setShowEncryptedBackup] = useState(false);
+  const [includePhotosInBackup, setIncludePhotosInBackup] = useState(false);
   const [pendingV3File, setPendingV3File] = useState<File | null>(null);
   const [pendingV3Backup, setPendingV3Backup] = useState<{ file: File; preview: BackupV3Preview; passphrase: string } | null>(null);
   const [v3PassphraseError, setV3PassphraseError] = useState<string | null>(null);
@@ -224,11 +225,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       const blob = await backupService.createV3(includeMedia, passphrase);
       const dateStamp = new Date().toISOString().split('T')[0];
       await exportBlobFile({
-        fileName: 'spendwise_backup_v3_' + (includeMedia ? 'full' : 'data') + '_' + dateStamp + '.swb3',
+        fileName: 'spendwise_encrypted_backup_' + (includeMedia ? 'full' : 'data') + '_' + dateStamp + '.swb3',
         blob,
-        shareTitle: includeMedia ? copy.fullBackup : copy.dataOnly,
+        shareTitle: copy.createEncryptedBackup,
       });
-      setPendingV3ExportMode(null);
+      setShowEncryptedBackup(false);
       setStatusMessage(includeMedia ? copy.fullBackup : copy.dataOnly);
       setErrorMessage(null);
     } catch {
@@ -405,8 +406,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         setPendingCurrencyCode(null);
         return;
       }
-      if (pendingV3ExportMode) {
-        setPendingV3ExportMode(null);
+      if (showEncryptedBackup) {
+        setShowEncryptedBackup(false);
         return;
       }
       if (pendingV3File) {
@@ -449,7 +450,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     pendingImportBackup,
     pendingV2Backup,
     pendingV3Backup,
-    pendingV3ExportMode,
+    showEncryptedBackup,
     pendingV3File,
     legalKind,
     settingsPage,
@@ -527,7 +528,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     pendingImportBackup !== null ||
     pendingV2Backup !== null ||
     pendingV3Backup !== null ||
-    pendingV3ExportMode !== null ||
+    showEncryptedBackup ||
     pendingV3File !== null ||
     pendingCurrencyCode !== null;
 
@@ -745,38 +746,36 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           <button
             type="button"
             disabled={isBackupBusy}
-            onClick={() => setPendingV3ExportMode('data')}
-            className="w-full min-h-[56px] px-3.5 py-3 rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200 dark:border-slate-800 flex items-center gap-3 text-left rtl:text-right disabled:opacity-50"
+            onClick={() => {
+              setIncludePhotosInBackup(false);
+              setShowEncryptedBackup(true);
+            }}
+            className="w-full min-h-[60px] px-3.5 py-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/25 border border-emerald-200 dark:border-emerald-900/70 flex items-center gap-3 text-left rtl:text-right disabled:opacity-50"
           >
-            <Archive className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+            <Archive className="w-5 h-5 text-emerald-700 dark:text-emerald-400 shrink-0" />
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-bold">{copy.dataOnly}</span>
-              <span className="block text-[11px] text-slate-500 dark:text-slate-400">{copy.dataOnlySub}</span>
+              <span className="block text-sm font-extrabold text-slate-900 dark:text-white">{copy.createEncryptedBackup}</span>
+              <span className="block text-[11px] leading-relaxed text-slate-600 dark:text-slate-400 mt-0.5">{copy.createEncryptedBackupSub}</span>
             </span>
           </button>
 
+          <input
+            ref={restoreInputRef}
+            type="file"
+            accept=".swb3,.zip,application/octet-stream,application/zip"
+            onChange={handleFileImport}
+            className="hidden"
+          />
           <button
             type="button"
             disabled={isBackupBusy}
-            onClick={() => setPendingV3ExportMode('full')}
+            onClick={() => restoreInputRef.current?.click()}
             className="w-full min-h-[56px] px-3.5 py-3 rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200 dark:border-slate-800 flex items-center gap-3 text-left rtl:text-right disabled:opacity-50"
           >
-            <ImageIcon className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <Upload className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0" />
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-bold">{copy.fullBackup}</span>
-              <span className="block text-[11px] text-slate-500 dark:text-slate-400">{copy.fullBackupSub}</span>
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleExportJson}
-            className="w-full min-h-[56px] px-3.5 py-3 rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200 dark:border-slate-800 flex items-center gap-3 text-left rtl:text-right"
-          >
-            <Download className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-bold">{copy.legacy}</span>
-              <span className="block text-[11px] text-slate-500 dark:text-slate-400">{t(currentLanguage, 'createBackupSub')}</span>
+              <span className="block text-sm font-bold">{copy.restoreBackup}</span>
+              <span className="block text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">{copy.restoreBackupSub}</span>
             </span>
           </button>
 
@@ -788,7 +787,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             <FileSpreadsheet className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-bold">{t(currentLanguage, 'exportCsvBtn')}</span>
-              <span className="block text-[11px] text-slate-500 dark:text-slate-400">{t(currentLanguage, 'exportCsvSub')}</span>
+              <span className="block text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">{t(currentLanguage, 'exportCsvSub')}</span>
             </span>
           </button>
           <p className="px-1 text-[11px] leading-relaxed text-amber-700 dark:text-amber-400">
@@ -807,23 +806,50 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             onClick={() => fileInputRef.current?.click()}
             className="w-full min-h-[56px] px-3.5 py-3 rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200 dark:border-slate-800 flex items-center gap-3 text-left rtl:text-right"
           >
-            <Upload className="w-5 h-5 text-purple-600 dark:text-purple-400 shrink-0" />
+            <Database className="w-5 h-5 text-purple-600 dark:text-purple-400 shrink-0" />
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-bold">{t(currentLanguage, 'importDataBtn')}</span>
-              <span className="block text-[11px] text-slate-500 dark:text-slate-400">{t(currentLanguage, 'importDataSub')}</span>
+              <span className="block text-sm font-bold">{copy.importData}</span>
+              <span className="block text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">{copy.importDataSub}</span>
             </span>
           </button>
+
+          <details className="group mt-3 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <summary className="min-h-[56px] cursor-pointer list-none px-3.5 py-3 flex items-center gap-3 bg-slate-50/70 dark:bg-[#0B0F19]">
+              <FileText className="w-5 h-5 text-slate-500 dark:text-slate-400 shrink-0" />
+              <span className="min-w-0 flex-1 text-left rtl:text-right">
+                <span className="block text-sm font-bold">{copy.legacyTools}</span>
+                <span className="block text-[11px] leading-relaxed text-slate-500 dark:text-slate-400 mt-0.5">{copy.legacyToolsSub}</span>
+              </span>
+              <ChevronDown className="w-4 h-4 text-slate-400 transition-transform group-open:rotate-180 shrink-0" />
+            </summary>
+            <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111928] space-y-2">
+              <button
+                type="button"
+                onClick={handleExportJson}
+                className="w-full min-h-[56px] px-3.5 py-3 rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200 dark:border-slate-800 flex items-center gap-3 text-left rtl:text-right"
+              >
+                <Download className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-bold">{copy.legacy}</span>
+                  <span className="block text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">{copy.legacySub}</span>
+                </span>
+              </button>
+              <p className="px-1 text-[11px] leading-relaxed text-amber-700 dark:text-amber-400">
+                {copy.legacyPlaintextWarning}
+              </p>
+            </div>
+          </details>
         </section>
 
-        {pendingV3ExportMode && (
+        {showEncryptedBackup && (
           <BackupPassphraseModal
             mode="create"
             language={currentLanguage}
             busy={isBackupBusy}
-            onSubmit={(passphrase) =>
-              void handleExportV3(pendingV3ExportMode === 'full', passphrase)
-            }
-            onClose={() => setPendingV3ExportMode(null)}
+            includePhotos={includePhotosInBackup}
+            onIncludePhotosChange={setIncludePhotosInBackup}
+            onSubmit={(passphrase) => void handleExportV3(includePhotosInBackup, passphrase)}
+            onClose={() => setShowEncryptedBackup(false)}
           />
         )}
 
