@@ -1,0 +1,151 @@
+name: WP33.5-06 Signed Candidate
+
+on:
+  push:
+    branches:
+      - codex/wp33-5-06-integration-regression
+  workflow_dispatch:
+    inputs:
+      expected_source:
+        description: Exact WP06 commit whose integration gates passed
+        required: true
+        type: string
+      installed_version_code:
+        description: Installed version baseline (last known Honor code 7; verify upgrade on phone)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  signed-candidate:
+    if: github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/codex/wp33-5-06-integration-regression' || github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate candidate source and version
+        id: version
+        shell: bash
+        env:
+          EXPECTED_SOURCE: ${{ inputs.expected_source }}
+          INSTALLED_CODE: ${{ inputs.installed_version_code }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE"
+          test "$EXPECTED_SOURCE" = "$GITHUB_SHA"
+          VERSION_NAME="$(node -p "require('./version.json').versionName")"
+          VERSION_CODE="$(node -p "require('./version.json').versionCode")"
+          [[ "$INSTALLED_CODE" =~ ^[0-9]+$ ]]
+          test "$VERSION_NAME" = "2.0.2"
+          test "$VERSION_CODE" -ge 8
+          test "$VERSION_CODE" -gt "$INSTALLED_CODE"
+          test "$(node -p "require('./package.json').version")" = "$VERSION_NAME"
+          echo "version=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+      - name: Validate signing secrets
+        shell: bash
+        env:
+          SPENDWISE_KEYSTORE_BASE64: ${{ secrets.SPENDWISE_KEYSTORE_BASE64 }}
+          SPENDWISE_KEYSTORE_PASSWORD: ${{ secrets.SPENDWISE_KEYSTORE_PASSWORD }}
+          SPENDWISE_KEY_ALIAS: ${{ secrets.SPENDWISE_KEY_ALIAS }}
+          SPENDWISE_KEY_PASSWORD: ${{ secrets.SPENDWISE_KEY_PASSWORD }}
+        run: |
+          missing=0
+          for var in SPENDWISE_KEYSTORE_BASE64 SPENDWISE_KEYSTORE_PASSWORD SPENDWISE_KEY_ALIAS SPENDWISE_KEY_PASSWORD; do
+            if [ -z "${!var}" ]; then
+              echo "::error::Missing repository Actions secret: $var"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Restore release keystore
+        shell: bash
+        env:
+          SPENDWISE_KEYSTORE_BASE64: ${{ secrets.SPENDWISE_KEYSTORE_BASE64 }}
+        run: |
+          printf '%s' "$SPENDWISE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/spendwise-release.jks"
+          chmod 600 "$RUNNER_TEMP/spendwise-release.jks"
+
+      - name: Verify web app
+        run: npm run verify
+
+      - name: Sync Capacitor Android
+        run: npm run android:sync
+
+      - name: Make Gradle executable
+        run: chmod +x android/gradlew
+
+      - name: Build signed release APK
+        working-directory: android
+        env:
+          SPENDWISE_KEYSTORE_PATH: ${{ runner.temp }}/spendwise-release.jks
+          SPENDWISE_KEYSTORE_PASSWORD: ${{ secrets.SPENDWISE_KEYSTORE_PASSWORD }}
+          SPENDWISE_KEY_ALIAS: ${{ secrets.SPENDWISE_KEY_ALIAS }}
+          SPENDWISE_KEY_PASSWORD: ${{ secrets.SPENDWISE_KEY_PASSWORD }}
+        run: ./gradlew clean assembleRelease
+
+      - name: Prepare versioned APK
+        shell: bash
+        run: |
+          mkdir -p release
+          cp android/app/build/outputs/apk/release/app-release.apk "release/SpendWise-v${{ steps.version.outputs.version }}.apk"
+
+      - name: Verify APK signature, version, and provenance
+        shell: bash
+        env:
+          APK_VERSION: ${{ steps.version.outputs.version }}
+          APK_CODE: ${{ steps.version.outputs.code }}
+        run: |
+          set -euo pipefail
+          apk="release/SpendWise-v$APK_VERSION.apk"
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          tools_dir="$(find "$sdk_root/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)"
+          test -n "$tools_dir"
+          "$tools_dir/apksigner" verify --verbose --print-certs "$apk" | tee release/signature.txt
+          "$tools_dir/aapt" dump badging "$apk" > release/apk-badging.txt
+          node <<'NODE'
+          const fs=require('node:fs');
+          const {execFileSync}=require('node:child_process');
+          const badging=fs.readFileSync('release/apk-badging.txt','utf8');
+          const match=badging.match(/^package: name='([^']+)' versionCode='([^']+)' versionName='([^']+)'/m);
+          if(!match || match[1]!=='com.spendwise.app' || match[2]!==process.env.APK_CODE || match[3]!==process.env.APK_VERSION) throw Error('APK package/version mismatch');
+          const signature=fs.readFileSync('release/signature.txt','utf8');
+          const signers=[...signature.matchAll(/^(?:Signer #\d+ |V\d+ Signer: )certificate SHA-256 digest: ([a-fA-F0-9]+)\r?$/gm)].map(match=>match[1].toLowerCase());
+          if(!signers.length || signers.some(signer=>signer!=='e279124cd9d2cd6d4c191e2644fd71063993e42d13441a46759fa922f16d5965')) throw Error('APK signing identity differs from previous official releases');
+          const signer=signers[0];
+          const source=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
+          fs.writeFileSync('release/build-receipt.json',JSON.stringify({package:match[1],versionName:match[3],versionCode:Number(match[2]),source,signingCertificateSha256:signer,runId:process.env.GITHUB_RUN_ID},null,2)+'\n');
+          NODE
+          (cd release && sha256sum "SpendWise-v$APK_VERSION.apk" > SHA256SUMS)
+
+      - name: Upload signed release APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: SpendWise-WP06-candidate-${{ github.sha }}
+          path: release/
+          if-no-files-found: error

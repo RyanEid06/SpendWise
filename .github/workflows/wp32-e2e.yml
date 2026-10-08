@@ -226,8 +226,8 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      - name: Upload Android failure artifacts
-        if: failure()
+      - name: Upload Android acceptance artifacts
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: wp32-android-failure
