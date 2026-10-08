@@ -117,6 +117,6 @@ test('WP33.5-01 steady-state cleanup optimization only skips duplicate validatio
   assert.match(cleanup, /assertSpendWiseDatabaseIntegrity\(destination\)/);
 });
 
-test('WP33.5-01 does not change official release versioning', () => {
-  assert.deepEqual(version, { versionName: '2.0.0', versionCode: 6 });
+test('WP06 uses the owner-selected candidate version and upgrade code', () => {
+  assert.deepEqual(version, { versionName: '2.0.2', versionCode: 8 });
 });

@@ -241,7 +241,7 @@ test('WP27 secure seams remain the only app-facing owners after WP28 implementat
 test('WP27 preserves approved release metadata', () => {
   const packageJson = JSON.parse(read('package.json')) as { version: string };
   const versionJson = JSON.parse(read('version.json')) as { versionName: string; versionCode: number };
-  assert.equal(packageJson.version, '2.0.0');
-  assert.equal(versionJson.versionName, '2.0.0');
-  assert.equal(versionJson.versionCode, 6);
+  assert.equal(packageJson.version, '2.0.2');
+  assert.equal(versionJson.versionName, '2.0.2');
+  assert.equal(versionJson.versionCode, 8);
 });
