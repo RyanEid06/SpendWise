@@ -26,7 +26,7 @@ import { ViewportPortal } from './ViewportPortal';
 import { useModalFocus } from './useModalFocus';
 
 interface ExpenseAttachmentsEditorProps {
-  protectAcquisition?: (operation: () => Promise<AttachmentDraft[]>) => Promise<AttachmentDraft[]>;
+  protectAcquisition?: (operation: () => Promise<AttachmentDraft[]>, accept?: () => boolean) => Promise<AttachmentDraft[]>;
   expenseId?: number;
   language: Language;
   drafts: AttachmentDraft[];

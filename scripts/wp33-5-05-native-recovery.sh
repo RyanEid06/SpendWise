@@ -90,5 +90,6 @@ run_wp05_recovery() {
   run_flow wp05-recovered-edit-save .maestro/wp05/assert-edit-save.yaml
   wp05_kill_reopen edited-save
   node scripts/wp33-5-05-native-probe.mjs edited "$RESULT_ROOT/edited-once.json"
+  python3 scripts/wp33-5-05-at-rest.py "$RESULT_ROOT/after-terminal-at-rest.json"
   echo "WP05_NATIVE_RECOVERY_PASSED"
 }

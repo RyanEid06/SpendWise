@@ -28,7 +28,7 @@ export class ExpenseDraftRecoveryService {
     return this.enqueue(() => this.write(state));
   }
 
-  acquire(state: ExpenseEditorDraft, target: 'photos' | 'smart' | 'receipt', language: 'en' | 'fr' | 'ar', operation: () => Promise<AttachmentDraft[]>): Promise<AttachmentDraft[]> {
+  acquire(state: ExpenseEditorDraft, target: 'photos' | 'smart' | 'receipt', language: 'en' | 'fr' | 'ar', operation: () => Promise<AttachmentDraft[]>, accept = () => true): Promise<AttachmentDraft[]> {
     if (this.acquisitions.has(state.id)) return Promise.reject(new Error('EXPENSE_DRAFT_ACQUISITION_IN_PROGRESS'));
     this.acquisitions.set(state.id, state);
     let photos: AttachmentDraft[] = [];
@@ -38,15 +38,12 @@ export class ExpenseDraftRecoveryService {
         await this.write(state);
         try { photos = await operation(); }
         finally { await cleanupNativeAcquisitionFiles(); }
-        const latest = this.acquisitions.get(state.id)!;
-        const next = photos.length === 0 ? latest : target === 'photos'
-          ? { ...latest, attachments: latest.attachments.concat(photos) }
-          : { ...latest, [target]: { photo: photos[0], result: null, interrupted: false, currencyCode: latest.currencyCode, language } };
-        await this.write(next);
+        await this.drainAcquisition(state.id, target, language, photos, accept);
+        if (!accept()) photos = [];
       } catch (error) {
         // Acquiring a replacement can fail after manual fields changed. Protect
         // that latest work before reporting the acquisition failure.
-        await this.write(this.acquisitions.get(state.id)!);
+        await this.drainAcquisition(state.id, target, language, photos, accept);
         throw error;
       } finally {
         this.acquisitions.delete(state.id);
@@ -55,6 +52,23 @@ export class ExpenseDraftRecoveryService {
     });
     this.acquisitionTasks.set(state.id, task);
     return task.then(() => photos);
+  }
+
+  private async drainAcquisition(id: string, target: 'photos' | 'smart' | 'receipt', language: 'en' | 'fr' | 'ar', photos: AttachmentDraft[], accept: () => boolean): Promise<void> {
+    for (;;) {
+      const latest = this.acquisitions.get(id)!;
+      const accepted = accept();
+      const picked = accepted ? photos : [];
+      const next = !accepted && target !== 'photos'
+        ? { ...latest, [target]: null }
+        : picked.length === 0 ? latest : target === 'photos'
+          ? { ...latest, attachments: latest.attachments.concat(picked.filter(photo => !latest.attachments.includes(photo))) }
+          : { ...latest, [target]: { photo: picked[0], result: null, interrupted: false, currencyCode: latest.currencyCode, language } };
+      await this.write(next);
+      // Acknowledgments include edits/Remove arriving while the encrypted write
+      // was pending, even if authentication destroyed the original component.
+      if (this.acquisitions.get(id) === latest && accept() === accepted) return;
+    }
   }
 
   // Reserve the entire Save, including private-media promotion, before unlock can

@@ -138,9 +138,9 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
     selectedDateMillis, noteText, activeTool, attachmentDrafts, removedAttachmentIds, smartDraft, receiptDraft]);
 
   const protectAcquisition = (target: 'photos' | 'smart' | 'receipt') => protectDraft
-    ? async (operation: () => Promise<AttachmentDraft[]>) => {
+    ? async (operation: () => Promise<AttachmentDraft[]>, accept?: () => boolean) => {
       setAcquisitionPending(true);
-      try { return await expenseDraftRecoveryService.acquire(snapshot, target, language, operation); }
+      try { return await expenseDraftRecoveryService.acquire(snapshot, target, language, operation, accept); }
       finally { setAcquisitionPending(false); }
     }
     : undefined;

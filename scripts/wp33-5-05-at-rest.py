@@ -7,6 +7,8 @@ import sys
 app = 'com.spendwise.app'
 roots = ['databases', 'files', 'shared_prefs', 'cache', 'app_webview', '/sdcard/Android/data/' + app + '/files', '/sdcard/Android/data/' + app + '/cache']
 listing = subprocess.run(['adb', 'shell', 'run-as', app, 'find', *roots, '-type', 'f'], capture_output=True, text=True, timeout=30)
+if 'Permission denied' in listing.stderr:
+    raise RuntimeError('Private at-rest inventory is incomplete: access denied')
 receipts = []
 databases = 0
 for path in listing.stdout.splitlines():

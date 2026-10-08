@@ -17,7 +17,7 @@ import {
 } from '../utils/imageAcquisition';
 
 interface SmartCaptureCardProps {
-  protectAcquisition?: (operation: () => Promise<AttachmentDraft[]>) => Promise<AttachmentDraft[]>;
+  protectAcquisition?: (operation: () => Promise<AttachmentDraft[]>, accept?: () => boolean) => Promise<AttachmentDraft[]>;
   recoveryState?: DraftToolState<SmartCaptureResult> | null;
   onDraftStateChange?: (state: DraftToolState<SmartCaptureResult>) => void;
   language: Language;
@@ -224,7 +224,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
       return selectionGeneration === selectionGenerationRef.current ? [draft] : [];
     };
     try {
-      const photos = await (protectAcquisition ? protectAcquisition(prepare) : prepare());
+      const photos = await (protectAcquisition ? protectAcquisition(prepare, () => selectionGeneration === selectionGenerationRef.current) : prepare());
       if (!mountedRef.current || selectionGeneration !== selectionGenerationRef.current || photos.length === 0) return;
       const draft = photos[0];
       const preparedPreviewUrl = URL.createObjectURL(draft.blob);

@@ -222,6 +222,29 @@ test('draft-wide acquisition single-flight preserves its owner across tools', as
   assert.equal(restored.receipt, null);
 });
 
+for (const cancel of [false, true]) test(`final acquisition write drains newer edits${cancel ? ' and explicit photo cancellation' : ''}`, async () => {
+  const h = await harness();
+  const write = h.store.writeExpenseDraft.bind(h.store);
+  let release!: () => void, started!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  const entered = new Promise<void>(resolve => { started = resolve; });
+  let paused = false, accepted = true;
+  h.store.writeExpenseDraft = async input => {
+    if (input.draft.photos.length && !paused) { paused = true; started(); await gate; }
+    await write(input);
+  };
+  const acquisition = h.service.acquire(draft(), 'smart', 'en', async () => [photo()], () => accepted);
+  await entered;
+  const latest = h.service.persist(draft({ amountText: '99' }));
+  if (cancel) accepted = false;
+  const unlock = h.service.restore();
+  release();
+  await Promise.all([acquisition, latest]);
+  const restored = (await unlock)!;
+  assert.equal(restored.amountText, '99');
+  assert.equal(Boolean(restored.smart?.photo), !cancel);
+});
+
 test('interrupted Edit preserves identity and removals; failed Update leaves recovery intact', async () => {
   const h = await harness();
   await h.store.createExpenseWithAttachments(expense, []);
