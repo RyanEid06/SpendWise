@@ -2,7 +2,8 @@
 # Sourced only after the isolated runner's disposable-emulator guard.
 wp05_launch_unlock() {
   local phase="$1"
-  adb shell am start -n "$APP_ACTIVITY" >/dev/null
+  shift
+  adb shell am start "$@" -n "$APP_ACTIVITY" >/dev/null
   # Verify the app DOM remains redacted while Android authentication is pending.
   node scripts/wp33-5-05-native-probe.mjs locked "$RESULT_ROOT/$phase-locked.json"
   run_flow "$phase-unlock" .maestro/helpers/android-device-pin.yaml
@@ -34,19 +35,30 @@ run_wp05_recovery() {
   sleep 2 # Wait for Android onStop; an immediate start can skip appStateChange(false).
   wp05_launch_unlock background
   run_flow wp05-background-fields .maestro/wp05/assert-add.yaml
-  # Android's real "Don't keep activities" destroys the background Activity while
-  # preserving the process. Record unchanged PID independently of force-stop tests.
+  # Replace the task's Activity through Android while preserving the process.
+  # Setting always_finish_activities alone left the observed Activity STOPPED;
+  # assert actual ActivityRecord replacement as well as unchanged process ID.
   local activity_pid
   activity_pid="$(adb shell pidof "$APP_ID" | tr -d '\r')"
-  adb shell settings put global always_finish_activities 1
+  adb shell dumpsys activity activities > "$RESULT_ROOT/before-activity-recreation.txt"
   adb shell input keyevent KEYCODE_HOME
   sleep 2
-  adb shell dumpsys activity activities > "$RESULT_ROOT/destroyed-activity.txt"
-  adb shell settings put global always_finish_activities 0
-  wp05_launch_unlock activity-recreation
+  wp05_launch_unlock activity-recreation --activity-clear-task --activity-new-task
   [[ "$(adb shell pidof "$APP_ID" | tr -d '\r')" = "$activity_pid" ]]
   run_flow wp05-recreated-activity .maestro/wp05/assert-add.yaml
-  printf '{"pid":%s,"mechanism":"always_finish_activities","sameProcess":true}\n' "$activity_pid" > "$RESULT_ROOT/activity-recreation.json"
+  adb shell dumpsys activity activities > "$RESULT_ROOT/after-activity-recreation.txt"
+  node --input-type=module - "$RESULT_ROOT" "$activity_pid" <<'NODE'
+import assert from 'node:assert/strict';
+import { readFileSync, writeFileSync } from 'node:fs';
+const [root, pid] = process.argv.slice(2);
+const records = phase => [...new Set([...readFileSync(`${root}/${phase}-activity-recreation.txt`, 'utf8')
+  .matchAll(/ActivityRecord\{([a-f0-9]+) [^\n}]*com\.spendwise\.app\/[^\n}]*MainActivity[^\n}]*\}/g)].map(match => match[1]))];
+const before = records('before'), after = records('after');
+assert.ok(before.length && after.length, 'Observe both old and replacement native Activities');
+assert.ok(before.every(record => !after.includes(record)), 'Old Activity must actually be destroyed/replaced');
+writeFileSync(`${root}/activity-recreation.json`, JSON.stringify({ pid: Number(pid), mechanism: 'am start --activity-clear-task --activity-new-task', sameProcess: true, before, after }, null, 2));
+console.log('WP05_ACTIVITY_RECREATION_PASSED');
+NODE
   wp05_kill_reopen partial-add
   run_flow wp05-recovered-fields .maestro/wp05/assert-add.yaml
   node scripts/wp33-5-05-native-probe.mjs add "$RESULT_ROOT/recovered-add-fields.json"
