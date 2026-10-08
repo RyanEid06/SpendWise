@@ -188,4 +188,3 @@ test('real signed upgrade seeds code 7, installs code 8 without launching, and v
   assert.match(runner, /verificationStatus: 'passed'/);
   assert.match(runner, /captureFailureEvidence\(error\)/);
 });
-

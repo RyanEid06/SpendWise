@@ -415,4 +415,3 @@ if (invokedFile?.endsWith('/scripts/wp33-5-06-signed-startup.ts') || invokedFile
     process.exitCode = 1;
   }
 }
-
