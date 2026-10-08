@@ -25,4 +25,8 @@ appId: com.spendwise.app
 - extendedWaitUntil:
     visible: "Add Expense"
     timeout: 30000
+- scrollUntilVisible:
+    element: "Unfinished expense protected"
+    direction: UP
+    timeout: 30000
 - assertVisible: "Unfinished expense protected"

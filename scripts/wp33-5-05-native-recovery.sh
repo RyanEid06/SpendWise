@@ -24,6 +24,7 @@ wp05_kill_reopen() {
 }
 
 run_wp05_recovery() {
+  node scripts/wp33-5-05-photo-fixture.mjs
   install_current
   adb shell locksettings set-pin 2468 >/dev/null
   bootstrap_app_lock_timeout

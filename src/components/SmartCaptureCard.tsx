@@ -213,13 +213,17 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
       requestIdRef.current += 1;
       analysisInFlightRef.current = false;
       clearPreparedPreview();
-      setPreviewUrl(acquired.previewUrl);
+      setPreviewUrl(null);
       setPreparedDraft(null);
       setResult(null);
       setIsAnalyzing(false);
       setIsPreparing(true);
-      await waitForPhotoUiPaint();
       const file = await acquired.loadFile();
+      if (mountedRef.current && selectionGeneration === selectionGenerationRef.current) {
+        preparedPreviewUrlRef.current = URL.createObjectURL(file);
+        setPreviewUrl(preparedPreviewUrlRef.current);
+      }
+      await waitForPhotoUiPaint();
       const draft = await AttachmentStorage.prepareImageDraft(file, 'purchase');
       return selectionGeneration === selectionGenerationRef.current ? [draft] : [];
     };

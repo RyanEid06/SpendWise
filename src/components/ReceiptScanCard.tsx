@@ -235,13 +235,17 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
       requestIdRef.current += 1;
       analysisInFlightRef.current = false;
       clearPreparedPreview();
-      setPreviewUrl(acquired.previewUrl);
+      setPreviewUrl(null);
       setPreparedDraft(null);
       setResult(null);
       setIsScanning(false);
       setIsPreparing(true);
-      await waitForPhotoUiPaint();
       const file = await acquired.loadFile();
+      if (mountedRef.current && selectionGeneration === selectionGenerationRef.current) {
+        preparedPreviewUrlRef.current = URL.createObjectURL(file);
+        setPreviewUrl(preparedPreviewUrlRef.current);
+      }
+      await waitForPhotoUiPaint();
       const draft = await AttachmentStorage.prepareImageDraft(file, 'receipt');
       return selectionGeneration === selectionGenerationRef.current ? [draft] : [];
     };

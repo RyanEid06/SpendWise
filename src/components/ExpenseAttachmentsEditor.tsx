@@ -361,11 +361,13 @@ export const ExpenseAttachmentsEditor: React.FC<ExpenseAttachmentsEditorProps> =
               key={item.id}
               className="relative aspect-square rounded-xl overflow-hidden border border-amber-300 dark:border-amber-800 bg-white dark:bg-slate-900"
             >
-              <img
+              {item.photo.previewUrl.startsWith('blob:') ? <img
                 src={item.photo.previewUrl}
                 alt={kindLabel(language, item.kind)}
                 className="w-full h-full object-cover opacity-80"
-              />
+              /> : <div role="img" aria-label={kindLabel(language, item.kind)} className="w-full h-full flex items-center justify-center text-slate-400">
+                <ImagePlus className="w-6 h-6" />
+              </div>}
               <div className="absolute inset-x-0 bottom-0 bg-slate-950/75 text-white px-1.5 py-1.5 text-[9px] font-semibold flex items-center justify-center gap-1">
                 <Loader2 className="w-3 h-3 animate-spin" />
                 <span>{ta(language, 'processingPhoto')}</span>

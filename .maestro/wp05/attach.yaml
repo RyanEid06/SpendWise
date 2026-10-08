@@ -1,7 +1,7 @@
 appId: com.spendwise.app
 ---
 - addMedia:
-    - "../../tests/fixtures/media/wp32-photo-01.jpg"
+    - "../../artifacts/android-e2e/fixtures/wp05-private-photo.jpg"
 - swipe:
     start: 50%, 74%
     end: 50%, 34%
@@ -28,6 +28,10 @@ appId: com.spendwise.app
     file: ../helpers/android-device-pin.yaml
 - extendedWaitUntil:
     visible: "Attach Photos · 1"
+    timeout: 30000
+- scrollUntilVisible:
+    element: "Unfinished expense protected"
+    direction: UP
     timeout: 30000
 - extendedWaitUntil:
     visible: "Unfinished expense protected"

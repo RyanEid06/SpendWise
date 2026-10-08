@@ -114,7 +114,9 @@ function toAcquiredPhoto(result: MediaResult, index: number): AcquiredPhoto {
     previewUrl,
     filename,
     loadFile: async () => {
-      const response = await fetch(previewUrl);
+      // Native converted file URLs must not create a second plaintext copy in
+      // WebView HTTP cache while the owned acquisition file is being retired.
+      const response = await fetch(previewUrl, { cache: 'no-store' });
       if (!response.ok) {
         throw new PhotoAcquisitionError('PHOTO_ACQUISITION_FAILED', 'Photo could not be read.');
       }

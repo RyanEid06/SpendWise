@@ -1,6 +1,8 @@
 """Read-only encrypted-at-rest checks on synthetic native artifacts; no secrets logged."""
 import hashlib
+import base64
 import json
+from pathlib import Path
 import subprocess
 import sys
 
@@ -11,6 +13,9 @@ if 'Permission denied' in listing.stderr:
     raise RuntimeError('Private at-rest inventory is incomplete: access denied')
 receipts = []
 databases = 0
+# HTTP cache entries can wrap photo bytes in metadata, so a file-header check
+# alone cannot prove the acquired fixture was not cached in plaintext.
+fixture_prefix = Path('artifacts/android-e2e/fixtures/wp05-private-photo.jpg').read_bytes()[:48]
 for path in listing.stdout.splitlines():
     path = path.strip()
     if not path or not any(path.startswith(root + '/') for root in roots) or '..' in path:
@@ -24,6 +29,8 @@ for path in listing.stdout.splitlines():
         raise RuntimeError('Financial draft sentinel found in a plaintext private artifact: ' + path)
     if raw.startswith(b'\xff\xd8\xff') or raw.startswith(b'\x89PNG\r\n\x1a\n'):
         raise RuntimeError('Unencrypted acquired photo remains in private storage: ' + path)
+    if fixture_prefix in raw or base64.b64encode(fixture_prefix) in raw:
+        raise RuntimeError('Acquired photo bytes remain in a plaintext private/cache artifact: ' + path)
     receipts.append({'path': path, 'bytes': len(raw), 'sha256': hashlib.sha256(raw).hexdigest()})
 if databases != 1:
     raise RuntimeError('Expected exactly one encrypted SpendWise database')
