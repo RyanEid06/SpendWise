@@ -3,12 +3,13 @@ set -euo pipefail
 
 TARGET="${WP32_TARGET:?WP32_TARGET is required}"
 APP_ID="com.spendwise.app"
+APP_ACTIVITY="$APP_ID/.MainActivity"
 NEW_APK="${NEW_APK:-artifacts/android-e2e/apks/current-debug.apk}"
 V14_APK="${V14_APK:-artifacts/android-e2e/apks/v14-debug.apk}"
 RESULT_ROOT="${RESULT_ROOT:-artifacts/android-isolated/${TARGET}}"
 FIXTURE_ROOT="${FIXTURE_ROOT:-artifacts/android-e2e/fixtures}"
 
-if [ "$TARGET" = "wp33-native-startup" ]; then
+if [[ "$TARGET" = "wp33-native-startup" || "$TARGET" = "backup-export-full" || "$TARGET" = "wp33-5-04-continuity" || "$TARGET" = "wp33-5-05-recovery" ]]; then
   # Validate before installing traps, changing device settings or resetting data.
   export ANDROID_SERIAL="${ANDROID_SERIAL:-emulator-5554}"
   [[ "$ANDROID_SERIAL" =~ ^emulator-[0-9]+$ ]] || exit 2
@@ -19,6 +20,8 @@ fi
 
 mkdir -p "$RESULT_ROOT"
 source scripts/wp32-android-helpers.sh
+source scripts/wp33-5-04-native-continuity.sh
+source scripts/wp33-5-05-native-recovery.sh
 
 run_flow() {
   local name="$1"
@@ -49,6 +52,7 @@ capture_failure() {
 }
 
 cleanup() {
+  restore_wp04_ime_setting || true
   adb shell cmd connectivity airplane-mode disable >/dev/null 2>&1 || true
   adb shell locksettings clear --old 2468 >/dev/null 2>&1 || true
   adb shell settings delete global hide_error_dialogs >/dev/null 2>&1 || true
@@ -123,6 +127,27 @@ prepare_device
 echo "== WP32 isolated target: $TARGET =="
 
 case "$TARGET" in
+  wp33-5-05-recovery)
+    run_wp05_recovery
+    ;;
+  wp33-5-04-continuity)
+    install_current
+    run_wp04_continuity
+    ;;
+  backup-export-full)
+    install_current
+    bootstrap_onboard_current
+    bootstrap_v3_full_restore
+    run_flow target-export-v3-full .maestro/current/backup-export-full.yaml
+    exported_full="$RESULT_ROOT/wp32-full.swb3"
+    extract_backup_prefix spendwise_encrypted_backup_full_ "$exported_full"
+    verify_swb3 "$exported_full" true
+    dismiss_share_sheet
+    run_flow clear-before-exported-restore .maestro/current/clear-financial-data.yaml
+    # Restore the app's actual export, replacing the original portable fixture.
+    push_download "$exported_full" wp32-full.swb3
+    run_flow target-restore-exported-full .maestro/diagnostic/restore-v3-full-bootstrap.yaml
+    ;;
   import-v3-full)
     install_current
     bootstrap_onboard_current

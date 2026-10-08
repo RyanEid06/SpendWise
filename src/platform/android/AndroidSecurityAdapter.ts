@@ -13,6 +13,8 @@ export interface NativeAuthenticationResult {
   status: NativeAuthenticationStatus;
   code?: string;
   message?: string;
+  postAuthKeyVerifyDurationMs?: number;
+  authSucceededAtElapsedRealtimeMs?: number;
 }
 
 export interface NativeKeyResult {
@@ -52,6 +54,9 @@ export interface NativeInstallationSignature {
 
 interface SpendWiseSecurityPlugin {
   getCapabilities(): Promise<NativeSecurityCapabilities>;
+  elapsedSinceAuthentication(options: {
+    authSucceededAtElapsedRealtimeMs: number;
+  }): Promise<{ durationMs: number }>;
   authenticate(options: {
     title: string;
     subtitle?: string;
@@ -145,6 +150,11 @@ export class AndroidSecurityAdapter {
 
   authenticate(title: string, reason: string): Promise<NativeAuthenticationResult> {
     return NativeSecurity.authenticate({ title, reason });
+  }
+
+  async elapsedSinceAuthentication(authSucceededAtElapsedRealtimeMs: number): Promise<number> {
+    const result = await NativeSecurity.elapsedSinceAuthentication({ authSucceededAtElapsedRealtimeMs });
+    return result.durationMs;
   }
 
   ensureKey(

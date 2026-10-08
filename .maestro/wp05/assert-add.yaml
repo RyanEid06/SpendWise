@@ -1,0 +1,8 @@
+appId: com.spendwise.app
+---
+- extendedWaitUntil:
+    visible: "Add Expense"
+    timeout: 30000
+- assertVisible: '37\.25, Amount \*'
+- assertVisible: "WP05 Native Recovery"
+- assertVisible: "Unfinished expense protected"

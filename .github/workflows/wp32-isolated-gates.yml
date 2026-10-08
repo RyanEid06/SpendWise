@@ -16,9 +16,11 @@ jobs:
     timeout-minutes: 35
     strategy:
       fail-fast: false
-      max-parallel: 1
+      max-parallel: 2
       matrix:
         target:
+          - wp33-5-04-continuity
+          - backup-export-full
           - wp33-native-startup
           - clear-before-v3-data
           - import-v3-data

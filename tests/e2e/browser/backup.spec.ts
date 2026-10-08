@@ -11,12 +11,12 @@ test('Backup v3 data-only survives clear and replace restore', async ({ page }) 
   await page.getByText('Backup & Restore', { exact: true }).click();
 
   const downloadPromise = page.waitForEvent('download');
-  await page.getByText('Backup v3 · Data only', { exact: true }).click();
+  await page.getByText('Create encrypted backup', { exact: true }).click();
   const modal = page.getByRole('dialog');
   const passwords = modal.locator('input[type="password"]');
   await passwords.nth(0).fill(BACKUP_PASSPHRASE);
   await passwords.nth(1).fill(BACKUP_PASSPHRASE);
-  await modal.getByRole('button', { name: 'Create secure backup' }).click();
+  await modal.getByRole('button', { name: 'Create encrypted backup' }).click();
   const download = await downloadPromise;
   const backupPath = await download.path();
   expect(backupPath).toBeTruthy();
@@ -32,14 +32,14 @@ test('Backup v3 data-only survives clear and replace restore', async ({ page }) 
 
   await openSettings(page);
   await page.getByText('Backup & Restore', { exact: true }).click();
-  const importButton = page.getByRole('button', { name: /^Import Data/ });
-  await importButton.focus();
-  await page.locator('input[type="file"]').setInputFiles(backupPath!);
+  const restoreButton = page.getByRole('button', { name: /^Restore backup/ });
+  await restoreButton.focus();
+  await page.locator('input[accept=".swb3,.zip,application/octet-stream,application/zip"]').setInputFiles(backupPath!);
   const unlock = page.getByRole('dialog');
   await unlock.locator('input[type="password"]').fill(BACKUP_PASSPHRASE);
   await unlock.getByRole('button', { name: 'Unlock backup' }).click();
 
-  const preview = page.getByRole('dialog', { name: 'Backup restore v3', exact: true });
+  const preview = page.getByRole('dialog', { name: 'Backup restore', exact: true });
   const previewCancel = preview.getByRole('button', { name: 'Cancel', exact: true }).first();
   await expect(previewCancel).toBeFocused();
   await page.keyboard.press('Shift+Tab');
@@ -47,6 +47,27 @@ test('Backup v3 data-only survives clear and replace restore', async ({ page }) 
   await page.keyboard.press('Tab');
   await expect(previewCancel).toBeFocused();
   await preview.getByRole('button', { name: 'Replace', exact: true }).first().click();
+  // A native WebView can retain a stale accessibility snapshot after restore.
+  // Observe the real focus transition through the main landmark before the
+  // restored summary receives focus on a later rendered frame.
+  await page.evaluate(() => {
+    const events: Array<{ target: string; frame: number }> = [];
+    let frame = 0;
+    const countFrame = () => {
+      frame += 1;
+      requestAnimationFrame(countFrame);
+    };
+    requestAnimationFrame(countFrame);
+    document.addEventListener('focusin', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      if (target.id === 'main-content') events.push({ target: 'main', frame });
+      if (target.getAttribute('role') === 'status' && target.textContent?.includes('Backup restored:')) {
+        events.push({ target: 'restore-summary', frame });
+      }
+    });
+    (window as typeof window & { restoreFocusEvents: typeof events }).restoreFocusEvents = events;
+  });
   await preview.getByRole('button', { name: 'Replace', exact: true }).last().click();
 
   // Maestro's native selector matches the entire visible label. Exercise that
@@ -55,15 +76,22 @@ test('Backup v3 data-only survives clear and replace restore', async ({ page }) 
   const summaryPattern = nativeFlow.match(/visible: "(Backup restored[^"]*)"/)?.[1];
   expect(summaryPattern).toBeTruthy();
   await expect(page.getByText(new RegExp(`^(?:${summaryPattern})$`))).toBeVisible();
-  await expect(importButton).toBeFocused();
+  await expect(page.getByRole('status').filter({ hasText: 'Backup restored: 2 expenses, 0 photos' })).toBeFocused();
+  const focusEvents = await page.evaluate(() =>
+    (window as typeof window & { restoreFocusEvents: Array<{ target: string; frame: number }> }).restoreFocusEvents
+  );
+  const mainFocus = focusEvents.find((event) => event.target === 'main');
+  const summaryFocus = focusEvents.find((event) => event.target === 'restore-summary');
+  expect(mainFocus, 'restore refreshes native accessibility through the main landmark').toBeDefined();
+  expect(summaryFocus!.frame).toBeGreaterThan(mainFocus!.frame);
 
   await page.getByRole('button', { name: 'Back', exact: true }).click();
   await page.getByRole('button', { name: 'Back to previous screen', exact: true }).click();
   await page.getByRole('button', { name: 'History' }).click();
-  await expect(page.getByText('WP32 Disaster Recovery')).toBeVisible();
-  await expect(page.getByText('WP32 Second Recovery')).toBeVisible();
+  await expect(page.getByRole('button', { name: /^WP32 Disaster Recovery,/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^WP32 Second Recovery,/ })).toBeVisible();
   await page.reload();
-  await expect(page.getByText('WP32 Disaster Recovery')).toBeVisible();
+  await expect(page.getByRole('button', { name: /^WP32 Disaster Recovery,/ })).toBeVisible();
 });
 
 test('wrong Backup v3 passphrase is surfaced without mutating ledger', async ({ page }) => {
@@ -73,27 +101,27 @@ test('wrong Backup v3 passphrase is surfaced without mutating ledger', async ({ 
   await page.getByText('Backup & Restore', { exact: true }).click();
 
   const downloadPromise = page.waitForEvent('download');
-  await page.getByText('Backup v3 · Data only', { exact: true }).click();
+  await page.getByText('Create encrypted backup', { exact: true }).click();
   let modal = page.getByRole('dialog');
   let passwords = modal.locator('input[type="password"]');
   await passwords.nth(0).fill(BACKUP_PASSPHRASE);
   await passwords.nth(1).fill(BACKUP_PASSPHRASE);
-  await modal.getByRole('button', { name: 'Create secure backup' }).click();
+  await modal.getByRole('button', { name: 'Create encrypted backup' }).click();
   const backupPath = await (await downloadPromise).path();
 
-  const importButton = page.getByRole('button', { name: /^Import Data/ });
-  await importButton.focus();
-  await page.locator('input[type="file"]').setInputFiles(backupPath!);
+  const restoreButton = page.getByRole('button', { name: /^Restore backup/ });
+  await restoreButton.focus();
+  await page.locator('input[accept=".swb3,.zip,application/octet-stream,application/zip"]').setInputFiles(backupPath!);
   modal = page.getByRole('dialog');
   await expect(modal.locator('input[type="password"]')).toBeFocused();
   await modal.locator('input[type="password"]').fill('definitely-wrong');
   await modal.getByRole('button', { name: 'Unlock backup' }).click();
-  await expect(modal).toContainText(/Wrong passphrase|tampered backup|invalid Backup v3/i);
+  await expect(modal).toContainText(/Wrong backup password|tampered backup|invalid encrypted backup/i);
   await modal.getByRole('button', { name: 'Cancel' }).first().click();
-  await expect(importButton).toBeFocused();
+  await expect(restoreButton).toBeFocused();
 
   await page.getByRole('button', { name: 'Back', exact: true }).click();
   await page.getByRole('button', { name: 'Back to previous screen', exact: true }).click();
   await page.getByRole('button', { name: 'History' }).click();
-  await expect(page.getByText('WP32 Protected Ledger')).toBeVisible();
+  await expect(page.getByRole('button', { name: /^WP32 Protected Ledger,/ })).toBeVisible();
 });

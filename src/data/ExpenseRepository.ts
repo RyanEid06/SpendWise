@@ -4,8 +4,8 @@ import { LocalDataStore } from '../utils/localDataStore';
 export interface ExpenseRepository {
   list(): Expense[];
   nextId(): number;
-  createWithAttachments(expense: Expense, attachments: ExpenseAttachment[]): Promise<void>;
-  updateWithAttachments(expense: Expense, attachments: ExpenseAttachment[]): Promise<void>;
+  createWithAttachments(expense: Expense, attachments: ExpenseAttachment[], draftId?: string): Promise<void>;
+  updateWithAttachments(expense: Expense, attachments: ExpenseAttachment[], draftId?: string): Promise<void>;
   deleteMany(ids: number[]): Promise<ExpenseAttachment[]>;
   getCurrencyCode(): string;
   setCurrencyCode(currencyCode: string): Promise<void>;
@@ -26,12 +26,12 @@ export class LocalExpenseRepository implements ExpenseRepository {
     return LocalDataStore.nextExpenseId();
   }
 
-  createWithAttachments(expense: Expense, attachments: ExpenseAttachment[]): Promise<void> {
-    return LocalDataStore.createExpenseWithAttachments(expense, attachments);
+  createWithAttachments(expense: Expense, attachments: ExpenseAttachment[], draftId?: string): Promise<void> {
+    return LocalDataStore.createExpenseWithAttachments(expense, attachments, draftId);
   }
 
-  updateWithAttachments(expense: Expense, attachments: ExpenseAttachment[]): Promise<void> {
-    return LocalDataStore.updateExpenseWithAttachments(expense, attachments);
+  updateWithAttachments(expense: Expense, attachments: ExpenseAttachment[], draftId?: string): Promise<void> {
+    return LocalDataStore.updateExpenseWithAttachments(expense, attachments, draftId);
   }
 
   deleteMany(ids: number[]): Promise<ExpenseAttachment[]> {

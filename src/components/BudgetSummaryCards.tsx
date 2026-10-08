@@ -3,6 +3,7 @@ import { Wallet, AlertTriangle, ArrowUp, ArrowDown, Edit2, Plus } from 'lucide-r
 import { formatCurrency } from '../utils/currency';
 import { Language } from '../types';
 import { t } from '../utils/translations';
+import { SingleLineAmount } from './SingleLineAmount';
 
 interface BudgetSummaryCardsProps {
   startingMoney: number;
@@ -113,9 +114,8 @@ export const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
           )}
         </div>
 
-        <div dir="ltr" className="mt-2 min-w-0 text-[clamp(1.75rem,8vw,2.25rem)] leading-tight font-extrabold tracking-tight tabular-nums text-slate-900 dark:text-white [overflow-wrap:anywhere]">
-          {isBudgetSet ? formatCurrency(remainingMoney, currencyCode) : '—'}
-        </div>
+        <SingleLineAmount value={isBudgetSet ? formatCurrency(remainingMoney, currencyCode) : '—'}
+          className="mt-2 text-[clamp(1.75rem,8vw,2.25rem)] leading-tight font-extrabold tracking-tight tabular-nums text-slate-900 dark:text-white" />
 
         {isBudgetSet && (
           <div className="mt-4 space-y-2">
@@ -135,11 +135,15 @@ export const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
               />
             </div>
             <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 font-medium">
-              <span className="tabular-nums font-semibold [overflow-wrap:anywhere]">
-                {t(language, 'spentOfBudget', {
-                  spent: formatCurrency(totalSpent, currencyCode),
-                  budget: formatCurrency(startingMoney, currencyCode),
-                })}
+              <span className="min-w-0 tabular-nums font-semibold">
+                {t(language, 'spentOfBudget', { spent: '{spent}', budget: '{budget}' })
+                  .split(/(\{spent\}|\{budget\})/).map((part, index) =>
+                    part === '{spent}' || part === '{budget}'
+                      ? <span key={index} dir="ltr" className="inline-block max-w-full align-bottom">
+                          <SingleLineAmount value={formatCurrency(part === '{spent}' ? totalSpent : startingMoney, currencyCode)} className="text-xs" />
+                        </span>
+                      : part
+                  )}
               </span>
             </div>
           </div>
@@ -147,7 +151,7 @@ export const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
       </div>
 
       {/* 3. Two Column Grid: Monthly Budget & Total Spent */}
-      <div className="grid grid-cols-2 gap-2 min-[390px]:gap-3">
+      <div className={`grid gap-2 min-[390px]:gap-3 ${formatCurrency(startingMoney, currencyCode).length > 16 || formatCurrency(totalSpent, currencyCode).length > 16 ? 'grid-cols-1' : 'grid-cols-2'}`}>
         {/* Monthly Budget Card */}
         <div
           onClick={onSetBudgetClick}
@@ -175,9 +179,8 @@ export const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
               <Edit2 className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors" />
             </div>
           </div>
-          <div dir="ltr" className="mt-2 min-w-0 font-extrabold text-[clamp(0.95rem,4.4vw,1.125rem)] tabular-nums text-slate-900 dark:text-white [overflow-wrap:anywhere] leading-tight">
-            {isBudgetSet ? formatCurrency(startingMoney, currencyCode) : t(language, 'notSet')}
-          </div>
+          <SingleLineAmount value={isBudgetSet ? formatCurrency(startingMoney, currencyCode) : t(language, 'notSet')}
+            className="mt-2 font-extrabold text-[clamp(0.95rem,4.4vw,1.125rem)] tabular-nums text-slate-900 dark:text-white leading-tight" />
         </div>
 
         {/* Total Spent Card */}
@@ -190,9 +193,8 @@ export const BudgetSummaryCards: React.FC<BudgetSummaryCardsProps> = ({
               {t(language, 'totalSpent')}
             </span>
           </div>
-          <div dir="ltr" className="mt-2 min-w-0 font-extrabold text-[clamp(0.95rem,4.4vw,1.125rem)] tabular-nums text-slate-900 dark:text-white [overflow-wrap:anywhere] leading-tight">
-            {formatCurrency(totalSpent, currencyCode)}
-          </div>
+          <SingleLineAmount value={formatCurrency(totalSpent, currencyCode)}
+            className="mt-2 font-extrabold text-[clamp(0.95rem,4.4vw,1.125rem)] tabular-nums text-slate-900 dark:text-white leading-tight" />
         </div>
       </div>
     </div>

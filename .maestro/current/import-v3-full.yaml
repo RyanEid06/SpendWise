@@ -3,14 +3,15 @@ appId: com.spendwise.app
 - launchApp
 - tapOn: "Open Settings"
 - tapOn: "Backup & Restore.*"
-- tapOn: "Import Data.*"
+- tapOn: "Restore backup.*"
 - tapOn: "wp32-full.swb3"
-- assertVisible: "Unlock Backup v3"
-- tapOn: "Backup passphrase"
+- assertVisible: "Unlock encrypted backup"
+- tapOn:
+    id: "backup-password"
 - inputText: "wp32-public-fixture-passphrase"
 - pressKey: enter
 - extendedWaitUntil:
-    visible: "Backup restore v3"
+    visible: "Backup restore"
     timeout: 30000
 - tapOn:
     text: "Replace"

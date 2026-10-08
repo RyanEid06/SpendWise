@@ -11,6 +11,7 @@ interface ConfirmationModalProps {
   isDestructive?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
+  dismissOnBack?: boolean;
 }
 
 export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
@@ -22,6 +23,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   isDestructive = false,
   onConfirm,
   onCancel,
+  dismissOnBack = true,
 }) => {
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const cancelRef = useRef<HTMLButtonElement | null>(null);
@@ -29,11 +31,11 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const close = () => onCancel();
+    const close = () => { if (dismissOnBack) onCancel(); };
     const key = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        onCancel();
+        close();
         return;
       }
       if (event.key !== 'Tab' || !dialogRef.current) return;
@@ -65,7 +67,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       document.removeEventListener('keydown', key);
       previousFocus?.focus();
     };
-  }, [isOpen, onCancel]);
+  }, [isOpen, onCancel, dismissOnBack]);
   if (!isOpen) return null;
   return (<ViewportPortal>
     <div

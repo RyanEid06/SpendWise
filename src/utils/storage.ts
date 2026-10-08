@@ -9,6 +9,7 @@ import {
   MediaStorageSummary,
 } from '../types';
 import { formatDate, getMonthKey, toInputDateFormat } from './date';
+import { normalizeCategoryName } from './categories';
 import {
   convertCurrencyAmount,
   DEFAULT_CURRENCY_CODE,
@@ -19,6 +20,7 @@ import { APP_VERSION_NAME } from './appVersion';
 import { AttachmentEditPayload, AttachmentStorage } from './attachmentStorage';
 import { LEGACY_FINANCIAL_KEYS, MAX_SAFE_FINANCIAL_VALUE } from './financialState';
 import { LocalDataStore } from './localDataStore';
+import { cleanupNativeAcquisitionFiles } from './imageAcquisition';
 import { diagnostics, measureDiagnostic } from '../services/diagnostics/diagnostics';
 import { SetupState } from './setupState';
 import {
@@ -94,6 +96,7 @@ export class StorageManager {
     // silently disable App Lock because a credential is missing or malformed.
 
     await LocalDataStore.init(localStorage);
+    await cleanupNativeAcquisitionFiles();
     await measureDiagnostic('media.init', () => AttachmentStorage.ensureNativeEncryption());
     diagnostics.setState({ mediaEncrypted: LocalDataStore.isNativeSqlite(), cryptoAvailable: Boolean(globalThis.crypto?.subtle) });
     localStorage.setItem(STORAGE_KEYS.INITIALIZED, 'true');
@@ -532,7 +535,7 @@ export class StorageManager {
         (incoming.createdAt === expense.createdAt && Math.abs(incoming.amount - expense.amount) < 0.001) ||
         (incoming.date === expense.date && Math.abs(incoming.amount - expense.amount) < 0.001 &&
           expense.description.trim().toLowerCase() === incoming.description.trim().toLowerCase() &&
-          expense.category.trim().toLowerCase() === incoming.category.trim().toLowerCase())
+          normalizeCategoryName(expense.category).toLowerCase() === normalizeCategoryName(incoming.category).toLowerCase())
       );
 
     const importedExpenses: Expense[] = [];
@@ -543,7 +546,7 @@ export class StorageManager {
         id: replaceExisting ? item.id : ++maxId,
         amount: item.amount,
         description: item.description.trim(),
-        category: item.category.trim(),
+        category: normalizeCategoryName(item.category),
         date: item.date,
         note: item.note?.trim() || null,
         createdAt: item.createdAt,

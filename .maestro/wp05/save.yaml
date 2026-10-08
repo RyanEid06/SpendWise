@@ -1,0 +1,7 @@
+appId: com.spendwise.app
+---
+- tapOn: "Save Expense"
+- extendedWaitUntil:
+    visible: 'WP05 Native Recovery, \$37\.25'
+    timeout: 30000
+- assertNotVisible: "Unfinished expense protected"

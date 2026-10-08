@@ -1,0 +1,37 @@
+appId: com.spendwise.app
+---
+- addMedia:
+    - "../../artifacts/android-e2e/fixtures/wp05-private-photo.jpg"
+- scrollUntilVisible:
+    element: "Attach Photos.*"
+    direction: DOWN
+    centerElement: true
+- assertVisible:
+    text: "Attach Photos.*"
+    checked: false
+- tapOn: "Attach Photos.*"
+- scrollUntilVisible:
+    element: "Choose Photo"
+    direction: DOWN
+    centerElement: true
+- tapOn: "Choose Photo"
+- tapOn:
+    id: "com.google.android.providers.media.module:id/icon_thumbnail"
+    index: 0
+- tapOn:
+    id: "com.google.android.providers.media.module:id/button_add"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "SpendWise is Locked|Unlock SpendWise|Use PIN"
+    file: ../helpers/android-device-pin.yaml
+- extendedWaitUntil:
+    visible: "Attach Photos · 1"
+    timeout: 30000
+- scrollUntilVisible:
+    element: "Unfinished expense protected"
+    direction: UP
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Unfinished expense protected"
+    timeout: 30000

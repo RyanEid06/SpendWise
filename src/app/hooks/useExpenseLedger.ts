@@ -57,7 +57,7 @@ export function useExpenseLedger() {
     hiddenExpenseIds: number[] = []
   ) => {
     const existing = expenses.find((expense) => expense.id === id);
-    if (!existing) return;
+    if (!existing) throw new Error('EXPENSE_NOT_FOUND');
 
     await expenseService.update(
       {

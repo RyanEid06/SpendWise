@@ -73,7 +73,7 @@ const makeMonth = (monthKey: string, amount: number, id: number): MonthlySpendin
 test('WP24 preserves canonical launcher identity and exactly four primary destinations', () => {
   assert.match(manifest, /android:icon="@mipmap\/ic_launcher"/);
   assert.match(manifest, /android:roundIcon="@mipmap\/ic_launcher_round"/);
-  assert.match(topBar, /src="\/spendwise-original-icon\.png"/);
+  assert.match(topBar, /<SpendWiseLogo className="h-9 w-9"/);
 
   for (const screen of ['home', 'history', 'insights', 'statistics']) {
     assert.match(navigation, new RegExp("screen: '" + screen + "'"));
@@ -303,10 +303,10 @@ test('WP24 recent interactive surfaces honor the 48dp target floor', () => {
   }
 });
 
-test('WP24 approved release gate is promoted to v2.0.0 with aligned metadata', () => {
-  assert.equal(packageJson.version, '2.0.0');
-  assert.equal(versionJson.versionName, '2.0.0');
-  assert.equal(versionJson.versionCode, 6);
+test('WP06 candidate metadata stays aligned while historical WP24 release evidence is retained', () => {
+  assert.equal(packageJson.version, '2.0.2');
+  assert.equal(versionJson.versionName, '2.0.2');
+  assert.equal(versionJson.versionCode, 8);
   assert.equal(packageJson.scripts['test:wp24'], 'tsx --test tests/wp24-integration-hardening.test.ts');
 
   const release = read('ROADMAP.md');

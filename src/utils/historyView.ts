@@ -1,4 +1,6 @@
 import { Expense, Language } from '../types';
+import { normalizeCategoryName } from './categories';
+import { getLocalizedCategoryName } from './translations';
 
 export type HistoryViewMode = 'ALL' | 'DAY' | 'CATEGORY';
 
@@ -71,7 +73,7 @@ export function sortHistoryExpenses(expenses: Expense[]): Expense[] {
   return [...expenses].sort((a, b) => b.date - a.date || b.createdAt - a.createdAt);
 }
 
-export function searchHistoryExpenses(expenses: Expense[], query: string): Expense[] {
+export function searchHistoryExpenses(expenses: Expense[], query: string, language: Language = 'en'): Expense[] {
   const sorted = sortHistoryExpenses(expenses);
   const q = query.trim().toLocaleLowerCase();
   if (!q) return sorted;
@@ -79,6 +81,7 @@ export function searchHistoryExpenses(expenses: Expense[], query: string): Expen
   return sorted.filter((expense) =>
     expense.description.toLocaleLowerCase().includes(q) ||
     expense.category.toLocaleLowerCase().includes(q) ||
+    getLocalizedCategoryName(expense.category, language).toLocaleLowerCase().includes(q) ||
     Boolean(expense.note?.toLocaleLowerCase().includes(q))
   );
 }
@@ -112,9 +115,10 @@ export function groupHistoryByCategory(expenses: Expense[]): HistoryCategoryGrou
   const groups = new Map<string, Expense[]>();
 
   for (const expense of sortHistoryExpenses(expenses)) {
-    const current = groups.get(expense.category);
+    const category = normalizeCategoryName(expense.category);
+    const current = groups.get(category);
     if (current) current.push(expense);
-    else groups.set(expense.category, [expense]);
+    else groups.set(category, [expense]);
   }
 
   return [...groups.entries()]

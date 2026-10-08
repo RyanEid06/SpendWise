@@ -1,0 +1,14 @@
+appId: com.spendwise.app
+---
+- extendedWaitUntil:
+    visible: "Add Expense"
+    timeout: 30000
+- scrollUntilVisible:
+    element: "Attach Photos · 1"
+    direction: DOWN
+- assertVisible: "Attach Photos · 1"
+- scrollUntilVisible:
+    element: "Unfinished expense protected"
+    direction: UP
+    timeout: 30000
+- assertVisible: "Unfinished expense protected"

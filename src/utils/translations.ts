@@ -206,6 +206,8 @@ export const TRANSLATIONS = {
     tapToExpand: 'Tap to expand months',
     monthlyHistory: 'Monthly History:',
     largestByMonthTitle: 'Largest Expense by Month',
+    showAll: 'Show all',
+    showTopThree: 'Show top 3',
     noMonthlyRecords: 'No expenses recorded for this period.',
     partialMonthLabel: 'partial',
 
@@ -292,7 +294,7 @@ export const TRANSLATIONS = {
     pinError: 'Incorrect passcode.',
 
     // Categories
-    catFood: 'Food',
+    catFood: 'Food & Beverage',
     catGroceries: 'Groceries',
     catTransportation: 'Transportation',
     catShopping: 'Shopping',
@@ -510,6 +512,8 @@ export const TRANSLATIONS = {
     tapToExpand: 'Appuyez pour développer les mois',
     monthlyHistory: 'Historique mensuel :',
     largestByMonthTitle: 'Plus grande dépense par mois',
+    showAll: 'Tout afficher',
+    showTopThree: 'Afficher le top 3',
     noMonthlyRecords: 'Aucune dépense enregistrée pour cette période.',
     partialMonthLabel: 'partiel',
 
@@ -596,7 +600,7 @@ export const TRANSLATIONS = {
     pinError: 'Code PIN incorrect.',
 
     // Categories
-    catFood: 'Alimentation',
+    catFood: 'Restauration et boissons',
     catGroceries: 'Courses & Épicerie',
     catTransportation: 'Transports & Carburant',
     catShopping: 'Shopping & Achats',
@@ -814,6 +818,8 @@ export const TRANSLATIONS = {
     tapToExpand: 'انقر للتوسيع وعرض الشهور',
     monthlyHistory: 'السجل الشهري:',
     largestByMonthTitle: 'أكبر مصروف شهرياً',
+    showAll: 'عرض الكل',
+    showTopThree: 'عرض أعلى 3',
     noMonthlyRecords: 'لا توجد نفقات مسجلة لهذه الفترة الزمنية.',
     partialMonthLabel: '\u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644',
 
@@ -900,7 +906,7 @@ export const TRANSLATIONS = {
     pinError: 'رمز المرور غير صحيح.',
 
     // Categories
-    catFood: 'طعام ومطاعم',
+    catFood: 'الطعام والمشروبات',
     catGroceries: 'بقالة وسوبرماركت',
     catTransportation: 'مواصلات ووقود',
     catShopping: 'تسوق ومشتريات',
@@ -937,6 +943,7 @@ export function getLocalizedMonthName(my: MonthYear, lang: Language): string {
 export function getLocalizedCategoryName(categoryName: string, lang: Language): string {
   const mapping: Record<string, TranslationKey> = {
     food: 'catFood',
+    'food & beverage': 'catFood',
     groceries: 'catGroceries',
     transportation: 'catTransportation',
     shopping: 'catShopping',

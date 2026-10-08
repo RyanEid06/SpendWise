@@ -1,0 +1,5 @@
+appId: com.spendwise.app
+---
+- tapOn: "Cancel"
+- assertVisible: "Money Remaining"
+- assertNotVisible: "Unfinished expense protected"

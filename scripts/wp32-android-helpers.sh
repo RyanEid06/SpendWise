@@ -1,6 +1,46 @@
 #!/usr/bin/env bash
 # Shared host-side operations. APP_ID is supplied by each Android test runner.
 
+app_is_foreground() {
+  local resumed
+  resumed="$(
+    adb shell dumpsys activity activities 2>/dev/null \
+      | grep -m 1 -E "mResumedActivity|topResumedActivity" || true
+  )"
+  [[ "$resumed" == *"$APP_ID"* ]]
+}
+
+dismiss_share_sheet() {
+  if ! app_is_foreground; then
+    adb shell input keyevent KEYCODE_BACK >/dev/null 2>&1 || true
+  fi
+  adb shell am start -n "$APP_ACTIVITY" >/dev/null 2>&1 || true
+}
+
+verify_swb3() {
+  local file="$1"
+  local expected_media="$2"
+  python3 - "$file" "$expected_media" <<'PY'
+import json
+import struct
+import sys
+
+path = sys.argv[1]
+expected = sys.argv[2].lower() == "true"
+raw = open(path, "rb").read()
+if len(raw) < 25 or raw[:4] != b"SWB3" or raw[4] != 3:
+    raise SystemExit(f"{path}: invalid SWB3 magic/version")
+header_len = struct.unpack(">I", raw[5:9])[0]
+if header_len <= 0 or 9 + header_len + 16 > len(raw):
+    raise SystemExit(f"{path}: invalid SWB3 header length")
+header = json.loads(raw[9:9 + header_len].decode("utf-8"))
+actual = header.get("payload", {}).get("mediaIncluded")
+if actual is not expected:
+    raise SystemExit(f"{path}: mediaIncluded={actual!r}, expected {expected!r}")
+print(f"Verified {path}: mediaIncluded={actual}, envelopeBytes={len(raw)}")
+PY
+}
+
 extract_backup_prefix() {
   local prefix="$1" target="$2" cache_file="" candidate attempt
   for attempt in {1..30}; do

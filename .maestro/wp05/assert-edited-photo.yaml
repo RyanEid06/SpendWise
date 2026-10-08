@@ -1,0 +1,13 @@
+appId: com.spendwise.app
+---
+- tapOn: "History"
+- tapOn: "WP05 Native Edited.*"
+- assertVisible: "Attached photos"
+- assertVisible: "View photos"
+- extendedWaitUntil:
+    visible:
+      text: "View photos"
+      enabled: true
+    timeout: 30000
+- tapOn: "View photos"
+- assertVisible: "Close photo"

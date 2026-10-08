@@ -566,9 +566,9 @@ export class NativeEncryptedDatabaseService {
         false,
         'no-encryption'
       );
-      await assertSpendWiseDatabaseIntegrity(source);
+      await assertSpendWiseDatabaseIntegrity(source, false);
       const sourceVersion = await readDatabaseUserVersion(source);
-      if (sourceVersion !== SPENDWISE_DATABASE_SCHEMA_VERSION) {
+      if (sourceVersion !== 1) {
         throw new Error('PLAINTEXT_DATABASE_SCHEMA_UNSUPPORTED');
       }
       const sourceSnapshot = await readSnapshot(source);
@@ -587,13 +587,14 @@ export class NativeEncryptedDatabaseService {
             true,
             'secret'
           );
-          await assertSpendWiseDatabaseIntegrity(candidate);
+          await assertSpendWiseDatabaseIntegrity(candidate, false);
           const candidateSnapshot = await readSnapshot(candidate);
           await assertSnapshotMatches(sourceSnapshot, candidateSnapshot);
           const candidateCounts = await countRows(candidate);
           if (!countsEqual(candidateCounts, sourceCounts)) {
             throw new Error('DATABASE_MIGRATION_COUNT_MISMATCH');
           }
+          await applySpendWiseSchema(candidate);
 
           await closeConnection(sqlite, ENCRYPTED_DATABASE_NAME);
           candidate = await openConnection(
@@ -641,6 +642,7 @@ export class NativeEncryptedDatabaseService {
         true,
         'secret'
       );
+      await applySpendWiseSchema(destination);
       await assertSpendWiseDatabaseIntegrity(destination);
       const snapshot = await readSnapshot(destination);
       validateFinancialState(snapshot.state);
@@ -662,7 +664,8 @@ export class NativeEncryptedDatabaseService {
       await assertSpendWiseDatabaseIntegrity(destination);
       const snapshot = await readSnapshot(destination);
       validateFinancialState(snapshot.state);
-      if (journal?.phase !== 'active') {
+      const cleanupAlreadyComplete = journal?.phase === 'complete' && !sourceExists;
+      if (journal?.phase !== 'active' && !cleanupAlreadyComplete) {
         writeMigration(
           storage,
           'active',
@@ -704,6 +707,19 @@ export class NativeEncryptedDatabaseService {
     const sqlite = this.sqlite;
     if (!sqlite) throw new Error('DATABASE_SERVICE_NOT_OPEN');
 
+    const journal = safeReadMigration(storage);
+    const sourceExists =
+      (await sqlite.isDatabase(PLAINTEXT_DATABASE_NAME)).result === true;
+
+    // Normal steady-state startup has already opened, schema-checked, integrity-
+    // checked and validated the encrypted destination in open(). Once cleanup is
+    // durably complete and the plaintext source is gone, repeating a second full
+    // integrity scan + snapshot read here only adds unlock latency.
+    if (journal?.phase === 'complete' && !sourceExists) {
+      diagnostics.setState({ migration: 'complete' });
+      return;
+    }
+
     const destinationExists =
       (await sqlite.isDatabase(ENCRYPTED_DATABASE_NAME)).result === true;
     if (!destinationExists) throw new Error('ENCRYPTED_DATABASE_MISSING');
@@ -721,7 +737,6 @@ export class NativeEncryptedDatabaseService {
     const snapshot = await readSnapshot(destination);
     validateFinancialState(snapshot.state);
 
-    const journal = safeReadMigration(storage);
     if (
       !journal ||
       (journal.phase !== 'active' && journal.phase !== 'complete')
@@ -729,8 +744,6 @@ export class NativeEncryptedDatabaseService {
       throw new Error('DATABASE_MIGRATION_NOT_ACTIVE');
     }
 
-    const sourceExists =
-      (await sqlite.isDatabase(PLAINTEXT_DATABASE_NAME)).result === true;
     if (sourceExists) {
       try {
         await deleteDatabase(sqlite, PLAINTEXT_DATABASE_NAME, false);
@@ -758,9 +771,9 @@ export class NativeEncryptedDatabaseService {
       'no-encryption'
     );
 
-    await assertSpendWiseDatabaseIntegrity(source);
+    await assertSpendWiseDatabaseIntegrity(source, false);
     const sourceVersion = await readDatabaseUserVersion(source);
-    if (sourceVersion !== SPENDWISE_DATABASE_SCHEMA_VERSION) {
+    if (sourceVersion !== 1) {
       throw new Error('PLAINTEXT_DATABASE_SCHEMA_UNSUPPORTED');
     }
 

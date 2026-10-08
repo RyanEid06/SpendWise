@@ -1,0 +1,24 @@
+appId: com.spendwise.app
+---
+- tapOn: "Save Expense"
+- assertVisible: 'WP04 Native Dining, \$14\.25'
+- tapOn: "Statistics"
+- tapOn: "All Time"
+- tapOn: "History"
+- tapOn: "Statistics"
+# After switching, the selected period is still All Time (not the 3-month default).
+- assertVisible: "Across 1 month"
+- tapOn: "Home"
+- tapOn: "WP04 Native Dining.*"
+- assertVisible: "Edit Expense"
+# The broad Amount label also matches a non-clickable uppercase text node.
+# Android exposes a populated EditText as value followed by its accessible label.
+# Match that whole field text, then prove the edit before moving focus.
+- tapOn: '14\.25, Amount \*'
+- eraseText
+- inputText: "16.75"
+- assertVisible: '16\.75, Amount \*'
+- tapOn: "Description / Merchant .*"
+- eraseText
+- inputText: "WP04 Native Edited"
+- assertVisible: "Update Expense"

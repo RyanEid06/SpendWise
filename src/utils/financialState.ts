@@ -1,5 +1,7 @@
 import { Expense, ExpenseAttachment, MonthlyBudget } from '../types';
+import { normalizeCategoryName } from './categories';
 import { DEFAULT_CURRENCY_CODE, SUPPORTED_CURRENCIES } from './currency';
+import { WEB_EXPENSE_DRAFT_KEY } from '../data/ExpenseDraft';
 
 export const LEGACY_FINANCIAL_KEYS = {
   EXPENSES: 'spendwise_expenses',
@@ -25,6 +27,7 @@ export interface FinancialState {
 }
 
 type SerializedState = {
+  draft?: string | null;
   expenses: string | null;
   budgets: string | null;
   attachments: string | null;
@@ -36,6 +39,7 @@ type WebFinancialJournal = {
   phase: 'prepared' | 'committed';
   original: SerializedState;
   target: SerializedState;
+  clearDraft?: boolean;
 };
 
 function parseArray(key: string, raw: string | null): unknown[] {
@@ -81,7 +85,7 @@ export function validateFinancialState(input: FinancialState): FinancialState {
       id: value.id,
       amount: value.amount,
       description: value.description,
-      category: value.category,
+      category: normalizeCategoryName(value.category),
       date: value.date,
       note: value.note ?? null,
       createdAt: value.createdAt,
@@ -199,6 +203,7 @@ function applySerializedState(storage: KeyValueStore, state: SerializedState): v
     [LEGACY_FINANCIAL_KEYS.ATTACHMENTS, state.attachments],
     [LEGACY_FINANCIAL_KEYS.CURRENCY, state.currency],
   ];
+  if ('draft' in state) entries.push([WEB_EXPENSE_DRAFT_KEY, state.draft ?? null]);
   for (const [key, value] of entries) {
     if (value === null) storage.removeItem(key);
     else storage.setItem(key, value);
@@ -221,14 +226,17 @@ export function recoverWebFinancialTransaction(storage: KeyValueStore): void {
     throw new Error('WEB_FINANCIAL_TRANSACTION_CORRUPT');
   }
   applySerializedState(storage, journal.phase === 'committed' ? journal.target : journal.original);
+  if (journal.phase === 'committed' && journal.clearDraft) storage.removeItem(WEB_EXPENSE_DRAFT_KEY);
   storage.removeItem(LEGACY_FINANCIAL_KEYS.WEB_TXN);
 }
 
-export function persistWebFinancialState(storage: KeyValueStore, input: FinancialState): void {
+export function persistWebFinancialState(storage: KeyValueStore, input: FinancialState, clearDraft = false): void {
   const state = validateFinancialState(cloneFinancialState(input));
   const original = readSerializedState(storage);
   const target = toSerializedState(state);
-  const journal: WebFinancialJournal = { version: 1, phase: 'prepared', original, target };
+  // Keep ciphertext in its existing slot until the commit point. Copying a photo
+  // envelope into the journal can exhaust localStorage despite a protected draft.
+  const journal: WebFinancialJournal = { version: 1, phase: 'prepared', original, target, clearDraft };
   storage.setItem(LEGACY_FINANCIAL_KEYS.WEB_TXN, JSON.stringify(journal));
   try {
     applySerializedState(storage, target);
@@ -244,6 +252,7 @@ export function persistWebFinancialState(storage: KeyValueStore, input: Financia
     throw error;
   }
   try {
+    if (clearDraft) storage.removeItem(WEB_EXPENSE_DRAFT_KEY);
     storage.removeItem(LEGACY_FINANCIAL_KEYS.WEB_TXN);
   } catch {
     // A committed journal is safe: startup will roll forward and clean it up.

@@ -1,0 +1,10 @@
+appId: com.spendwise.app
+---
+- scrollUntilVisible:
+    element: "Attach Photos.*"
+    direction: DOWN
+    centerElement: true
+- tapOn: "Attach Photos.*"
+- assertVisible:
+    text: "Attach Photos.*"
+    checked: false

@@ -2,6 +2,7 @@ package com.spendwise.app;
 
 import android.app.KeyguardManager;
 import android.os.Build;
+import android.os.SystemClock;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyPermanentlyInvalidatedException;
 import android.security.keystore.KeyProperties;
@@ -49,7 +50,7 @@ public class SpendWiseSecurityPlugin extends Plugin {
     private static final int AUTH_VALIDITY_SECONDS = 5;
 
     private interface AuthSuccess {
-        void run();
+        void run(long authSucceededAtElapsedRealtimeMs);
     }
 
     private String aliasFor(int version) {
@@ -216,8 +217,9 @@ public class SpendWiseSecurityPlugin extends Plugin {
                     public void onAuthenticationSucceeded(
                         BiometricPrompt.AuthenticationResult result
                     ) {
+                        long authSucceededAtElapsedRealtimeMs = SystemClock.elapsedRealtime();
                         super.onAuthenticationSucceeded(result);
-                        success.run();
+                        success.run(authSucceededAtElapsedRealtimeMs);
                     }
 
                     @Override
@@ -258,8 +260,26 @@ public class SpendWiseSecurityPlugin extends Plugin {
             call,
             call.getString("title", "SpendWise"),
             call.getString("reason", "Authenticate to continue"),
-            () -> call.resolve(authResult("success", null, null))
+            authSucceededAtElapsedRealtimeMs -> {
+                JSObject result = authResult("success", null, null);
+                result.put("authSucceededAtElapsedRealtimeMs", authSucceededAtElapsedRealtimeMs);
+                call.resolve(result);
+            }
         );
+    }
+
+    @PluginMethod
+    public void elapsedSinceAuthentication(PluginCall call) {
+        Object value = call.getData().opt("authSucceededAtElapsedRealtimeMs");
+        long now = SystemClock.elapsedRealtime();
+        double startedAt = value instanceof Number ? ((Number) value).doubleValue() : -1;
+        if (!Double.isFinite(startedAt) || startedAt < 0 || startedAt != Math.floor(startedAt) || startedAt > now) {
+            call.reject("Invalid authentication timestamp.", "INVALID_AUTHENTICATION_TIMESTAMP");
+            return;
+        }
+        JSObject result = new JSObject();
+        result.put("durationMs", now - (long) startedAt);
+        call.resolve(result);
     }
 
     @PluginMethod
@@ -354,10 +374,31 @@ public class SpendWiseSecurityPlugin extends Plugin {
         );
     }
 
+    private void resolveKeyVerification(
+        PluginCall call,
+        JSObject result,
+        long authSucceededAtElapsedRealtime
+    ) {
+        if (authSucceededAtElapsedRealtime > 0) {
+            if ("success".equals(result.getString("status"))) {
+                result.put("authSucceededAtElapsedRealtimeMs", authSucceededAtElapsedRealtime);
+            }
+            result.put(
+                "postAuthKeyVerifyDurationMs",
+                Math.max(
+                    0,
+                    SystemClock.elapsedRealtime() - authSucceededAtElapsedRealtime
+                )
+            );
+        }
+        call.resolve(result);
+    }
+
     private void verifyKeyNow(
         PluginCall call,
         int version,
-        boolean requireAuthentication
+        boolean requireAuthentication,
+        long authSucceededAtElapsedRealtime
     ) {
         String alias = aliasFor(version);
         byte[] clear = "spendwise-key-check-v1".getBytes(StandardCharsets.UTF_8);
@@ -366,7 +407,7 @@ public class SpendWiseSecurityPlugin extends Plugin {
             if (key == null) {
                 JSObject result = authResult("error", "KEY_MISSING", null);
                 result.put("keyStatus", "missing");
-                call.resolve(result);
+                resolveKeyVerification(call, result, authSucceededAtElapsedRealtime);
                 return;
             }
 
@@ -389,10 +430,18 @@ public class SpendWiseSecurityPlugin extends Plugin {
             Arrays.fill(ciphertext, (byte) 0);
 
             if (!verified) {
-                call.resolve(authResult("error", "KEY_VERIFICATION_FAILED", null));
+                resolveKeyVerification(
+                    call,
+                    authResult("error", "KEY_VERIFICATION_FAILED", null),
+                    authSucceededAtElapsedRealtime
+                );
                 return;
             }
-            call.resolve(authResult("success", null, null));
+            resolveKeyVerification(
+                call,
+                authResult("success", null, null),
+                authSucceededAtElapsedRealtime
+            );
         } catch (UserNotAuthenticatedException error) {
             JSObject result = authResult(
                 "error",
@@ -400,19 +449,19 @@ public class SpendWiseSecurityPlugin extends Plugin {
                 "Authentication expired before the protected key operation completed."
             );
             result.put("keyStatus", "present");
-            call.resolve(result);
+            resolveKeyVerification(call, result, authSucceededAtElapsedRealtime);
         } catch (KeyPermanentlyInvalidatedException error) {
             JSObject result = authResult("error", "KEY_INVALIDATED", null);
             result.put("keyStatus", "invalidated");
-            call.resolve(result);
+            resolveKeyVerification(call, result, authSucceededAtElapsedRealtime);
         } catch (UnrecoverableKeyException error) {
             JSObject result = authResult("error", "KEY_UNRECOVERABLE", null);
             result.put("keyStatus", "unrecoverable");
-            call.resolve(result);
+            resolveKeyVerification(call, result, authSucceededAtElapsedRealtime);
         } catch (Exception error) {
             JSObject result = authResult("error", "KEY_VERIFICATION_FAILED", null);
             result.put("keyStatus", inspectKeyStatus(alias));
-            call.resolve(result);
+            resolveKeyVerification(call, result, authSucceededAtElapsedRealtime);
         } finally {
             Arrays.fill(clear, (byte) 0);
         }
@@ -432,7 +481,7 @@ public class SpendWiseSecurityPlugin extends Plugin {
         }
 
         if (!requireAuthentication) {
-            verifyKeyNow(call, version, false);
+            verifyKeyNow(call, version, false, 0);
             return;
         }
 
@@ -440,7 +489,12 @@ public class SpendWiseSecurityPlugin extends Plugin {
             call,
             call.getString("title", "Unlock SpendWise"),
             call.getString("reason", "Authenticate to continue"),
-            () -> verifyKeyNow(call, version, true)
+            authSucceededAtElapsedRealtimeMs -> verifyKeyNow(
+                call,
+                version,
+                true,
+                authSucceededAtElapsedRealtimeMs
+            )
         );
     }
 
@@ -583,7 +637,7 @@ public class SpendWiseSecurityPlugin extends Plugin {
                 call,
                 call.getString("title", "Unlock SpendWise"),
                 call.getString("reason", "Protect local SpendWise data"),
-                action::run
+                authSucceededAtElapsedRealtimeMs -> action.run()
             );
         } else {
             action.run();
@@ -622,7 +676,7 @@ public class SpendWiseSecurityPlugin extends Plugin {
                 call,
                 call.getString("title", "Unlock SpendWise"),
                 call.getString("reason", "Protect local SpendWise data"),
-                action::run
+                authSucceededAtElapsedRealtimeMs -> action.run()
             );
         } else {
             action.run();
@@ -682,7 +736,7 @@ public class SpendWiseSecurityPlugin extends Plugin {
                 call,
                 call.getString("title", "Unlock SpendWise"),
                 call.getString("reason", "Open protected local data"),
-                action::run
+                authSucceededAtElapsedRealtimeMs -> action.run()
             );
         } else {
             action.run();

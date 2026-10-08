@@ -6,8 +6,7 @@ appId: com.spendwise.app
 - pressKey: home
 - launchApp:
     stopApp: false
-- assertVisible: "SpendWise is Locked"
-- tapOn: "Authenticate & Unlock"
+# Resume automatically starts system authentication. Cancel it before retrying.
 - extendedWaitUntil:
     visible:
       id: "com.android.systemui:id/lockPassword"
@@ -20,7 +19,8 @@ appId: com.spendwise.app
     timeout: 15000
 - pressKey: back
 - assertVisible: "Authentication was cancelled."
-- tapOn: "Authenticate & Unlock"
+- assertVisible: "SpendWise is Locked"
+- tapOn: "Unlock SpendWise"
 - runFlow: ../helpers/android-device-pin.yaml
 - extendedWaitUntil:
     visible: "Money Remaining"

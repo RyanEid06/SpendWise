@@ -10,6 +10,8 @@ import {
 } from '../utils/date';
 import { SetupState } from '../utils/setupState';
 import { Navigation } from '../components/Navigation';
+import { RetainedScreen } from '../components/RetainedScreen';
+import { useTabScroll } from './navigation/useTabScroll';
 import { ViewportPortal } from '../components/ViewportPortal';
 import { AppTopBar } from '../components/AppTopBar';
 import { UndoSnackbar } from '../components/UndoSnackbar';
@@ -32,9 +34,19 @@ import { useExpenseDeleteUndo } from './hooks/useExpenseDeleteUndo';
 import { useAiAnalysis } from './hooks/useAiAnalysis';
 import { useAppLockLifecycle } from './hooks/useAppLockLifecycle';
 import { selectMonthlyLedger } from './selectors/monthlyLedger';
+import type { StartupHomeFrameTiming } from './startup/StartupHomeFrameTiming';
+import { useStartupHomeFrameTiming } from './startup/useStartupHomeFrameTiming';
+import { useExpenseDraftRecovery } from './hooks/useExpenseDraftRecovery';
+import { SecureStartupScreen } from '../screens/SecureStartupScreen';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 
-export const AppShell: React.FC = () => {
+interface AppShellProps {
+  startupHomeFrameTiming?: StartupHomeFrameTiming;
+}
+
+export const AppShell: React.FC<AppShellProps> = ({ startupHomeFrameTiming }) => {
   const navigation = useAppNavigation();
+  useTabScroll(navigation.currentScreen);
   const overlays = useAppOverlays();
   const preferences = useThemeLanguage();
   const ledger = useExpenseLedger();
@@ -67,6 +79,18 @@ export const AppShell: React.FC = () => {
     onBackground: deleteUndo.undoPending,
     onLock: overlays.closeForLock,
   });
+
+  const recovery = useExpenseDraftRecovery({
+    enabled: !appLock.isLocked && setupMode === null,
+    expenses: ledger.expenses, currencyCode: ledger.currencyCode,
+    openAdd: overlays.openAddExpense, openEdit: overlays.openEditExpense,
+  });
+  const [recoveryActionError, setRecoveryActionError] = useState(false);
+
+  useStartupHomeFrameTiming(
+    startupHomeFrameTiming,
+    setupMode === null && !appLock.isLocked && navigation.currentScreen === 'home'
+  );
 
   const goHome = useCallback(() => {
     navigation.selectPrimaryScreen('home');
@@ -153,8 +177,26 @@ export const AppShell: React.FC = () => {
         migrationIssue={appLock.migrationIssue}
         language={preferences.language}
         onUnlock={appLock.unlock}
+        autoUnlock={appLock.securityMode === 'native'}
       />
     );
+  }
+
+  if (!recovery.ready) return <SecureStartupScreen language={preferences.language} />;
+
+  if (recovery.issue) {
+    const fr = preferences.language === 'fr', ar = preferences.language === 'ar';
+    return <ConfirmationModal isOpen title={ar ? 'مصروف غير مكتمل' : fr ? 'Dépense inachevée' : 'Unfinished expense'}
+      message={recoveryActionError
+        ? (ar ? 'تعذر حذف العمل. حاول مجدداً.' : fr ? 'Suppression impossible. Réessayez.' : 'Could not discard unfinished work. Retry.')
+        : recovery.issue === 'missing-expense'
+          ? (ar ? 'المصروف الأصلي لم يعد موجوداً. متابعة كمصروف جديد أو تجاهل العمل؟' : fr ? 'La dépense d’origine n’existe plus. Continuer comme nouvelle dépense ou supprimer ?' : 'The original expense no longer exists. Continue as a new expense or discard unfinished work?')
+          : (ar ? 'تعذر استعادة العمل بأمان. حاول مجدداً أو تجاهل العمل.' : fr ? 'Récupération sûre impossible. Réessayez ou supprimez le travail.' : 'Unfinished work could not be recovered safely. Retry or discard it.')}
+      confirmText={recovery.issue === 'missing-expense' ? (ar ? 'متابعة' : fr ? 'Continuer' : 'Continue') : (ar ? 'إعادة المحاولة' : fr ? 'Réessayer' : 'Retry')}
+      cancelText={ar ? 'تجاهل' : fr ? 'Supprimer' : 'Discard'}
+      dismissOnBack={false}
+      onConfirm={recovery.issue === 'missing-expense' ? recovery.continueAsNew : recovery.retry}
+      onCancel={() => { void recovery.discard().catch(() => setRecoveryActionError(true)); }} />;
   }
 
   return (
@@ -185,7 +227,7 @@ export const AppShell: React.FC = () => {
               : 'calc(9rem + env(safe-area-inset-bottom, 0px))',
         }}
       >
-        {navigation.currentScreen === 'home' && (
+        <RetainedScreen active={navigation.currentScreen === 'home'}>
           <DashboardScreen
             currentMonthYear={currentMY}
             startingMoney={monthly.startingMoney}
@@ -202,9 +244,9 @@ export const AppShell: React.FC = () => {
             onSetBudgetClick={overlays.openBudgetModal}
             onExpenseClick={overlays.openEditExpense}
           />
-        )}
+        </RetainedScreen>
 
-        {navigation.currentScreen === 'history' && (
+        <RetainedScreen active={navigation.currentScreen === 'history'}>
           <HistoryScreen
             currentMonthYear={currentMY}
             expenses={monthly.monthlyExpenses}
@@ -216,9 +258,9 @@ export const AppShell: React.FC = () => {
             onDeleteExpense={(expense) => { deleteUndo.stageDelete(expense); }}
             onAddExpenseClick={overlays.openAddExpense}
           />
-        )}
+        </RetainedScreen>
 
-        {navigation.currentScreen === 'insights' && (
+        <RetainedScreen active={navigation.currentScreen === 'insights'}>
           <AiInsightsScreen
             currentMonthYear={currentMY}
             analysisResult={ai.result}
@@ -230,9 +272,9 @@ export const AppShell: React.FC = () => {
             onNextMonth={() => setCurrentMY((previous) => nextMonth(previous))}
             onAnalyzeClick={ai.analyze}
           />
-        )}
+        </RetainedScreen>
 
-        {navigation.currentScreen === 'statistics' && (
+        <RetainedScreen active={navigation.currentScreen === 'statistics'}>
           <StatisticsScreen
             expenses={ledger.expenses}
             budgets={ledger.budgets}
@@ -241,7 +283,7 @@ export const AppShell: React.FC = () => {
             language={preferences.language}
             onNavigateToExpense={overlays.openExpenseDetail}
           />
-        )}
+        </RetainedScreen>
 
         {navigation.currentScreen === 'settings' && (
           <SettingsScreen
@@ -311,6 +353,7 @@ export const AppShell: React.FC = () => {
 
       {(overlays.showAddModal || overlays.editingExpense !== null) && (
         <AddEditExpenseModal
+          recoveryDraft={recovery.draft}
           isOpen={true}
           initialExpense={overlays.editingExpense}
           defaultDate={getDefaultTimestampForMonth(currentMY)}
@@ -328,8 +371,9 @@ export const AppShell: React.FC = () => {
               await ledger.addExpense(input, deleteUndo.getPendingExpenseIds());
             }
             overlays.closeExpenseEditor();
+            recovery.closed();
           }}
-          onClose={overlays.closeExpenseEditor}
+          onClose={() => { overlays.closeExpenseEditor(); recovery.closed(); }}
         />
       )}
 

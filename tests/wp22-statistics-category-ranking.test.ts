@@ -157,7 +157,8 @@ test('WP22 tie ordering is deterministic: newer month first, then expense id', (
 
 test('WP22 ranked month cards preserve rank, month, category, amount hierarchy, and navigation', () => {
   assert.match(statisticsScreenSource, /rankLargestExpensesByMonth\(stats\.monthlyStats\)/);
-  assert.match(statisticsScreenSource, /rankedLargestExpenses\.map/);
+  assert.match(statisticsScreenSource, /visibleLargestExpenses\.map/);
+  assert.match(statisticsScreenSource, /rankedLargestExpenses\.slice\(0, 3\)/);
   assert.match(statisticsScreenSource, /getLocalizedMonthName/);
   assert.match(statisticsScreenSource, /getLocalizedCategoryName\(expense\.category, language\)/);
   assert.match(statisticsScreenSource, /formatCurrency\(expense\.amount, currencyCode\)/);

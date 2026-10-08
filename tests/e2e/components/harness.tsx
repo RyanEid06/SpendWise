@@ -13,6 +13,9 @@ import { ExpenseDetailModal } from '../../../src/components/ExpenseDetailModal';
 import { LockScreen } from '../../../src/screens/LockScreen';
 import { StorageManager } from '../../../src/utils/storage';
 import { TechnicalDiagnostics } from '../../../src/features/settings/TechnicalDiagnostics';
+import { BudgetSummaryCards } from '../../../src/components/BudgetSummaryCards';
+import { TopExpensesSection } from '../../../src/components/TopExpensesSection';
+import { AddEditExpenseModal } from '../../../src/components/AddEditExpenseModal';
 
 declare global {
   interface Window {
@@ -55,7 +58,7 @@ const SettingsHarness = () => {
       currentLanguage={language}
       totalExpensesCount={2}
       isAppLockEnabled={false}
-      storageValue="0 photos · 0 B"
+      storageValue="0 photos"
       copy={overviewCopy[language]}
       expandedSection={expanded}
       onExpandedSectionChange={setExpanded}
@@ -130,6 +133,7 @@ const LockHarness = () => {
 };
 
 const DialogHarness = () => {
+  const [includePhotos, setIncludePhotos] = useState(false);
   applyLanguage(initialLanguage);
   if (testCase === 'confirm') {
     return (
@@ -150,6 +154,8 @@ const DialogHarness = () => {
       <BackupPassphraseModal
         mode="create"
         language={initialLanguage}
+        includePhotos={includePhotos}
+        onIncludePhotosChange={setIncludePhotos}
         onSubmit={(value) => record('passphrase:' + value)}
         onClose={() => record('close')}
       />
@@ -202,6 +208,18 @@ const DialogHarness = () => {
   return null;
 };
 
+const AmountHarness = () => {
+  const amount = Number(params.get('amount') || '12999.99');
+  const currency = params.get('currency') || 'USD';
+  return <div className="p-4 max-w-md">
+    <BudgetSummaryCards startingMoney={amount} isBudgetSet={true} totalSpent={amount}
+      remainingMoney={amount} progress={0.5} currencyCode={currency} monthName="October"
+      language={initialLanguage} onSetBudgetClick={() => {}} />
+    <TopExpensesSection topExpenses={[{ ...fixtures[0], amount, description: 'A very long expense description that must yield space to the full amount' }]}
+      currencyCode={currency} language={initialLanguage} onExpenseClick={() => {}} />
+  </div>;
+};
+
 async function render() {
   applyLanguage(initialLanguage);
   await StorageManager.init();
@@ -211,6 +229,9 @@ async function render() {
       {testCase === 'settings' ? <SettingsHarness /> :
        testCase === 'diagnostics' ? <TechnicalDiagnostics language={initialLanguage} /> :
        testCase === 'history' ? <HistoryHarness /> :
+       testCase === 'amounts' ? <AmountHarness /> :
+       testCase === 'expense' ? <AddEditExpenseModal protectDraft={params.has('protect')} isOpen={true} language={initialLanguage} currencyCode="USD"
+         initialExpense={params.get('edit') ? fixtures[0] : null} onSave={() => record('expense-save')} onClose={() => record('expense-close')} /> :
        testCase.startsWith('lock-') ? <LockHarness /> :
        <DialogHarness />}
     </React.StrictMode>

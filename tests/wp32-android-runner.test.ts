@@ -10,6 +10,31 @@ const bash = process.env.WP32_BASH || (process.platform === 'win32'
   ? 'C:/Program Files/Git/bin/bash.exe' : 'bash');
 const shellPath = (value: string) => value.replace(/\\/g, '/');
 
+for (const target of ['backup-export-full', 'wp33-5-04-continuity']) {
+test(`isolated ${target} rejects unsafe devices before any mutation`, () => {
+  for (const input of [
+    { serial: 'physical-phone', qemu: '0', avd: 'wp33-synthetic-api34' },
+    { serial: 'emulator-5554', qemu: '0', avd: 'wp33-synthetic-api34' },
+    { serial: 'emulator-5554', qemu: '1', avd: 'personal-emulator' },
+  ]) {
+    const result = spawnSync(bash, ['-c', `
+adb() {
+  printf 'ADB_CALL:%s\\n' "$*" >&2
+  if [[ "$*" == *ro.kernel.qemu ]]; then printf '%s\\n' "$WP32_TEST_QEMU";
+  elif [[ "$*" == *'emu avd name' ]]; then printf '%s\\nOK\\n' "$WP32_TEST_AVD";
+  else return 91; fi
+}
+export -f adb
+bash scripts/run-wp32-isolated-gate.sh
+`], { encoding: 'utf8', env: { ...process.env, WP32_TARGET: target,
+      ANDROID_SERIAL: input.serial, WP32_TEST_QEMU: input.qemu, WP32_TEST_AVD: input.avd } });
+    assert.equal(result.status, 2, result.stderr);
+    assert.doesNotMatch(result.stderr, /uninstall|install|pm clear|settings|locksettings|screencap|uiautomator|logcat|connectivity|KEYCODE/);
+    if (input.serial === 'physical-phone') assert.doesNotMatch(result.stderr, /ADB_CALL/);
+  }
+});
+}
+
 function generateFixtures(directory: string) {
   const result = spawnSync(process.execPath, [
     'node_modules/tsx/dist/cli.mjs', 'scripts/wp32-generate-portable-fixtures.ts', directory,
@@ -109,18 +134,18 @@ APP_ID=com.spendwise.app
 source scripts/wp32-android-helpers.sh
 adb() {
   if [[ "$*" == 'shell run-as com.spendwise.app find cache -type f' ]]; then
-    printf 'cache/spendwise_backup_v3_full_2026-10-03.swb3\\r\\ncache/spendwise_backup_v3_data_2026-10-03.swb3\\r\\ncache/unrelated.swb3\\r\\n'
-  elif [[ "$*" == 'exec-out run-as com.spendwise.app cat cache/spendwise_backup_v3_data_2026-10-03.swb3' ]]; then
+    printf 'cache/spendwise_encrypted_backup_full_2026-10-03.swb3\\r\\ncache/spendwise_encrypted_backup_data_2026-10-03.swb3\\r\\ncache/unrelated.swb3\\r\\n'
+  elif [[ "$*" == 'exec-out run-as com.spendwise.app cat cache/spendwise_encrypted_backup_data_2026-10-03.swb3' ]]; then
     printf 'DATA_ONLY'
-  elif [[ "$*" == 'exec-out run-as com.spendwise.app cat cache/spendwise_backup_v3_full_2026-10-03.swb3' ]]; then
+  elif [[ "$*" == 'exec-out run-as com.spendwise.app cat cache/spendwise_encrypted_backup_full_2026-10-03.swb3' ]]; then
     printf 'FULL_WITH_PHOTOS'
   else
     echo "Unexpected adb arguments: $*" >&2
     return 1
   fi
 }
-extract_backup_prefix spendwise_backup_v3_data_ "$WP32_DATA"
-extract_backup_prefix spendwise_backup_v3_full_ "$WP32_FULL"
+extract_backup_prefix spendwise_encrypted_backup_data_ "$WP32_DATA"
+extract_backup_prefix spendwise_encrypted_backup_full_ "$WP32_FULL"
 `], { encoding: 'utf8', env: { ...process.env, WP32_DATA: shellPath(data), WP32_FULL: shellPath(full) } });
     assert.equal(result.status, 0, result.stderr);
     assert.equal(readFileSync(data, 'utf8'), 'DATA_ONLY');

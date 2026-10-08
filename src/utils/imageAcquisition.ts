@@ -4,6 +4,12 @@ import {
   type MediaResult,
   type PermissionStatus,
 } from '@capacitor/camera';
+import { Capacitor, registerPlugin } from '@capacitor/core';
+
+const acquisitionFiles = registerPlugin<{ dispose(options: { path: string }): Promise<void>; cleanup(): Promise<void> }>('SpendWiseAcquisition');
+export async function cleanupNativeAcquisitionFiles(): Promise<void> {
+  if (Capacitor.getPlatform() === 'android') await acquisitionFiles.cleanup();
+}
 
 export type PhotoAcquisitionSource = 'camera' | 'gallery';
 
@@ -108,11 +114,14 @@ function toAcquiredPhoto(result: MediaResult, index: number): AcquiredPhoto {
     previewUrl,
     filename,
     loadFile: async () => {
-      const response = await fetch(previewUrl);
+      // Native converted file URLs must not create a second plaintext copy in
+      // WebView HTTP cache while the owned acquisition file is being retired.
+      const response = await fetch(previewUrl, { cache: 'no-store' });
       if (!response.ok) {
         throw new PhotoAcquisitionError('PHOTO_ACQUISITION_FAILED', 'Photo could not be read.');
       }
       const blob = await response.blob();
+      if (Capacitor.getPlatform() === 'android' && result.uri) await acquisitionFiles.dispose({ path: result.uri });
       if (blob.size <= 0) {
         throw new PhotoAcquisitionError('PHOTO_ACQUISITION_FAILED', 'Photo is empty.');
       }

@@ -1,0 +1,19 @@
+appId: com.spendwise.app
+---
+- tapOn: "Update Expense"
+- tapOn: "History"
+- assertVisible: "WP04 Native Edited.*"
+- assertVisible: '.*\$16\.75.*'
+- tapOn: "AI Insights"
+- setAirplaneMode: enabled
+- tapOn: "Analyze My Spending"
+- tapOn: "Home"
+- tapOn: "Statistics"
+- tapOn: "Home"
+- tapOn: "AI Insights"
+- extendedWaitUntil:
+    visible: "Local Statistical"
+    timeout: 35000
+- assertVisible: ".*AI is unavailable right now.*"
+- setAirplaneMode: disabled
+- tapOn: "Home"

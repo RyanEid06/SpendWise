@@ -134,7 +134,7 @@ test('WP17 keeps exactly four primary destinations', () => {
 });
 
 test('WP19 restores the original normal, round, and adaptive launcher system', () => {
-  assert.match(topBarSource, /src="\/spendwise-original-icon\.png"/);
+  assert.match(topBarSource, /<SpendWiseLogo className="h-9 w-9"/);
   assert.match(manifestSource, /android:icon="@mipmap\/ic_launcher"/);
   assert.match(manifestSource, /android:roundIcon="@mipmap\/ic_launcher_round"/);
   assert.doesNotMatch(manifestSource, /spendwise_app_icon/);
@@ -150,7 +150,8 @@ test('WP19 keeps budget state communication while removing the redundant alert c
   assert.doesNotMatch(budgetSource, /Spending Alerts Card|AlertCircle|CheckCircle2/);
   assert.match(budgetSource, /isApproachingLimit/);
   assert.match(budgetSource, /approachingLimitBadge/);
-  assert.match(budgetSource, /grid grid-cols-2 gap-2/);
+  assert.match(budgetSource, /'grid-cols-1' : 'grid-cols-2'/);
+  assert.match(budgetSource, /SingleLineAmount/);
   assert.doesNotMatch(budgetSource, /grid-cols-1 min-\[390px\]:grid-cols-2/);
 });
 

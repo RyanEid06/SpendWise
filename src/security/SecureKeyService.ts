@@ -10,6 +10,7 @@ import {
   SecurityStateStore,
   securityStateStore,
 } from './SecurityStateStore';
+import { diagnostics } from '../services/diagnostics/diagnostics';
 
 export type SecureKeyFailureKind =
   | 'cancelled'
@@ -21,7 +22,7 @@ export type SecureKeyFailureKind =
   | 'error';
 
 export type SecureKeyResult<T = undefined> =
-  | { ok: true; value: T }
+  | { ok: true; value: T; authSucceededAtElapsedRealtimeMs?: number }
   | { ok: false; kind: SecureKeyFailureKind; code?: string; message?: string };
 
 export interface SecureKeyService {
@@ -74,6 +75,21 @@ function decodeBase64(value: string): Uint8Array {
   return bytes;
 }
 
+function recordPostAuthKeyTiming(result: NativeAuthenticationResult): void {
+  const duration = result.postAuthKeyVerifyDurationMs;
+  if (typeof duration !== 'number' || !Number.isFinite(duration) || duration < 0) return;
+  diagnostics.record({ operation: 'security.post_auth_key', outcome: 'success', durationMs: duration });
+}
+
+function authenticationTiming(result: NativeAuthenticationResult): {
+  authSucceededAtElapsedRealtimeMs?: number;
+} {
+  const timestamp = result.authSucceededAtElapsedRealtimeMs;
+  return typeof timestamp === 'number' && Number.isSafeInteger(timestamp) && timestamp >= 0
+    ? { authSucceededAtElapsedRealtimeMs: timestamp }
+    : {};
+}
+
 export class AndroidSecureKeyService implements SecureKeyService {
   private readonly sessionSecrets = new Map<string, Uint8Array>();
   private lastVerifiedAt = 0;
@@ -113,6 +129,7 @@ export class AndroidSecureKeyService implements SecureKeyService {
         'Unlock SpendWise',
         reason
       );
+      recordPostAuthKeyTiming(verified);
       if (verified.status !== 'success') {
         await this.adapter.deleteKey(keyVersion).catch(() => ({ deleted: false }));
         return keyFailure(verified.keyStatus, verified);
@@ -122,6 +139,7 @@ export class AndroidSecureKeyService implements SecureKeyService {
       return {
         ok: true,
         value: { version: 1, keyVersion, authenticationRequired },
+        ...authenticationTiming(verified),
       };
     } catch {
       await this.adapter.deleteKey(keyVersion).catch(() => ({ deleted: false }));
@@ -215,11 +233,27 @@ export class AndroidSecureKeyService implements SecureKeyService {
         'Unlock SpendWise',
         reason
       );
+      recordPostAuthKeyTiming(verified);
       if (verified.status !== 'success') return keyFailure(verified.keyStatus, verified);
       this.lastVerifiedAt = Date.now();
+      const primeStartedAt = performance.now();
       const primed = await this.primeSessionSecrets(current);
+      diagnostics.record(
+        primed.ok
+          ? {
+              operation: 'security.secret_prime',
+              outcome: 'success',
+              durationMs: performance.now() - primeStartedAt,
+            }
+          : {
+              operation: 'security.secret_prime',
+              outcome: 'failure',
+              code: 'SECURITY_SECRET_PRIME_FAILED',
+              durationMs: performance.now() - primeStartedAt,
+            }
+      );
       if (!primed.ok) return primed;
-      return { ok: true, value: current };
+      return { ok: true, value: current, ...authenticationTiming(verified) };
     } catch {
       return { ok: false, kind: 'error', code: 'KEY_VERIFY_FAILED' };
     }

@@ -2,24 +2,62 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { App } from './App';
 import { LockScreen } from './screens/LockScreen';
+import { SecureStartupScreen } from './screens/SecureStartupScreen';
 import {
   secureSessionService,
   type SecureSessionActionResult,
 } from './security/SecureSessionService';
-import type { Language } from './types';
+import type { Language, ThemeMode } from './types';
 import { StorageManager } from './utils/storage';
 import { TechnicalDiagnostics } from './features/settings/TechnicalDiagnostics';
 import { measureDiagnostic } from './services/diagnostics/diagnostics';
+import { androidSecurityAdapter } from './platform/android/AndroidSecurityAdapter';
+import { StartupHomeFrameTiming } from './app/startup/StartupHomeFrameTiming';
 import './index.css';
+
+function bootstrapLanguage(): Language {
+  try {
+    const value = localStorage.getItem('spendwise_language');
+    return value === 'fr' || value === 'ar' ? value : 'en';
+  } catch {
+    return 'en';
+  }
+}
+
+function bootstrapTheme(): ThemeMode {
+  try {
+    const value = localStorage.getItem('spendwise_theme');
+    return value === 'LIGHT' || value === 'DARK' ? value : 'SYSTEM';
+  } catch {
+    return 'SYSTEM';
+  }
+}
+
+function applyBootstrapAppearance(): void {
+  const language = bootstrapLanguage();
+  const theme = bootstrapTheme();
+  const systemDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+  const dark = theme === 'DARK' || (theme === 'SYSTEM' && systemDark);
+  const html = document.documentElement;
+  html.classList.toggle('dark', dark);
+  html.setAttribute('lang', language);
+  html.setAttribute('dir', language === 'ar' ? 'rtl' : 'ltr');
+}
+
+applyBootstrapAppearance();
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 
-function renderApp(): void {
+function renderApp(homeFrameTiming?: StartupHomeFrameTiming): void {
   root.render(
     <React.StrictMode>
-      <App />
+      <App startupHomeFrameTiming={homeFrameTiming} />
     </React.StrictMode>
   );
+}
+
+function renderSecureStartup(): void {
+  root.render(<SecureStartupScreen language={bootstrapLanguage()} />);
 }
 
 function renderStorageFailure(): void {
@@ -37,16 +75,11 @@ function renderStorageFailure(): void {
   );
 }
 
-function bootstrapLanguage(): Language {
-  try {
-    const value = localStorage.getItem('spendwise_language');
-    return value === 'fr' || value === 'ar' ? value : 'en';
-  } catch { return 'en'; }
-}
-
-async function openProtectedStorage(): Promise<void> {
-  await measureDiagnostic('storage.init', () => StorageManager.init());
-  renderApp();
+async function openProtectedStorage(homeFrameTiming?: StartupHomeFrameTiming): Promise<void> {
+  await measureDiagnostic('startup.secure_init', () =>
+    measureDiagnostic('storage.init', () => StorageManager.init())
+  );
+  renderApp(homeFrameTiming);
 }
 
 async function unlockAndOpen(
@@ -67,8 +100,16 @@ async function unlockAndOpen(
     };
   }
 
+  const authSucceededAtElapsedRealtimeMs = result.authSucceededAtElapsedRealtimeMs;
+  // Native authentication and Home sampling use the same Android monotonic
+  // clock. Older bridges can omit timing without blocking a successful unlock.
+  const homeFrameTiming = authSucceededAtElapsedRealtimeMs === undefined
+    ? undefined
+    : new StartupHomeFrameTiming(() =>
+        androidSecurityAdapter.elapsedSinceAuthentication(authSucceededAtElapsedRealtimeMs)
+      );
   try {
-    await openProtectedStorage();
+    await openProtectedStorage(homeFrameTiming);
     return result;
   } catch {
     renderStorageFailure();
@@ -80,7 +121,7 @@ async function unlockAndOpen(
   }
 }
 
-function renderBootstrapLock(): void {
+function renderBootstrapLock(autoUnlock = false): void {
   const snapshot = secureSessionService.getSnapshot();
   root.render(
     <LockScreen
@@ -88,6 +129,7 @@ function renderBootstrapLock(): void {
       migrationIssue={snapshot.migrationIssue}
       language={bootstrapLanguage()}
       onUnlock={unlockAndOpen}
+      autoUnlock={autoUnlock}
     />
   );
 }
@@ -101,13 +143,15 @@ async function bootstrap() {
       security.appLockEnabled &&
       security.state === 'locked'
     ) {
-      // Existing WP28-native users get the system prompt immediately. Legacy
-      // PIN users intentionally fall through to the normal lock screen.
-      if (security.unlockMode !== 'legacy-native-migration') {
-        const unlocked = await unlockAndOpen();
-        if (unlocked.ok) return;
-      }
-      renderBootstrapLock();
+      // Paint the secure SpendWise surface first, then let LockScreen start one
+      // system authentication attempt. Cancellation leaves the surface intact
+      // with an explicit Unlock action; it never auto-retries in a loop.
+      renderBootstrapLock(security.unlockMode !== 'legacy-native-migration');
+      return;
+    }
+
+    if (security.appLockEnabled && security.state === 'locked') {
+      renderBootstrapLock(false);
       return;
     }
 
@@ -117,4 +161,7 @@ async function bootstrap() {
   }
 }
 
+// Render privacy-safe branded UI synchronously so WebView/native startup never
+// waits on Keystore, biometric or SQLCipher work with an empty black surface.
+renderSecureStartup();
 void bootstrap();

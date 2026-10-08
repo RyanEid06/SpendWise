@@ -437,31 +437,41 @@ export const SetupWizardScreen: React.FC<Props> = ({
                 {pinError && <p className="text-xs font-bold text-rose-600 dark:text-rose-400">{pinError}</p>}
               </div>
 
-              <label className="min-h-[56px] bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex items-start gap-3 rtl:flex-row-reverse cursor-pointer">
-                <input
-                  type="checkbox"
-                  aria-label={
-                    language === 'ar'
-                      ? 'الموافقة على شروط الاستخدام وسياسة الخصوصية'
-                      : language === 'fr'
-                        ? 'Accepter les conditions d’utilisation et la politique de confidentialité'
-                        : 'Accept Terms of Use and Privacy Policy'
-                  }
-                  checked={accepted}
-                  onChange={(event) => setAccepted(event.target.checked)}
-                  className="mt-1 w-5 h-5 accent-emerald-600"
-                />
-                <span className="text-sm leading-6">
-                  {copy.agreePrefix}{' '}
-                  <button type="button" className="font-bold underline underline-offset-2" onClick={(event) => { event.preventDefault(); setLegalKind('terms'); }}>
+              <div
+                className="min-h-[64px] bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-800 rounded-2xl px-3 py-2.5 flex items-start gap-2"
+                data-legal-agreement="terms-privacy"
+              >
+                <label
+                  htmlFor="setup-legal-agreement"
+                  className="min-w-[44px] min-h-[44px] flex items-start justify-center pt-2 cursor-pointer shrink-0"
+                >
+                  <input
+                    id="setup-legal-agreement"
+                    type="checkbox"
+                    aria-describedby="setup-legal-agreement-copy"
+                    aria-label={
+                      language === 'ar'
+                        ? 'الموافقة على شروط الاستخدام وسياسة الخصوصية'
+                        : language === 'fr'
+                          ? 'Accepter les conditions d’utilisation et la politique de confidentialité'
+                          : 'Accept Terms of Use and Privacy Policy'
+                    }
+                    checked={accepted}
+                    onChange={(event) => setAccepted(event.target.checked)}
+                    className="w-5 h-5 accent-emerald-600 shrink-0"
+                  />
+                </label>
+                <p id="setup-legal-agreement-copy" className="min-w-0 flex-1 text-sm leading-6 pt-1.5 text-slate-700 dark:text-slate-200">
+                  <label htmlFor="setup-legal-agreement" className="cursor-pointer">{copy.agreePrefix}</label>{' '}
+                  <button type="button" className="font-bold underline underline-offset-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500" onClick={() => setLegalKind('terms')}>
                     {copy.terms}
                   </button>{' '}
                   {copy.and}{' '}
-                  <button type="button" className="font-bold underline underline-offset-2" onClick={(event) => { event.preventDefault(); setLegalKind('privacy'); }}>
+                  <button type="button" className="font-bold underline underline-offset-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500" onClick={() => setLegalKind('privacy')}>
                     {copy.privacyPolicy}
                   </button>
-                </span>
-              </label>
+                </p>
+              </div>
             </section>
           )}
         </main>

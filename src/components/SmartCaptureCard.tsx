@@ -1,13 +1,14 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AlertCircle, Camera, CheckCircle2, ImagePlus, Loader2, Sparkles, X } from 'lucide-react';
 import { Language, SmartCaptureResult } from '../types';
+import type { DraftToolState } from '../data/ExpenseDraft';
 import { apiFetchJson } from '../utils/api';
 import { getAiErrorMessage, SpendWiseApiError } from '../utils/apiErrors';
 import { AttachmentDraft, AttachmentStorage } from '../utils/attachmentStorage';
 import { photoAcquisitionErrorText, ta } from '../utils/attachmentTranslations';
 import { getLocalizedCategoryName, t } from '../utils/translations';
 import { formatCurrency } from '../utils/currency';
-import { DEFAULT_CATEGORIES } from '../utils/categories';
+import { DEFAULT_CATEGORIES, normalizeCategoryName } from '../utils/categories';
 import {
   choosePhotos,
   takePhoto,
@@ -16,6 +17,9 @@ import {
 } from '../utils/imageAcquisition';
 
 interface SmartCaptureCardProps {
+  protectAcquisition?: (operation: () => Promise<AttachmentDraft[]>, accept?: () => boolean) => Promise<AttachmentDraft[]>;
+  recoveryState?: DraftToolState<SmartCaptureResult> | null;
+  onDraftStateChange?: (state: DraftToolState<SmartCaptureResult>) => void;
   language: Language;
   currencyCode: string;
   disabled?: boolean;
@@ -29,7 +33,7 @@ function parseSmartCaptureResult(value: unknown, currentCurrencyCode: string): S
 
   if (
     typeof item.category !== 'string' ||
-    !DEFAULT_CATEGORIES.some((category) => category.name === item.category)
+    !DEFAULT_CATEGORIES.some((category) => category.name === normalizeCategoryName(item.category as string))
   ) {
     return null;
   }
@@ -89,7 +93,7 @@ function parseSmartCaptureResult(value: unknown, currentCurrencyCode: string): S
 
   return {
     description: optionalString(item.description, 240),
-    category: item.category,
+    category: normalizeCategoryName(item.category),
     amount,
     merchantOrBrand: optionalString(item.merchantOrBrand, 200),
     notes: optionalString(item.notes, 1000),
@@ -116,27 +120,57 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
   disabled = false,
   onPreparingChange,
   onApply,
+  recoveryState,
+  protectAcquisition,
+  onDraftStateChange,
 }) => {
+  const selectionGenerationRef = useRef(0);
+  const mountedRef = useRef(true);
   const preparationRequestIdRef = useRef(0);
   const requestIdRef = useRef(0);
   const acquisitionInFlightRef = useRef(false);
   const analysisInFlightRef = useRef(false);
-  const attachmentAppliedRef = useRef(false);
   const preparedPreviewUrlRef = useRef<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [preparedDraft, setPreparedDraft] = useState<AttachmentDraft | null>(null);
-  const [result, setResult] = useState<SmartCaptureResult | null>(null);
+  const [preparedDraft, setPreparedDraft] = useState<AttachmentDraft | null>(recoveryState?.photo ?? null);
+  const [result, setResult] = useState<SmartCaptureResult | null>(recoveryState?.currencyCode === currencyCode && recoveryState?.language === language ? recoveryState.result : null);
+  const [interrupted, setInterrupted] = useState(recoveryState?.interrupted ?? false);
+  const previousContext = useRef({ currencyCode, language });
   const [isAcquiring, setIsAcquiring] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    onPreparingChange?.(isPreparing);
-  }, [isPreparing, onPreparingChange]);
+    onPreparingChange?.(isPreparing || isAcquiring);
+  }, [isPreparing, isAcquiring, onPreparingChange]);
+
+  useLayoutEffect(() => {
+    if (previousContext.current.currencyCode === currencyCode && previousContext.current.language === language) return;
+    previousContext.current = { currencyCode, language };
+    requestIdRef.current += 1;
+    analysisInFlightRef.current = false;
+    setResult(null);
+    setError(null);
+    setIsAnalyzing(false);
+  }, [currencyCode, language]);
 
   useEffect(() => {
+    onDraftStateChange?.({ photo: preparedDraft, result, interrupted: isAnalyzing || interrupted, currencyCode, language });
+  }, [preparedDraft, result, isAnalyzing, interrupted, currencyCode, language, onDraftStateChange]);
+
+  useEffect(() => {
+    if (!recoveryState?.photo) return;
+    const url = URL.createObjectURL(recoveryState.photo.blob);
+    preparedPreviewUrlRef.current = url;
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       preparationRequestIdRef.current += 1;
       requestIdRef.current += 1;
       acquisitionInFlightRef.current = false;
@@ -153,6 +187,8 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
   };
 
   const resetSelection = () => {
+    selectionGenerationRef.current += 1;
+    setInterrupted(false);
     preparationRequestIdRef.current += 1;
     requestIdRef.current += 1;
     analysisInFlightRef.current = false;
@@ -163,62 +199,49 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
     setError(null);
     setIsPreparing(false);
     setIsAnalyzing(false);
-    attachmentAppliedRef.current = false;
   };
 
   const beginPhotoSelection = async (source: PhotoAcquisitionSource) => {
     if (disabled || acquisitionInFlightRef.current || isAnalyzing) return;
-
     acquisitionInFlightRef.current = true;
     setIsAcquiring(true);
     setError(null);
-
-    let acquired = null;
-    try {
-      acquired =
-        source === 'camera' ? await takePhoto() : (await choosePhotos(1))[0] || null;
-    } catch (acquisitionError) {
-      setError(photoAcquisitionErrorText(language, acquisitionError));
-      return;
-    } finally {
-      acquisitionInFlightRef.current = false;
-      setIsAcquiring(false);
-    }
-
-    if (!acquired) return;
-
-    requestIdRef.current += 1;
-    analysisInFlightRef.current = false;
-    const preparationRequestId = ++preparationRequestIdRef.current;
-    clearPreparedPreview();
-    setPreviewUrl(acquired.previewUrl);
-    setPreparedDraft(null);
-    setResult(null);
-    setError(null);
-    setIsAnalyzing(false);
-    setIsPreparing(true);
-      attachmentAppliedRef.current = false;
-
-    await waitForPhotoUiPaint();
-
-    try {
+    const selectionGeneration = selectionGenerationRef.current;
+    const prepare = async (): Promise<AttachmentDraft[]> => {
+      const acquired = source === 'camera' ? await takePhoto() : (await choosePhotos(1))[0] || null;
+      if (!acquired) return [];
+      requestIdRef.current += 1;
+      analysisInFlightRef.current = false;
+      clearPreparedPreview();
+      setPreviewUrl(null);
+      setPreparedDraft(null);
+      setResult(null);
+      setIsAnalyzing(false);
+      setIsPreparing(true);
       const file = await acquired.loadFile();
+      if (mountedRef.current && selectionGeneration === selectionGenerationRef.current) {
+        preparedPreviewUrlRef.current = URL.createObjectURL(file);
+        setPreviewUrl(preparedPreviewUrlRef.current);
+      }
+      await waitForPhotoUiPaint();
       const draft = await AttachmentStorage.prepareImageDraft(file, 'purchase');
-      if (preparationRequestId !== preparationRequestIdRef.current) return;
-
+      return selectionGeneration === selectionGenerationRef.current ? [draft] : [];
+    };
+    try {
+      const photos = await (protectAcquisition ? protectAcquisition(prepare, () => selectionGeneration === selectionGenerationRef.current) : prepare());
+      if (!mountedRef.current || selectionGeneration !== selectionGenerationRef.current || photos.length === 0) return;
+      const draft = photos[0];
       const preparedPreviewUrl = URL.createObjectURL(draft.blob);
       clearPreparedPreview();
       preparedPreviewUrlRef.current = preparedPreviewUrl;
       setPreparedDraft(draft);
+      setInterrupted(false);
       setPreviewUrl(preparedPreviewUrl);
-    } catch {
-      if (preparationRequestId !== preparationRequestIdRef.current) return;
-      setPreparedDraft(null);
-      setError(t(language, 'smartCaptureInvalidImage'));
+    } catch (error) {
+      if (mountedRef.current) setError(photoAcquisitionErrorText(language, error));
     } finally {
-      if (preparationRequestId === preparationRequestIdRef.current) {
-        setIsPreparing(false);
-      }
+      acquisitionInFlightRef.current = false;
+      if (mountedRef.current) { setIsAcquiring(false); setIsPreparing(false); }
     }
   };
 
@@ -228,6 +251,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
     }
 
     analysisInFlightRef.current = true;
+    setInterrupted(false);
     const requestId = ++requestIdRef.current;
     setIsAnalyzing(true);
     setError(null);
@@ -267,14 +291,16 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
   };
 
   const applyResult = () => {
-    if (!result) return;
-    const attachment = attachmentAppliedRef.current ? null : preparedDraft;
-    onApply(result, attachment);
-    attachmentAppliedRef.current = true;
+    if (!result || disabled || isAnalyzing || isPreparing) return;
+    // The form owns acceptance/deduplication, including a retry after freeing capacity.
+    onApply(result, preparedDraft);
   };
 
   return (
     <section className="rounded-2xl border border-cyan-200 dark:border-cyan-900/70 bg-cyan-50/70 dark:bg-cyan-950/25 p-4 space-y-3">
+      {interrupted && <p role="status" className="text-xs text-cyan-900 dark:text-cyan-100">
+        {language === 'ar' ? 'توقف التحليل. أعد المحاولة عندما تكون جاهزاً.' : language === 'fr' ? 'Analyse interrompue. Réessayez quand vous êtes prêt.' : 'Analysis was interrupted. Retry when you are ready.'}
+      </p>}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3 min-w-0">
           <div className="w-10 h-10 rounded-xl bg-cyan-100 dark:bg-cyan-900/60 text-cyan-700 dark:text-cyan-300 flex items-center justify-center shrink-0">
@@ -307,7 +333,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
           type="button"
           disabled={disabled || isAcquiring || isAnalyzing}
           onClick={() => void beginPhotoSelection('camera')}
-          className="min-h-[44px] rounded-xl border border-cyan-300 dark:border-cyan-800 bg-white/80 dark:bg-[#111928]/80 text-cyan-800 dark:text-cyan-200 text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+          className="min-h-[44px] rounded-xl border border-emerald-400 dark:border-emerald-700 bg-white dark:bg-[#111928] text-emerald-800 dark:text-emerald-200 text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50"
         >
           <Camera className="w-4 h-4" />
           <span>{ta(language, 'takePhoto')}</span>
@@ -316,7 +342,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
           type="button"
           disabled={disabled || isAcquiring || isAnalyzing}
           onClick={() => void beginPhotoSelection('gallery')}
-          className="min-h-[44px] rounded-xl border border-cyan-300 dark:border-cyan-800 bg-white/80 dark:bg-[#111928]/80 text-cyan-800 dark:text-cyan-200 text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+          className="min-h-[44px] rounded-xl border border-emerald-400 dark:border-emerald-700 bg-white dark:bg-[#111928] text-emerald-800 dark:text-emerald-200 text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50"
         >
           {isAcquiring ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
           <span>{ta(language, 'choosePhoto')}</span>
@@ -408,6 +434,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
           <button
             type="button"
             onClick={applyResult}
+            disabled={disabled || isAnalyzing || isPreparing}
             className="w-full min-h-[44px] rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-extrabold"
           >
             {t(language, 'smartCaptureReviewExpense')}

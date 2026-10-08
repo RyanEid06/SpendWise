@@ -15,8 +15,9 @@ import {
   previousMonth,
   currentMonthYear,
 } from './date';
-import { getCategoryInfo } from './categories';
+import { getCategoryInfo, normalizeCategoryName } from './categories';
 import { formatCurrency } from './currency';
+import { getLocalizedCategoryName } from './translations';
 
 export class StatisticsEngine {
   /**
@@ -138,7 +139,7 @@ export class StatisticsEngine {
     const categoryMonthlyTotals: Record<string, Record<string, { amount: number; count: number }>> = {};
 
     for (const exp of filteredExpenses) {
-      const cat = exp.category;
+      const cat = normalizeCategoryName(exp.category);
       const k = getMonthKey(getMonthYearFromTimestamp(exp.date));
 
       categoryTotals[cat] = (categoryTotals[cat] || 0) + exp.amount;
@@ -340,14 +341,14 @@ export class StatisticsEngine {
         `Your largest single expense was "${stats.overallLargestExpense.description}" for ${formatCurrency(
           stats.overallLargestExpense.amount,
           currencyCode
-        )} in ${stats.overallLargestExpense.category}.`
+        )} in ${getLocalizedCategoryName(stats.overallLargestExpense.category, 'en')}.`
       );
     }
 
     const categoryHighlights: string[] = [];
     if (topCategory) {
       categoryHighlights.push(
-        `${topCategory.category} represents the largest share of spending at ${topCategory.percentage.toFixed(
+        `${getLocalizedCategoryName(topCategory.category, 'en')} represents the largest share of spending at ${topCategory.percentage.toFixed(
           1
         )}% (${formatCurrency(topCategory.amount, currencyCode)}).`
       );
@@ -356,14 +357,14 @@ export class StatisticsEngine {
     const increasingCat = stats.categoryTrends.find((c) => c.trendDirection === 'UP' && c.trendPercent > 15);
     if (increasingCat) {
       categoryHighlights.push(
-        `${increasingCat.category} spending increased by ${Math.round(
+        `${getLocalizedCategoryName(increasingCat.category, 'en')} spending increased by ${Math.round(
           increasingCat.trendPercent
         )}% across this period.`
       );
     }
 
     const recommendation = topCategory
-      ? `Reviewing your ${topCategory.category} expenses could offer the highest potential impact since it accounts for over ${Math.round(
+      ? `Reviewing your ${getLocalizedCategoryName(topCategory.category, 'en')} expenses could offer the highest potential impact since it accounts for over ${Math.round(
           topCategory.percentage
         )}% of your overall outflow.`
       : 'Maintain consistent monthly budget tracking to keep your financial goals aligned.';

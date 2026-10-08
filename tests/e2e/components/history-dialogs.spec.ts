@@ -43,12 +43,12 @@ test('destructive confirmation exposes alertdialog semantics and both paths', as
 test('Backup v3 passphrase validates create mode and reports restore errors', async ({ page }) => {
   await page.goto('/tests/e2e/components/index.html?case=backup-create');
   await expect(page.getByRole('dialog')).toBeVisible();
-  await page.getByRole('button', { name: 'Create secure backup' }).click();
-  await expect(page.getByText(/Passphrases must match/)).toBeVisible();
+  await page.getByRole('button', { name: 'Create encrypted backup' }).click();
+  await expect(page.getByRole('alert')).toContainText('Passwords must match');
   const inputs = page.locator('input[type="password"]');
   await inputs.nth(0).fill('wp32-public-passphrase');
   await inputs.nth(1).fill('wp32-public-passphrase');
-  await page.getByRole('button', { name: 'Create secure backup' }).click();
+  await page.getByRole('button', { name: 'Create encrypted backup' }).click();
   await expect.poll(() => page.evaluate(() => window.__WP32_EVENTS__)).toContain('passphrase:wp32-public-passphrase');
 
   await page.goto('/tests/e2e/components/index.html?case=backup-restore-error');
@@ -57,7 +57,7 @@ test('Backup v3 passphrase validates create mode and reports restore errors', as
 
 test('Backup restore presents merge and replace as explicit choices', async ({ page }) => {
   await page.goto('/tests/e2e/components/index.html?case=backup-preview');
-  await expect(page.getByRole('dialog')).toContainText('Backup restore v3');
+  await expect(page.getByRole('dialog')).toContainText('Backup restore');
   await page.getByRole('button', { name: 'Replace', exact: true }).first().click();
   await expect(page.getByText(/fully validates and stages/)).toBeVisible();
   await page.getByRole('button', { name: 'Replace', exact: true }).last().click();
@@ -90,7 +90,7 @@ test('web lock rejects an incorrect PIN and accepts the correct credential', asy
 test('native lock exposes cancellation without pretending the session unlocked', async ({ page }) => {
   await page.goto('/tests/e2e/components/index.html?case=lock-native');
   await expect(page.getByText(/Android screen lock|strong biometric/)).toBeVisible();
-  const unlock = page.getByRole('button', { name: 'Authenticate & Unlock' });
+  const unlock = page.getByRole('button', { name: 'Unlock SpendWise' });
   await unlock.click();
   await expect(page.getByText('Authentication was cancelled.')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'SpendWise is Locked' })).toBeVisible();

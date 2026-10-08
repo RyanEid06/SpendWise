@@ -2,5 +2,8 @@ appId: com.spendwise.app
 ---
 - launchApp:
     stopApp: false
-- assertVisible: "SpendWise is Locked"
-- tapOn: "Authenticate & Unlock"
+# Cold start automatically prompts once; the credential helper handles it.
+- extendedWaitUntil:
+    visible:
+      id: "com.android.systemui:id/lockPassword"
+    timeout: 15000
