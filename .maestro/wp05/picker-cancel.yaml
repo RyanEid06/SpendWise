@@ -1,0 +1,32 @@
+appId: com.spendwise.app
+---
+- swipe:
+    start: 50%, 74%
+    end: 50%, 34%
+    duration: 600
+- swipe:
+    start: 50%, 74%
+    end: 50%, 34%
+    duration: 600
+- tapOn: "Attach Photos.*"
+- swipe:
+    start: 50%, 76%
+    end: 50%, 45%
+    duration: 500
+- tapOn: "Choose Photo"
+- pressKey: back
+# The Android photo picker can remain a foreground dialog (no app onStop).
+# Authenticate when it actually backgrounds the app, including direct PIN UI.
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "SpendWise is Locked|Unlock SpendWise|Use PIN"
+    file: ../helpers/android-device-pin.yaml
+- extendedWaitUntil:
+    visible: "Add Expense"
+    timeout: 30000
+- scrollUntilVisible:
+    element: "Unfinished expense protected"
+    direction: UP
+    timeout: 30000
+- assertVisible: "Unfinished expense protected"

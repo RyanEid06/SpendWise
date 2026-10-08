@@ -1,0 +1,13 @@
+appId: com.spendwise.app
+---
+- tapOn: "Add Expense"
+- tapOn: "Amount .*"
+- inputText: "37.25"
+- tapOn: "Description / Merchant .*"
+- inputText: "WP05 Native Recovery"
+- tapOn: "Food & Beverage"
+- extendedWaitUntil:
+    visible: "Unfinished expense protected"
+    timeout: 30000
+- assertVisible: '37\.25, Amount \*'
+- assertVisible: "WP05 Native Recovery"

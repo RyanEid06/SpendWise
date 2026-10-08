@@ -110,6 +110,7 @@ const stubs: Record<string, string> = {
   'com/getcapacitor/PluginMethod.java': 'package com.getcapacitor; public @interface PluginMethod {}',
   'com/getcapacitor/annotation/CapacitorPlugin.java': 'package com.getcapacitor.annotation; public @interface CapacitorPlugin {String name();}',
   'com/spendwise/app/SpendWiseSecurityPlugin.java': 'package com.spendwise.app; public class SpendWiseSecurityPlugin {}',
+  'com/spendwise/app/SpendWiseAcquisitionPlugin.java': 'package com.spendwise.app; public class SpendWiseAcquisitionPlugin {}',
   'com/spendwise/app/R.java': `package com.spendwise.app; public class R {
     public static class color {public static final int spendwise_launch_background=1,spendwise_system_bar=2;}}`,
 };

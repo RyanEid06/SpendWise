@@ -1,0 +1,5 @@
+appId: com.spendwise.app
+---
+- tapOn: "Close photo"
+- tapOn: "Close details"
+- tapOn: "Home"

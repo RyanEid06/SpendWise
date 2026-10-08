@@ -26,6 +26,7 @@ import { ViewportPortal } from './ViewportPortal';
 import { useModalFocus } from './useModalFocus';
 
 interface ExpenseAttachmentsEditorProps {
+  protectAcquisition?: (operation: () => Promise<AttachmentDraft[]>, accept?: () => boolean) => Promise<AttachmentDraft[]>;
   expenseId?: number;
   language: Language;
   drafts: AttachmentDraft[];
@@ -76,6 +77,7 @@ export const ExpenseAttachmentsEditor: React.FC<ExpenseAttachmentsEditorProps> =
   onRemovedAttachmentIdsChange,
   onPreparingChange,
   disabled = false,
+  protectAcquisition,
 }) => {
   const preparationGenerationRef = useRef(0);
   const acquisitionInFlightRef = useRef(false);
@@ -109,7 +111,6 @@ export const ExpenseAttachmentsEditor: React.FC<ExpenseAttachmentsEditorProps> =
     return () => {
       preparationGenerationRef.current += 1;
       acquisitionInFlightRef.current = false;
-      cancelledPendingIdsRef.current.clear();
     };
   }, []);
 
@@ -171,8 +172,8 @@ export const ExpenseAttachmentsEditor: React.FC<ExpenseAttachmentsEditorProps> =
     };
   }, [preview]);
 
-  const preparePhotos = async (photos: AcquiredPhoto[]) => {
-    if (photos.length === 0) return;
+  const preparePhotos = async (photos: AcquiredPhoto[]): Promise<AttachmentDraft[]> => {
+    if (photos.length === 0) return [];
 
     const generation = ++preparationGenerationRef.current;
     const kind = selectedKind;
@@ -191,31 +192,39 @@ export const ExpenseAttachmentsEditor: React.FC<ExpenseAttachmentsEditorProps> =
     const prepared: AttachmentDraft[] = [];
     try {
       for (const item of pending) {
-        if (generation !== preparationGenerationRef.current) return;
         const file = await item.photo.loadFile();
         const draft = await AttachmentStorage.prepareImageDraft(file, item.kind);
-        if (generation !== preparationGenerationRef.current) return;
         if (!cancelledPendingIdsRef.current.has(item.id)) {
           prepared.push(draft);
         }
       }
 
-      if (generation !== preparationGenerationRef.current) return;
-      if (prepared.length > 0) {
-        const next = draftsRef.current.concat(prepared);
-        draftsRef.current = next;
-        onDraftsChange(next);
-      }
+      return prepared;
     } catch (err) {
       if (generation === preparationGenerationRef.current) {
         setError(errorMessage(language, err));
       }
+      throw err;
     } finally {
       if (generation === preparationGenerationRef.current) {
         setPendingPhotos([]);
         cancelledPendingIdsRef.current.clear();
         setIsPreparing(false);
       }
+    }
+  };
+
+  const acquireAndPrepare = async (operation: () => Promise<AcquiredPhoto[]>) => {
+    const generation = preparationGenerationRef.current;
+    const prepare = async () => preparePhotos(await operation());
+    const prepared = await (protectAcquisition ? protectAcquisition(prepare) : prepare());
+    // Authentication may have destroyed this editor; the service already owns
+    // its result. Only the current mounted editor gets preview/state updates.
+    if (preparationGenerationRef.current !== generation + (prepared.length > 0 ? 1 : 0)) return;
+    if (prepared.length > 0) {
+      const next = draftsRef.current.concat(prepared);
+      draftsRef.current = next;
+      onDraftsChange(next);
     }
   };
 
@@ -233,8 +242,7 @@ export const ExpenseAttachmentsEditor: React.FC<ExpenseAttachmentsEditorProps> =
     setIsAcquiring(true);
     setError(null);
     try {
-      const photo = await takePhoto();
-      if (photo) await preparePhotos([photo]);
+      await acquireAndPrepare(async () => { const photo = await takePhoto(); return photo ? [photo] : []; });
     } catch (acquisitionError) {
       setError(photoAcquisitionErrorText(language, acquisitionError));
     } finally {
@@ -257,8 +265,7 @@ export const ExpenseAttachmentsEditor: React.FC<ExpenseAttachmentsEditorProps> =
     setIsAcquiring(true);
     setError(null);
     try {
-      const photos = await choosePhotos(available);
-      await preparePhotos(photos.slice(0, available));
+      await acquireAndPrepare(async () => (await choosePhotos(available)).slice(0, available));
     } catch (acquisitionError) {
       setError(photoAcquisitionErrorText(language, acquisitionError));
     } finally {
@@ -354,11 +361,13 @@ export const ExpenseAttachmentsEditor: React.FC<ExpenseAttachmentsEditorProps> =
               key={item.id}
               className="relative aspect-square rounded-xl overflow-hidden border border-amber-300 dark:border-amber-800 bg-white dark:bg-slate-900"
             >
-              <img
+              {item.photo.previewUrl.startsWith('blob:') ? <img
                 src={item.photo.previewUrl}
                 alt={kindLabel(language, item.kind)}
                 className="w-full h-full object-cover opacity-80"
-              />
+              /> : <div role="img" aria-label={kindLabel(language, item.kind)} className="w-full h-full flex items-center justify-center text-slate-400">
+                <ImagePlus className="w-6 h-6" />
+              </div>}
               <div className="absolute inset-x-0 bottom-0 bg-slate-950/75 text-white px-1.5 py-1.5 text-[9px] font-semibold flex items-center justify-center gap-1">
                 <Loader2 className="w-3 h-3 animate-spin" />
                 <span>{ta(language, 'processingPhoto')}</span>

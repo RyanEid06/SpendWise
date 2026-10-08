@@ -1,4 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { DraftToolState, ExpenseEditorDraft } from '../data/ExpenseDraft';
+import { expenseDraftRecoveryService } from '../services/ExpenseDraftRecoveryService';
 import { ChevronDown, ImagePlus, ReceiptText, Sparkles, X } from 'lucide-react';
 import { Expense, Language, ReceiptScanResult, SmartCaptureResult } from '../types';
 import { DEFAULT_CATEGORIES, normalizeCategoryName } from '../utils/categories';
@@ -21,6 +23,8 @@ import { useVisualViewport } from './useVisualViewport';
 import { useModalFocus } from './useModalFocus';
 
 interface AddEditExpenseModalProps {
+  recoveryDraft?: ExpenseEditorDraft | null;
+  protectDraft?: boolean;
   isOpen: boolean;
   initialExpense?: Expense | null;
   defaultDate?: number;
@@ -71,6 +75,8 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
   language,
   onSave,
   onClose,
+  recoveryDraft,
+  protectDraft = true,
 }) => {
   if (!isOpen) return null;
 
@@ -81,29 +87,37 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
   const [suggestionApplied, setSuggestionApplied] = useState(false);
   const optionalCopy = OPTIONAL_COPY[language];
   const [amountText, setAmountText] = useState(
-    initialExpense ? initialExpense.amount.toString() : ''
+    recoveryDraft?.amountText ?? (initialExpense ? initialExpense.amount.toString() : '')
   );
-  const [descriptionText, setDescriptionText] = useState(initialExpense?.description || '');
+  const [descriptionText, setDescriptionText] = useState(recoveryDraft?.descriptionText ?? initialExpense?.description ?? '');
   const [selectedCategory, setSelectedCategory] = useState(
-    normalizeCategoryName(initialExpense?.category || DEFAULT_CATEGORIES[0].name)
+    normalizeCategoryName(recoveryDraft?.category ?? initialExpense?.category ?? DEFAULT_CATEGORIES[0].name)
   );
   const [selectedDateMillis, setSelectedDateMillis] = useState<number>(
-    initialExpense?.date || defaultDate
+    recoveryDraft?.date ?? initialExpense?.date ?? defaultDate
   );
-  const [noteText, setNoteText] = useState(initialExpense?.note || '');
-  const [activeTool, setActiveTool] = useState<OptionalTool>(null);
+  const [noteText, setNoteText] = useState(recoveryDraft?.noteText ?? initialExpense?.note ?? '');
+  const [activeTool, setActiveTool] = useState<OptionalTool>(recoveryDraft?.activeTool ?? null);
 
   const [amountError, setAmountError] = useState<string | null>(null);
   const [descriptionError, setDescriptionError] = useState<string | null>(null);
 
-  const [attachmentDrafts, setAttachmentDrafts] = useState<AttachmentDraft[]>([]);
-  const [removedAttachmentIds, setRemovedAttachmentIds] = useState<string[]>([]);
+  const [attachmentDrafts, setAttachmentDrafts] = useState<AttachmentDraft[]>(recoveryDraft?.attachments ?? []);
+  const [removedAttachmentIds, setRemovedAttachmentIds] = useState<string[]>(recoveryDraft?.removedAttachmentIds ?? []);
+  const [smartDraft, setSmartDraft] = useState<DraftToolState<SmartCaptureResult> | null>(recoveryDraft?.smart ?? null);
+  const [receiptDraft, setReceiptDraft] = useState<DraftToolState<ReceiptScanResult> | null>(recoveryDraft?.receipt ?? null);
+  const [draftId] = useState(() => recoveryDraft?.id ?? crypto.randomUUID());
+  const terminal = useRef(false);
+  const writeSequence = useRef(0);
+  const [draftStatus, setDraftStatus] = useState<'saving' | 'protected' | 'error'>('saving');
   const [isSaving, setIsSaving] = useState(false);
   const [smartCapturePreparing, setSmartCapturePreparing] = useState(false);
   const [receiptPreparing, setReceiptPreparing] = useState(false);
   const [attachmentsPreparing, setAttachmentsPreparing] = useState(false);
+  const [acquisitionPending, setAcquisitionPending] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const isPhotoPreparing = smartCapturePreparing || receiptPreparing || attachmentsPreparing;
+  const isPhotoPreparing = acquisitionPending || smartCapturePreparing || receiptPreparing || attachmentsPreparing;
+  const visibleDraftStatus = isPhotoPreparing ? 'saving' : draftStatus;
 
   const persistedAttachmentCount = useMemo(() => {
     if (!initialExpense) return 0;
@@ -114,10 +128,51 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
 
   const visiblePhotoCount = persistedAttachmentCount + attachmentDrafts.length;
 
+  const snapshot = useMemo<ExpenseEditorDraft>(() => ({
+    version: 1, id: draftId, expenseId: initialExpense?.id ?? null,
+    expenseCreatedAt: initialExpense?.createdAt ?? null, currencyCode,
+    amountText, descriptionText, category: selectedCategory, date: selectedDateMillis,
+    noteText, activeTool, attachments: attachmentDrafts, removedAttachmentIds,
+    smart: smartDraft, receipt: receiptDraft,
+  }), [draftId, initialExpense, currencyCode, amountText, descriptionText, selectedCategory,
+    selectedDateMillis, noteText, activeTool, attachmentDrafts, removedAttachmentIds, smartDraft, receiptDraft]);
+
+  const protectAcquisition = (target: 'photos' | 'smart' | 'receipt') => protectDraft
+    ? async (operation: () => Promise<AttachmentDraft[]>, accept?: () => boolean) => {
+      setAcquisitionPending(true);
+      try { return await expenseDraftRecoveryService.acquire(snapshot, target, language, operation, accept); }
+      finally { setAcquisitionPending(false); }
+    }
+    : undefined;
+
+  useLayoutEffect(() => {
+    if (!protectDraft || terminal.current) return;
+    const sequence = ++writeSequence.current;
+    setDraftStatus('saving');
+    void expenseDraftRecoveryService.persist(snapshot).then(() => {
+      if (sequence === writeSequence.current && !terminal.current) setDraftStatus('protected');
+    }, () => {
+      if (sequence === writeSequence.current && !terminal.current) setDraftStatus('error');
+    });
+  }, [snapshot, protectDraft]);
+
+  const discardAndClose = async () => {
+    if (isSaving || isPhotoPreparing || terminal.current) return;
+    terminal.current = true;
+    setIsSaving(true);
+    try {
+      if (protectDraft) await expenseDraftRecoveryService.discard(draftId);
+      onClose();
+    } catch {
+      terminal.current = false;
+      setSaveError(ta(language, 'attachmentSaveError'));
+    } finally { setIsSaving(false); }
+  };
+
   useEffect(() => {
     const closeIfSafe = () => {
       if (isSaving || isPhotoPreparing) return;
-      onClose();
+      void discardAndClose();
     };
     const handleKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
@@ -131,7 +186,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
       document.removeEventListener('keydown', handleKey);
       window.removeEventListener('spendwise-native-back', handleNativeBack);
     };
-  }, [isSaving, isPhotoPreparing, onClose]);
+  }, [isSaving, isPhotoPreparing, onClose, draftId, protectDraft]);
 
   const revealAppliedDraft = () => {
     setSuggestionApplied(true);
@@ -226,13 +281,14 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
       hasError = true;
     }
 
-    if (hasError || isNaN(amount) || isSaving || isPhotoPreparing) return;
+    if (hasError || isNaN(amount) || isSaving || isPhotoPreparing || terminal.current) return;
 
     setIsSaving(true);
+    terminal.current = true;
     setSaveError(null);
 
     try {
-      await onSave(
+      const save = async () => { await onSave(
         amount,
         descriptionText.trim(),
         selectedCategory,
@@ -241,9 +297,13 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
         {
           newAttachments: attachmentDrafts,
           removedAttachmentIds,
+          recoveryDraftId: protectDraft ? draftId : undefined,
         }
-      );
+      ); };
+      if (protectDraft) await expenseDraftRecoveryService.commit(snapshot, save);
+      else await save();
     } catch {
+      terminal.current = false;
       setSaveError(ta(language, 'attachmentSaveError'));
     } finally {
       setIsSaving(false);
@@ -287,7 +347,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
               )}
             </div>
             <button
-              onClick={onClose}
+              onClick={() => void discardAndClose()}
               disabled={isSaving || isPhotoPreparing}
               className="min-w-[48px] min-h-[48px] flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               aria-label={t(language, 'cancelBtn')}
@@ -296,7 +356,12 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
             </button>
           </div>
 
-          <div className="min-h-0 p-4 sm:p-5 space-y-4 overflow-y-auto flex-1" data-expense-scroll-body>
+          <div inert={isSaving} className="min-h-0 p-4 sm:p-5 space-y-4 overflow-y-auto flex-1" data-expense-scroll-body>
+            {protectDraft && <p data-testid="draft-status" role="status" className="text-xs text-slate-600 dark:text-slate-300">
+              {language === 'ar' ? (visibleDraftStatus === 'protected' ? 'تمت حماية المصروف غير المكتمل' : visibleDraftStatus === 'error' ? 'تعذرت حماية العمل. أبقِ التطبيق مفتوحاً وحاول مجدداً.' : 'جارٍ حماية العمل…')
+                : language === 'fr' ? (visibleDraftStatus === 'protected' ? 'Dépense inachevée protégée' : visibleDraftStatus === 'error' ? 'Protection impossible. Gardez l’application ouverte et réessayez.' : 'Protection en cours…')
+                : (visibleDraftStatus === 'protected' ? 'Unfinished expense protected' : visibleDraftStatus === 'error' ? 'Could not protect unfinished work. Keep the app open and retry.' : 'Protecting unfinished work…')}
+            </p>}
             {suggestionApplied && <p role="status" className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
               {language === 'ar' ? 'تم تطبيق الاقتراح. راجع التفاصيل واحفظ المصروف عندما تكون جاهزاً.' : language === 'fr'
                 ? 'Suggestion appliquée. Vérifiez les détails, puis enregistrez la dépense.'
@@ -475,6 +540,9 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
                   currencyCode={currencyCode}
                   disabled={isSaving}
                   onPreparingChange={setSmartCapturePreparing}
+                  recoveryState={recoveryDraft?.smart}
+                  protectAcquisition={protectAcquisition('smart')}
+                  onDraftStateChange={setSmartDraft}
                   onApply={handleSmartCaptureApply}
                 />
               </RetainedScreen>
@@ -485,12 +553,16 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
                   currencyCode={currencyCode}
                   disabled={isSaving}
                   onPreparingChange={setReceiptPreparing}
+                  recoveryState={recoveryDraft?.receipt}
+                  protectAcquisition={protectAcquisition('receipt')}
+                  onDraftStateChange={setReceiptDraft}
                   onApply={handleReceiptScanApply}
                 />
               </RetainedScreen>
 
               <RetainedScreen active={activeTool === 'photos'}>
                 <ExpenseAttachmentsEditor
+                  protectAcquisition={protectAcquisition('photos')}
                   expenseId={initialExpense?.id}
                   language={language}
                   drafts={attachmentDrafts}
@@ -513,7 +585,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
           <div className="shrink-0 p-3 bg-slate-50 dark:bg-[#0B0F19]/60 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-end gap-2">
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => void discardAndClose()}
               disabled={isSaving || isPhotoPreparing}
               className="min-h-[48px] px-5 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >

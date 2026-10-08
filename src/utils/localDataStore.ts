@@ -5,6 +5,8 @@ import { normalizeCategoryName } from './categories';
 import { applySpendWiseSchema } from '../data/databaseSchema';
 import { nativeEncryptedDatabaseService } from '../data/NativeEncryptedDatabaseService';
 import { diagnostics, measureDiagnostic } from '../services/diagnostics/diagnostics';
+import { type DraftWrite, type StoredExpenseDraft, NATIVE_EXPENSE_DRAFT_KEY, WEB_EXPENSE_DRAFT_KEY, validateStoredDraft } from '../data/ExpenseDraft';
+import { clearWebDraft, decryptWebDraft, encryptWebDraft } from '../data/WebEncryptedDraft';
 import {
   cloneFinancialState,
   FinancialState,
@@ -71,6 +73,10 @@ export class LocalDataStoreImpl {
   private storage: KeyValueStore | null = null;
   private state: FinancialState = emptyState();
   private writeQueue: Promise<void> = Promise.resolve();
+  private expenseDraft: StoredExpenseDraft | null = null;
+  private webDraftMedia: Record<string, string> = {};
+  private draftMediaIds = new Set<string>();
+  private draftReadError: unknown = null;
 
   async init(storage: KeyValueStore): Promise<void> {
     if (this.initialized) return;
@@ -83,6 +89,7 @@ export class LocalDataStoreImpl {
         recoverWebFinancialTransaction(storage);
         return readLegacyFinancialState(storage);
       });
+      await this.loadExpenseDraft();
       this.initialized = true;
       diagnostics.setState({ databaseOpen: true });
       return;
@@ -92,6 +99,7 @@ export class LocalDataStoreImpl {
     await measureDiagnostic('storage.schema', () => this.applySchemaMigrations());
     await measureDiagnostic('storage.migration', () => this.migrateLegacyLocalStorage(storage));
     this.state = await measureDiagnostic('storage.read', () => this.loadNativeState());
+    await this.loadExpenseDraft();
     await measureDiagnostic('storage.migration', () => nativeEncryptedDatabaseService.finalizePlaintextSourceCleanup(storage));
     this.initialized = true;
     diagnostics.setState({ databaseOpen: true, databaseEncrypted: true });
@@ -126,8 +134,100 @@ export class LocalDataStoreImpl {
     return this.state.expenses.reduce((max, expense) => Math.max(max, expense.id), 0) + 1;
   }
 
-  async createExpenseWithAttachments(expense: Expense, attachments: ExpenseAttachment[]): Promise<void> {
+  getExpenseDraft(): StoredExpenseDraft | null {
+    this.requireInitialized();
+    return this.expenseDraft ? structuredClone(this.expenseDraft) : null;
+  }
+
+  async readExpenseDraftMedia(): Promise<Record<string, string>> {
+    this.requireInitialized();
+    // Reads wait for outstanding writes, so unlock never sees half of a snapshot.
+    await this.writeQueue;
+    if (this.draftReadError) {
+      await this.loadExpenseDraft();
+      if (this.draftReadError) throw this.draftReadError;
+    }
+    if (!this.native) return { ...this.webDraftMedia };
+    const rows = await this.requireDb().query('SELECT id, data FROM expense_draft_media');
+    return Object.fromEntries((rows.values ?? []).map(row => [rowString(row, 'id'), rowString(row, 'data')]));
+  }
+
+  async writeExpenseDraft(input: DraftWrite): Promise<void> {
     await this.enqueueWrite(async () => {
+      if (this.draftReadError) throw this.draftReadError;
+      const draft = validateStoredDraft(input.draft);
+      if (this.expenseDraft && this.expenseDraft.id !== draft.id) throw new Error('EXPENSE_DRAFT_CONFLICT');
+      if (this.native) {
+        await this.withNativeTransaction(async db => {
+          for (const photo of draft.photos) {
+            if (this.draftMediaIds.has(photo.id)) continue;
+            if (!input.media[photo.id]) throw new Error('EXPENSE_DRAFT_MEDIA_MISSING');
+            await db.run('INSERT INTO expense_draft_media(id, data) VALUES(?, ?)', [photo.id, input.media[photo.id]], false);
+          }
+          const ids = draft.photos.map(p => p.id);
+          await db.run(ids.length ? `DELETE FROM expense_draft_media WHERE id NOT IN (${ids.map(() => '?').join(',')})` : 'DELETE FROM expense_draft_media', ids, false);
+          await this.setMeta(db, NATIVE_EXPENSE_DRAFT_KEY, JSON.stringify(draft));
+        });
+      } else {
+        const encrypted = await encryptWebDraft(input);
+        this.storage!.setItem(WEB_EXPENSE_DRAFT_KEY, encrypted);
+        this.webDraftMedia = { ...input.media };
+      }
+      this.expenseDraft = structuredClone(draft);
+      this.draftMediaIds = new Set(draft.photos.map(p => p.id));
+    });
+  }
+
+  async discardExpenseDraft(id?: string): Promise<void> {
+    await this.enqueueWrite(async () => {
+      if (!this.draftReadError && (!id || this.expenseDraft?.id !== id)) return;
+      if (this.native) await this.withNativeTransaction(db => this.deleteDraftRows(db));
+      else this.storage!.removeItem(WEB_EXPENSE_DRAFT_KEY);
+      await this.forgetDraft();
+    });
+  }
+
+  private async deleteDraftRows(db: SQLiteDBConnection): Promise<void> {
+    await db.run('DELETE FROM app_meta WHERE key = ?', [NATIVE_EXPENSE_DRAFT_KEY], false);
+    await db.run('DELETE FROM expense_draft_media', [], false);
+  }
+
+  private async forgetDraft(): Promise<void> {
+    this.draftReadError = null;
+    this.expenseDraft = null;
+    this.webDraftMedia = {};
+    this.draftMediaIds.clear();
+    if (!this.native) await clearWebDraft().catch(() => undefined);
+  }
+
+  private async loadExpenseDraft(): Promise<void> {
+    try {
+      const raw = this.native ? await this.getMeta(this.requireDb(), NATIVE_EXPENSE_DRAFT_KEY) : this.storage!.getItem(WEB_EXPENSE_DRAFT_KEY);
+      if (!raw) { await this.forgetDraft(); return; }
+      if (this.native) this.expenseDraft = validateStoredDraft(JSON.parse(raw));
+      else {
+        const saved = await decryptWebDraft(raw) as DraftWrite;
+        this.expenseDraft = validateStoredDraft(saved.draft);
+        this.webDraftMedia = saved.media;
+      }
+      this.draftMediaIds = new Set(this.expenseDraft.photos.map(p => p.id));
+      this.draftReadError = null;
+    } catch (error) {
+      // Preserve opaque bytes for authenticated Retry/Discard; a broken draft
+      // must not block an independently validated financial ledger at startup.
+      this.draftReadError = error;
+    }
+  }
+
+  private assertSavingDraft(id?: string): boolean {
+    if (!id) return false;
+    if (this.expenseDraft?.id !== id) throw new Error('EXPENSE_DRAFT_CONFLICT');
+    return true;
+  }
+
+  async createExpenseWithAttachments(expense: Expense, attachments: ExpenseAttachment[], draftId?: string): Promise<void> {
+    await this.enqueueWrite(async () => {
+      const clearDraft = this.assertSavingDraft(draftId);
       const next = cloneFinancialState(this.state);
       if (next.expenses.some((item) => item.id === expense.id)) throw new Error('EXPENSE_ID_EXISTS');
       next.expenses.unshift({ ...expense });
@@ -138,16 +238,19 @@ export class LocalDataStoreImpl {
         await this.withNativeTransaction(async (db) => {
           await this.insertExpense(db, expense);
           for (const attachment of attachments) await this.insertAttachment(db, attachment);
+          if (clearDraft) await this.deleteDraftRows(db);
         });
       } else {
-        this.persistWeb(next);
+        this.persistWeb(next, clearDraft);
       }
+      if (clearDraft) await this.forgetDraft();
       this.state = next;
     });
   }
 
-  async updateExpenseWithAttachments(expense: Expense, attachments: ExpenseAttachment[]): Promise<void> {
+  async updateExpenseWithAttachments(expense: Expense, attachments: ExpenseAttachment[], draftId?: string): Promise<void> {
     await this.enqueueWrite(async () => {
+      const clearDraft = this.assertSavingDraft(draftId);
       const next = cloneFinancialState(this.state);
       const index = next.expenses.findIndex((item) => item.id === expense.id);
       if (index < 0) throw new Error('EXPENSE_NOT_FOUND');
@@ -168,10 +271,12 @@ export class LocalDataStoreImpl {
           );
           await db.run('DELETE FROM expense_attachments WHERE expense_id = ?', [expense.id], false);
           for (const attachment of attachments) await this.insertAttachment(db, attachment);
+          if (clearDraft) await this.deleteDraftRows(db);
         });
       } else {
-        this.persistWeb(next);
+        this.persistWeb(next, clearDraft);
       }
+      if (clearDraft) await this.forgetDraft();
       this.state = next;
     });
   }
@@ -182,6 +287,7 @@ export class LocalDataStoreImpl {
 
     return this.enqueueWrite(async () => {
       const idSet = new Set(uniqueIds);
+      const clearDraft = this.expenseDraft?.expenseId != null && idSet.has(this.expenseDraft.expenseId);
       const detached = this.state.attachments
         .filter((item) => idSet.has(item.expenseId))
         .map((item) => ({ ...item }));
@@ -194,10 +300,12 @@ export class LocalDataStoreImpl {
         await this.withNativeTransaction(async (db) => {
           const placeholders = uniqueIds.map(() => '?').join(', ');
           await db.run(`DELETE FROM expenses WHERE id IN (${placeholders})`, uniqueIds, false);
+          if (clearDraft) await this.deleteDraftRows(db);
         });
       } else {
-        this.persistWeb(next);
+        this.persistWeb(next, clearDraft);
       }
+      if (clearDraft) await this.forgetDraft();
       this.state = next;
       return detached;
     });
@@ -293,10 +401,12 @@ export class LocalDataStoreImpl {
           await db.run('DELETE FROM expense_attachments', [], false);
           await db.run('DELETE FROM expenses', [], false);
           await db.run('DELETE FROM monthly_budgets', [], false);
+          await this.deleteDraftRows(db);
         });
       } else {
-        this.persistWeb(next);
+        this.persistWeb(next, true);
       }
+      await this.forgetDraft();
       this.state = next;
       return detached;
     });
@@ -311,9 +421,9 @@ export class LocalDataStoreImpl {
     if (!this.initialized) throw new Error('LOCAL_DATA_STORE_NOT_INITIALIZED');
   }
 
-  private persistWeb(state: FinancialState): void {
+  private persistWeb(state: FinancialState, clearDraft = false): void {
     if (!this.storage) throw new Error('WEB_STORAGE_UNAVAILABLE');
-    persistWebFinancialState(this.storage, state);
+    persistWebFinancialState(this.storage, state, clearDraft);
   }
 
   private enqueueWrite<T>(work: () => Promise<T>): Promise<T> {

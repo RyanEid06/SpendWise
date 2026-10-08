@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AlertCircle, Camera, CheckCircle2, ImagePlus, Loader2, X } from 'lucide-react';
 import { Language, ReceiptScanResult } from '../types';
+import type { DraftToolState } from '../data/ExpenseDraft';
 import { apiFetchJson } from '../utils/api';
 import { getAiErrorMessage, SpendWiseApiError } from '../utils/apiErrors';
 import { AttachmentDraft, AttachmentStorage } from '../utils/attachmentStorage';
@@ -16,6 +17,9 @@ import {
 } from '../utils/imageAcquisition';
 
 interface ReceiptScanCardProps {
+  protectAcquisition?: (operation: () => Promise<AttachmentDraft[]>, accept?: () => boolean) => Promise<AttachmentDraft[]>;
+  recoveryState?: DraftToolState<ReceiptScanResult> | null;
+  onDraftStateChange?: (state: DraftToolState<ReceiptScanResult>) => void;
   language: Language;
   currencyCode: string;
   disabled?: boolean;
@@ -138,18 +142,25 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
   disabled = false,
   onPreparingChange,
   onApply,
+  recoveryState,
+  protectAcquisition,
+  onDraftStateChange,
 }) => {
+  const selectionGenerationRef = useRef(0);
+  const mountedRef = useRef(true);
   const preparationRequestIdRef = useRef(0);
   const requestIdRef = useRef(0);
   const acquisitionInFlightRef = useRef(false);
   const analysisInFlightRef = useRef(false);
   const preparedPreviewUrlRef = useRef<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [preparedDraft, setPreparedDraft] = useState<AttachmentDraft | null>(null);
+  const [preparedDraft, setPreparedDraft] = useState<AttachmentDraft | null>(recoveryState?.photo ?? null);
   const [isAcquiring, setIsAcquiring] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
-  const [result, setResult] = useState<ReceiptScanResult | null>(null);
+  const [result, setResult] = useState<ReceiptScanResult | null>(recoveryState?.currencyCode === currencyCode && recoveryState?.language === language ? recoveryState.result : null);
+  const [interrupted, setInterrupted] = useState(recoveryState?.interrupted ?? false);
+  const previousContext = useRef({ currencyCode, language });
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -157,6 +168,8 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
   }, [isPreparing, isAcquiring, onPreparingChange]);
 
   useLayoutEffect(() => {
+    if (previousContext.current.currencyCode === currencyCode && previousContext.current.language === language) return;
+    previousContext.current = { currencyCode, language };
     requestIdRef.current += 1;
     analysisInFlightRef.current = false;
     setResult(null);
@@ -165,7 +178,21 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
   }, [currencyCode, language]);
 
   useEffect(() => {
+    onDraftStateChange?.({ photo: preparedDraft, result, interrupted: isScanning || interrupted, currencyCode, language });
+  }, [preparedDraft, result, isScanning, interrupted, currencyCode, language, onDraftStateChange]);
+
+  useEffect(() => {
+    if (!recoveryState?.photo) return;
+    const url = URL.createObjectURL(recoveryState.photo.blob);
+    preparedPreviewUrlRef.current = url;
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       preparationRequestIdRef.current += 1;
       requestIdRef.current += 1;
       acquisitionInFlightRef.current = false;
@@ -182,6 +209,8 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
   };
 
   const resetSelection = () => {
+    selectionGenerationRef.current += 1;
+    setInterrupted(false);
     preparationRequestIdRef.current += 1;
     requestIdRef.current += 1;
     analysisInFlightRef.current = false;
@@ -196,56 +225,45 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
 
   const beginPhotoSelection = async (source: PhotoAcquisitionSource) => {
     if (disabled || acquisitionInFlightRef.current || isScanning) return;
-
     acquisitionInFlightRef.current = true;
     setIsAcquiring(true);
     setError(null);
-
-    let acquired = null;
-    try {
-      acquired =
-        source === 'camera' ? await takePhoto() : (await choosePhotos(1))[0] || null;
-    } catch (acquisitionError) {
-      setError(photoAcquisitionErrorText(language, acquisitionError));
-      return;
-    } finally {
-      acquisitionInFlightRef.current = false;
-      setIsAcquiring(false);
-    }
-
-    if (!acquired) return;
-
-    requestIdRef.current += 1;
-    analysisInFlightRef.current = false;
-    const preparationRequestId = ++preparationRequestIdRef.current;
-    clearPreparedPreview();
-    setPreviewUrl(acquired.previewUrl);
-    setPreparedDraft(null);
-    setResult(null);
-    setError(null);
-    setIsScanning(false);
-    setIsPreparing(true);
-
-    await waitForPhotoUiPaint();
-
-    try {
+    const selectionGeneration = selectionGenerationRef.current;
+    const prepare = async (): Promise<AttachmentDraft[]> => {
+      const acquired = source === 'camera' ? await takePhoto() : (await choosePhotos(1))[0] || null;
+      if (!acquired) return [];
+      requestIdRef.current += 1;
+      analysisInFlightRef.current = false;
+      clearPreparedPreview();
+      setPreviewUrl(null);
+      setPreparedDraft(null);
+      setResult(null);
+      setIsScanning(false);
+      setIsPreparing(true);
       const file = await acquired.loadFile();
+      if (mountedRef.current && selectionGeneration === selectionGenerationRef.current) {
+        preparedPreviewUrlRef.current = URL.createObjectURL(file);
+        setPreviewUrl(preparedPreviewUrlRef.current);
+      }
+      await waitForPhotoUiPaint();
       const draft = await AttachmentStorage.prepareImageDraft(file, 'receipt');
-      if (preparationRequestId !== preparationRequestIdRef.current) return;
-
+      return selectionGeneration === selectionGenerationRef.current ? [draft] : [];
+    };
+    try {
+      const photos = await (protectAcquisition ? protectAcquisition(prepare, () => selectionGeneration === selectionGenerationRef.current) : prepare());
+      if (!mountedRef.current || selectionGeneration !== selectionGenerationRef.current || photos.length === 0) return;
+      const draft = photos[0];
       const preparedPreviewUrl = URL.createObjectURL(draft.blob);
       clearPreparedPreview();
       preparedPreviewUrlRef.current = preparedPreviewUrl;
       setPreparedDraft(draft);
+      setInterrupted(false);
       setPreviewUrl(preparedPreviewUrl);
-    } catch {
-      if (preparationRequestId !== preparationRequestIdRef.current) return;
-      setPreparedDraft(null);
-      setError(ta(language, 'photoPrepareError'));
+    } catch (error) {
+      if (mountedRef.current) setError(photoAcquisitionErrorText(language, error));
     } finally {
-      if (preparationRequestId === preparationRequestIdRef.current) {
-        setIsPreparing(false);
-      }
+      acquisitionInFlightRef.current = false;
+      if (mountedRef.current) { setIsAcquiring(false); setIsPreparing(false); }
     }
   };
 
@@ -255,6 +273,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
     }
 
     analysisInFlightRef.current = true;
+    setInterrupted(false);
     const requestId = ++requestIdRef.current;
     setIsScanning(true);
     setResult(null);
@@ -295,6 +314,9 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
 
   return (
     <section className="rounded-2xl border border-purple-200 dark:border-purple-800/60 bg-purple-50 dark:bg-purple-950/40 p-4 space-y-3">
+      {interrupted && <p role="status" className="text-xs text-purple-900 dark:text-purple-100">
+        {language === 'ar' ? 'توقف التحليل. أعد المحاولة عندما تكون جاهزاً.' : language === 'fr' ? 'Analyse interrompue. Réessayez quand vous êtes prêt.' : 'Analysis was interrupted. Retry when you are ready.'}
+      </p>}
       <div className="flex items-start gap-3 min-w-0">
         <div className="w-10 h-10 rounded-xl bg-purple-200/80 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 flex items-center justify-center shrink-0">
           <Camera className="w-5 h-5" />

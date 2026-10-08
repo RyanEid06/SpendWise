@@ -38,7 +38,7 @@ export function useAppOverlays() {
   const closeBudgetModal = useCallback(() => setShowBudgetModal(false), []);
 
   const closeForLock = useCallback(() => {
-    window.dispatchEvent(new Event('spendwise-native-back'));
+    // Authentication interruption is not intentional Cancel/Back.
     setShowAddModal(false);
     setEditingExpense(null);
     setViewingExpense(null);

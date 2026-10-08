@@ -566,9 +566,9 @@ export class NativeEncryptedDatabaseService {
         false,
         'no-encryption'
       );
-      await assertSpendWiseDatabaseIntegrity(source);
+      await assertSpendWiseDatabaseIntegrity(source, false);
       const sourceVersion = await readDatabaseUserVersion(source);
-      if (sourceVersion !== SPENDWISE_DATABASE_SCHEMA_VERSION) {
+      if (sourceVersion !== 1) {
         throw new Error('PLAINTEXT_DATABASE_SCHEMA_UNSUPPORTED');
       }
       const sourceSnapshot = await readSnapshot(source);
@@ -587,13 +587,14 @@ export class NativeEncryptedDatabaseService {
             true,
             'secret'
           );
-          await assertSpendWiseDatabaseIntegrity(candidate);
+          await assertSpendWiseDatabaseIntegrity(candidate, false);
           const candidateSnapshot = await readSnapshot(candidate);
           await assertSnapshotMatches(sourceSnapshot, candidateSnapshot);
           const candidateCounts = await countRows(candidate);
           if (!countsEqual(candidateCounts, sourceCounts)) {
             throw new Error('DATABASE_MIGRATION_COUNT_MISMATCH');
           }
+          await applySpendWiseSchema(candidate);
 
           await closeConnection(sqlite, ENCRYPTED_DATABASE_NAME);
           candidate = await openConnection(
@@ -641,6 +642,7 @@ export class NativeEncryptedDatabaseService {
         true,
         'secret'
       );
+      await applySpendWiseSchema(destination);
       await assertSpendWiseDatabaseIntegrity(destination);
       const snapshot = await readSnapshot(destination);
       validateFinancialState(snapshot.state);
@@ -769,9 +771,9 @@ export class NativeEncryptedDatabaseService {
       'no-encryption'
     );
 
-    await assertSpendWiseDatabaseIntegrity(source);
+    await assertSpendWiseDatabaseIntegrity(source, false);
     const sourceVersion = await readDatabaseUserVersion(source);
-    if (sourceVersion !== SPENDWISE_DATABASE_SCHEMA_VERSION) {
+    if (sourceVersion !== 1) {
       throw new Error('PLAINTEXT_DATABASE_SCHEMA_UNSUPPORTED');
     }
 

@@ -63,7 +63,7 @@ export class ExpenseService {
     );
 
     try {
-      await this.expenses.createWithAttachments(expense, prepared.nextAttachments);
+      await this.expenses.createWithAttachments(expense, prepared.nextAttachments, attachmentChanges.recoveryDraftId);
     } catch (error) {
       await this.media.deleteDetachedFiles(prepared.stagedAttachments);
       throw error;
@@ -79,7 +79,7 @@ export class ExpenseService {
   ): Promise<void> {
     updated = { ...updated, category: normalizeCategoryName(updated.category) };
     const previous = this.expenses.list().find((expense) => expense.id === updated.id);
-    if (!previous) return;
+    if (!previous) throw new Error('EXPENSE_NOT_FOUND');
 
     const prepared = await this.media.prepareExpenseAttachmentChanges(
       updated.id,
@@ -88,7 +88,7 @@ export class ExpenseService {
     );
 
     try {
-      await this.expenses.updateWithAttachments(updated, prepared.nextAttachments);
+      await this.expenses.updateWithAttachments(updated, prepared.nextAttachments, attachmentChanges.recoveryDraftId);
     } catch (error) {
       await this.media.deleteDetachedFiles(prepared.stagedAttachments);
       throw error;
