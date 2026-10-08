@@ -149,4 +149,3 @@ jobs:
           name: SpendWise-WP06-candidate-${{ github.sha }}
           path: release/
           if-no-files-found: error
-
