@@ -15,11 +15,9 @@ appId: com.spendwise.app
     duration: 500
 - tapOn: "Choose Photo"
 - pressKey: back
-# Immediate App Lock may require authentication after leaving the picker.
-- runFlow:
-    when:
-      visible: "Use PIN"
-    file: ../helpers/android-device-pin.yaml
+# This gate configures immediate App Lock. Android's observed credential screen
+# opens the PIN input directly, without a "Use PIN" biometric choice.
+- runFlow: ../helpers/android-device-pin.yaml
 - extendedWaitUntil:
     visible: "Add Expense"
     timeout: 30000
