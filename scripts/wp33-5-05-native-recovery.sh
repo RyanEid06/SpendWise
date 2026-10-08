@@ -43,7 +43,9 @@ run_wp05_recovery() {
   adb shell dumpsys activity activities > "$RESULT_ROOT/before-activity-recreation.txt"
   adb shell input keyevent KEYCODE_HOME
   sleep 2
-  wp05_launch_unlock activity-recreation --activity-clear-task --activity-new-task
+  # am has no --activity-new-task switch on API 34. -f supplies the documented
+  # FLAG_ACTIVITY_NEW_TASK (0x10000000) | FLAG_ACTIVITY_CLEAR_TASK (0x8000).
+  wp05_launch_unlock activity-recreation -f 0x10008000
   [[ "$(adb shell pidof "$APP_ID" | tr -d '\r')" = "$activity_pid" ]]
   run_flow wp05-recreated-activity .maestro/wp05/assert-add.yaml
   adb shell dumpsys activity activities > "$RESULT_ROOT/after-activity-recreation.txt"
@@ -56,7 +58,7 @@ const records = phase => [...new Set([...readFileSync(`${root}/${phase}-activity
 const before = records('before'), after = records('after');
 assert.ok(before.length && after.length, 'Observe both old and replacement native Activities');
 assert.ok(before.every(record => !after.includes(record)), 'Old Activity must actually be destroyed/replaced');
-writeFileSync(`${root}/activity-recreation.json`, JSON.stringify({ pid: Number(pid), mechanism: 'am start --activity-clear-task --activity-new-task', sameProcess: true, before, after }, null, 2));
+writeFileSync(`${root}/activity-recreation.json`, JSON.stringify({ pid: Number(pid), mechanism: 'am start -f 0x10008000 (NEW_TASK | CLEAR_TASK)', sameProcess: true, before, after }, null, 2));
 console.log('WP05_ACTIVITY_RECREATION_PASSED');
 NODE
   wp05_kill_reopen partial-add
