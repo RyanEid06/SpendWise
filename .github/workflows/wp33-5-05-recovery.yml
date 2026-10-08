@@ -95,6 +95,8 @@ jobs:
           npm run android:sync
           chmod +x android/gradlew
           (cd android && ./gradlew testDebugUnitTest assembleDebug)
+          mkdir -p artifacts/android-isolated/wp33-5-05-recovery/native-unit-results
+          cp android/app/build/test-results/testDebugUnitTest/TEST-*.xml artifacts/android-isolated/wp33-5-05-recovery/native-unit-results/
           mkdir -p artifacts/android-e2e/apks
           cp android/app/build/outputs/apk/debug/app-debug.apk artifacts/android-e2e/apks/current-debug.apk
           ./node_modules/.bin/esbuild scripts/wp33/native.ts --bundle --platform=node --format=esm --outfile=artifacts/wp33/native-runner.mjs

@@ -36,7 +36,12 @@ const evaluate = expression => new Promise((resolve, reject) => {
   pending.set(id, { resolve, reject, timer });
   socket.send(JSON.stringify({ id, method: 'Runtime.evaluate', params: { expression, returnByValue: true } }));
 });
-const expression = `(() => ({
+// A force-stopped process exposes its new WebView before navigation has built
+// document.body. Observe only the app origin after its document exists; this
+// readiness wait does not authenticate or change any app state.
+const expression = `(() => {
+  if (location.origin !== 'https://localhost' || !document.body) return null;
+  return ({
   text: document.body.innerText,
   inputs: [...document.querySelectorAll('input,textarea')].map(e => ({label:e.getAttribute('aria-label'),value:e.value})),
   dialogs: [...document.querySelectorAll('[role=dialog]')].map(e=>e.getAttribute('aria-labelledby')),
@@ -44,18 +49,23 @@ const expression = `(() => ({
   photos: [...document.querySelectorAll('[role=dialog] img')].map(e=>({width:e.naturalWidth,height:e.naturalHeight,src:e.src.slice(0,5)})),
   localValues: Object.values(localStorage),
   status: document.querySelector('[data-testid=draft-status]')?.innerText
-}))()`;
+}); })()`;
 try {
   let state;
   for (let attempt = 0; attempt < 30; attempt++) {
     const observed = await evaluate(expression);
     if (observed.exceptionDetails) throw new Error('DOM observation failed');
     state = observed.result.value;
+    if (!state) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      continue;
+    }
     if (phase === 'locked' ? /SpendWise is Locked|Unlocking/.test(state.text)
         : ['add', 'photo'].includes(phase) ? state.status === 'Unfinished expense protected'
         : state.text.includes('Money Remaining')) break;
     await new Promise(resolve => setTimeout(resolve, 500));
   }
+  assert.ok(state, 'App document did not become ready for native observation');
   mkdirSync(dirname(output), { recursive: true });
   const { localValues, ...receipt } = state;
   receipt.plaintextDraftInLocalStorage = localValues.some(value => /WP05 Native Recovery|WP05 Native Edited/.test(value));
