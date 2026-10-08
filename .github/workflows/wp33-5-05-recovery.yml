@@ -79,6 +79,8 @@ jobs:
         run: |
           bash -n scripts/wp32-android-helpers.sh
           bash -n scripts/run-wp32-isolated-gate.sh
+          bash -n scripts/wp33-5-05-native-recovery.sh
+          python3 tests/wp33-5-05-at-rest.test.py
 
       - name: Generate portable fixtures
         shell: bash

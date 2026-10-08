@@ -1,11 +1,7 @@
 appId: com.spendwise.app
 ---
-- extendedWaitUntil:
-    visible: 'WP05 Native Recovery, \$37\.25'
-    timeout: 30000
-- assertNotVisible: "Unfinished expense protected"
 - tapOn: "History"
-- tapOn: "WP05 Native Recovery.*"
+- tapOn: "WP05 Native Edited.*"
 - assertVisible: "Attached photos"
 - assertVisible: "View photos"
 - extendedWaitUntil:

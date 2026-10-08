@@ -47,6 +47,8 @@ const expression = `(() => {
   dialogs: [...document.querySelectorAll('[role=dialog]')].map(e=>e.getAttribute('aria-labelledby')),
   category: document.querySelector('[data-expense-categories] [aria-pressed=true]')?.innerText,
   photos: [...document.querySelectorAll('[role=dialog] img')].map(e=>({width:e.naturalWidth,height:e.naturalHeight,src:e.src.slice(0,5)})),
+  viewer: [...document.querySelectorAll('[data-attachment-viewer] img')].map(e=>({width:e.naturalWidth,height:e.naturalHeight,src:e.src.slice(0,5)})),
+  expenseRows: [...document.querySelectorAll('[role=button][aria-label]')].filter(e=>!e.closest('[hidden]')).map(e=>e.getAttribute('aria-label')).filter(label=>/^WP05 Native (Recovery|Edited),/.test(label)),
   localValues: Object.values(localStorage),
   status: document.querySelector('[data-testid=draft-status]')?.innerText
 }); })()`;
@@ -60,8 +62,10 @@ try {
       await new Promise(resolve => setTimeout(resolve, 500));
       continue;
     }
+    const decoded = photos => photos.length === 1 && photos[0].width === 1024 && photos[0].src === 'blob:';
     if (phase === 'locked' ? /SpendWise is Locked|Unlocking/.test(state.text)
-        : ['add', 'photo'].includes(phase) ? state.status === 'Unfinished expense protected'
+        : phase === 'viewer' ? decoded(state.viewer)
+        : ['add', 'photo'].includes(phase) ? state.status === 'Unfinished expense protected' && (phase !== 'photo' || decoded(state.photos))
         : state.text.includes('Money Remaining')) break;
     await new Promise(resolve => setTimeout(resolve, 500));
   }
@@ -87,11 +91,18 @@ try {
       assert.equal(state.photos[0].width, 1024);
       assert.equal(state.photos[0].src, 'blob:');
     }
+  } else if (phase === 'viewer') {
+    assert.equal(state.viewer.length, 1);
+    assert.equal(state.viewer[0].width, 1024);
+    assert.equal(state.viewer[0].src, 'blob:');
   } else if (phase === 'saved' || phase === 'edited') {
     assert.equal(state.dialogs.length, 0);
     const expected = phase === 'saved' ? 'WP05 Native Recovery' : 'WP05 Native Edited';
     // Home presents the one saved expense once. No second Save or recreated Add.
     assert.equal(state.text.split(expected).length - 1, 1);
+    assert.equal(state.expenseRows.length, 1, 'Exactly one native ledger row after Save/Edit');
+    assert.match(state.expenseRows[0], new RegExp(`^${expected},`));
+    if (phase === 'edited') assert.equal(state.text.includes('WP05 Native Recovery'), false, 'Edit updates the existing row rather than creating a duplicate');
     const files = adb('shell','run-as','com.spendwise.app','find','files/expense-attachments/secure','-type','f').trim().split(/\r?\n/).filter(Boolean);
     assert.equal(files.length, 1, 'One permanent encrypted photo, without discarded copies/orphans');
   } else throw new Error('Unknown probe phase');

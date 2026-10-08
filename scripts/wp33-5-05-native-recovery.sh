@@ -21,6 +21,7 @@ wp05_kill_reopen() {
   wp05_launch_unlock "$phase"
   after="$(adb shell pidof "$APP_ID" | tr -d '\r')"
   [[ "$after" =~ ^[0-9]+$ && "$after" != "$before" ]]
+  printf '{"phase":"%s","beforePid":%s,"afterKillPid":null,"restartedPid":%s,"method":"am force-stop"}\n' "$phase" "$before" "$after" > "$RESULT_ROOT/$phase-process-death.json"
   echo "WP05_PROCESS_DEATH:$phase:$before->$after"
 }
 
@@ -31,6 +32,9 @@ run_wp05_recovery() {
   bootstrap_app_lock_timeout
   run_flow wp05-add .maestro/wp05/add.yaml
   node scripts/wp33-5-05-native-probe.mjs add "$RESULT_ROOT/add-fields.json"
+  # Prove inventory access before spending time on lifecycle/picker phases;
+  # repeat the full audit with an acquired photo and after terminal operations.
+  python3 scripts/wp33-5-05-at-rest.py "$RESULT_ROOT/before-photo-at-rest.json"
   adb shell input keyevent KEYCODE_HOME
   sleep 2 # Wait for Android onStop; an immediate start can skip appStateChange(false).
   wp05_launch_unlock background
@@ -75,23 +79,30 @@ NODE
   run_flow wp05-recovered-photo .maestro/wp05/assert-photo.yaml
   node scripts/wp33-5-05-native-probe.mjs photo "$RESULT_ROOT/recovered-photo.json"
   # A real reboot with durable photo recovery, not a browser reload.
+  local before_boot after_boot
+  before_boot="$(adb shell cat /proc/sys/kernel/random/boot_id | tr -d '\r')"
+  [[ "$before_boot" =~ ^[a-f0-9-]{36}$ ]]
   adb reboot
   adb wait-for-device
   for attempt in {1..60}; do
-    [[ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ]] && break
+    after_boot="$(adb shell cat /proc/sys/kernel/random/boot_id 2>/dev/null | tr -d '\r' || true)"
+    if [[ "$after_boot" =~ ^[a-f0-9-]{36}$ && "$after_boot" != "$before_boot" && "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ]]; then break; fi
     sleep 2
   done
-  [[ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ]]
+  [[ "$after_boot" =~ ^[a-f0-9-]{36}$ && "$after_boot" != "$before_boot" && "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ]]
+  printf '{"beforeBootId":"%s","afterBootId":"%s","completed":true}\n' "$before_boot" "$after_boot" > "$RESULT_ROOT/reboot.json"
+  echo "WP05_ACTUAL_REBOOT_PASSED"
   adb shell input keyevent KEYCODE_WAKEUP
   adb shell input swipe 500 1800 500 300
-  adb shell input text 2468
-  adb shell input keyevent KEYCODE_ENTER
+  python3 scripts/wp33-5-05-keyguard.py "$RESULT_ROOT"
   wp05_launch_unlock reboot-photo
   run_flow wp05-reboot-photo .maestro/wp05/assert-photo.yaml
   node scripts/wp33-5-05-native-probe.mjs photo "$RESULT_ROOT/reboot-photo.json"
   run_flow wp05-recovered-save .maestro/wp05/save.yaml
   wp05_kill_reopen recovered-save
   run_flow wp05-saved-once .maestro/wp05/assert-saved.yaml
+  node scripts/wp33-5-05-native-probe.mjs viewer "$RESULT_ROOT/saved-photo-decoded.json"
+  run_flow wp05-close-saved-photo .maestro/wp05/close-saved-photo.yaml
   node scripts/wp33-5-05-native-probe.mjs saved "$RESULT_ROOT/saved-once.json"
   run_flow wp05-add-discard .maestro/wp05/add.yaml
   run_flow wp05-attach-discard .maestro/wp05/attach.yaml
@@ -105,6 +116,9 @@ NODE
   run_flow wp05-recovered-edit-save .maestro/wp05/assert-edit-save.yaml
   wp05_kill_reopen edited-save
   node scripts/wp33-5-05-native-probe.mjs edited "$RESULT_ROOT/edited-once.json"
+  run_flow wp05-edited-photo .maestro/wp05/assert-edited-photo.yaml
+  node scripts/wp33-5-05-native-probe.mjs viewer "$RESULT_ROOT/edited-photo-decoded.json"
+  run_flow wp05-close-edited-photo .maestro/wp05/close-saved-photo.yaml
   python3 scripts/wp33-5-05-at-rest.py "$RESULT_ROOT/after-terminal-at-rest.json"
   echo "WP05_NATIVE_RECOVERY_PASSED"
 }
