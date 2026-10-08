@@ -11,13 +11,17 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     protected void attachBaseContext(Context base) {
-        // AppCompat resolves qualified splash resources while attaching its base.
-        SpendWiseAppearance.restoreBeforeActivity(base);
+        // Older AppCompat needs its local mode before it resolves splash resources.
+        // This phase must never fetch a service through the unattached Activity.
+        SpendWiseAppearance.restoreBeforeAttachment(base);
         super.attachBaseContext(base);
     }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        // Activity attachment is complete; Android 12+ uses the initialized
+        // application context rather than ContextImpl's outer Activity wrapper.
+        SpendWiseAppearance.restoreAfterAttachment(getApplicationContext());
         SplashScreen.installSplashScreen(this);
         registerPlugin(SpendWiseSecurityPlugin.class);
         registerPlugin(SpendWiseAppearancePlugin.class);

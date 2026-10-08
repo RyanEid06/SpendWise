@@ -1,0 +1,8 @@
+appId: com.spendwise.app
+---
+- launchApp:
+    stopApp: false
+- runFlow: ../helpers/onboard-current.yaml
+- assertVisible: "Money Remaining"
+- assertVisible: "Home"
+- assertVisible: "Add Expense"

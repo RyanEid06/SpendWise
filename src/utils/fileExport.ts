@@ -9,6 +9,28 @@ export interface TextFileExportOptions {
   shareTitle: string;
 }
 
+const NATIVE_SHARE_DIRECTORY = 'shared';
+
+async function getNativeSharePath(fileName: string): Promise<string> {
+  const safeFileName = fileName.replace(/\\/g, '/').split('/').filter(Boolean).at(-1);
+  if (!safeFileName || safeFileName === '.' || safeFileName === '..' || /[\u0000-\u001f\u007f]/.test(safeFileName)) {
+    throw new Error('Invalid export filename.');
+  }
+
+  try {
+    await Filesystem.mkdir({ path: NATIVE_SHARE_DIRECTORY, directory: Directory.Cache, recursive: true });
+  } catch (createError) {
+    try {
+      const existing = await Filesystem.stat({ path: NATIVE_SHARE_DIRECTORY, directory: Directory.Cache });
+      if (existing.type !== 'directory') throw createError;
+    } catch {
+      throw createError;
+    }
+  }
+
+  return `${NATIVE_SHARE_DIRECTORY}/${safeFileName}`;
+}
+
 /**
  * Export text files in a platform-appropriate way.
  *
@@ -22,8 +44,9 @@ export interface TextFileExportOptions {
  */
 export async function exportTextFile(options: TextFileExportOptions): Promise<void> {
   if (Capacitor.isNativePlatform()) {
+    const path = await getNativeSharePath(options.fileName);
     const result = await Filesystem.writeFile({
-      path: options.fileName,
+      path,
       data: options.content,
       directory: Directory.Cache,
       encoding: Encoding.UTF8,
@@ -66,6 +89,7 @@ export interface BlobFileExportOptions {
 
 export async function exportBlobFile(options: BlobFileExportOptions): Promise<void> {
   if (Capacitor.isNativePlatform()) {
+    const path = await getNativeSharePath(options.fileName);
     const bytes = new Uint8Array(await options.blob.arrayBuffer());
     let binary = '';
     const chunk = 0x8000;
@@ -73,7 +97,7 @@ export async function exportBlobFile(options: BlobFileExportOptions): Promise<vo
       binary += String.fromCharCode(...bytes.subarray(offset, Math.min(offset + chunk, bytes.length)));
     }
     const result = await Filesystem.writeFile({
-      path: options.fileName,
+      path,
       data: btoa(binary),
       directory: Directory.Cache,
     });

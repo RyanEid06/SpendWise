@@ -33,10 +33,17 @@ const stubs: Record<string, string> = {
     public class Context {
       public static final int MODE_PRIVATE=0; public static final String UI_MODE_SERVICE="uimode";
       public static final Map<String,String> values=new HashMap<>();
+      public static final Context APPLICATION=new Context();
+      public android.app.Activity outer; public static Context lastServiceContext;
       public static boolean durable=true; public Resources resources=new Resources();
-      public Object getSystemService(String key) {return android.app.UiModeManager.INSTANCE;}
+      public Object getSystemService(String key) {
+        // Android 16 constructs UiModeManager from ContextImpl's outer Activity.
+        // Its ContextWrapper base is still null during attachBaseContext entry.
+        if(android.os.Build.VERSION.SDK_INT>=36 && outer!=null) outer.getApplicationContext();
+        lastServiceContext=this;return android.app.UiModeManager.INSTANCE;
+      }
       public Resources getResources() {return resources;}
-      public Context getApplicationContext() {return this;}
+      public Context getApplicationContext() {return APPLICATION;}
       public Context createConfigurationContext(Configuration c) {Context x=new Context();x.resources.config=c;return x;}
       public SharedPreferences getSharedPreferences(String file,int access) {
         if (!file.equals("spendwise.appearance") || access!=MODE_PRIVATE) throw new AssertionError("appearance must be private");
@@ -67,9 +74,10 @@ const stubs: Record<string, string> = {
       public void setStatusBarColor(int c){status=c;} public void setNavigationBarColor(int c){navigation=c;}
     }`,
   'android/app/Activity.java': `package android.app; import android.content.Context; import android.content.res.Configuration;
-    public class Activity extends Context {public android.view.Window window=new android.view.Window();
+    public class Activity extends Context {public boolean attached;public android.view.Window window=new android.view.Window();
       public android.view.Window getWindow(){return window;} public void runOnUiThread(Runnable r){r.run();}
-      protected void attachBaseContext(Context base){resources=base.resources;}
+      protected void attachBaseContext(Context base){resources=base.resources;attached=true;}
+      public Context getApplicationContext(){if(!attached)throw new NullPointerException("ContextWrapper base is null");return Context.APPLICATION;}
       public void onConfigurationChanged(Configuration c){resources.config=c;}
     }`,
   'androidx/appcompat/app/AppCompatDelegate.java': `package androidx.appcompat.app;
@@ -87,6 +95,11 @@ const stubs: Record<string, string> = {
   'androidx/core/splashscreen/SplashScreen.java': `package androidx.core.splashscreen;
     public class SplashScreen {public static void installSplashScreen(android.app.Activity a) {
       com.getcapacitor.BridgeActivity.events.add("splash:"+androidx.appcompat.app.AppCompatDelegate.mode);
+      if(android.os.Build.VERSION.SDK_INT>=31) {
+        if(!a.attached)throw new AssertionError("modern splash installed before attachment");
+        if(android.app.UiModeManager.INSTANCE.mode==-99)throw new AssertionError("modern saved mode not restored before splash");
+        com.getcapacitor.BridgeActivity.events.add("splash-modern:"+android.app.UiModeManager.INSTANCE.mode);
+      }
     }}`,
   'com/getcapacitor/Bridge.java': `package com.getcapacitor;
     public class Bridge {public android.view.View web=new android.view.View();public android.view.View getWebView(){return web;}}`,
@@ -117,7 +130,7 @@ const stubs: Record<string, string> = {
 
 const nativeDir = 'android/app/src/main/java/com/spendwise/app/';
 
-test('saved native mode is restored before splash and persists only appearance on API 30 and 31', () => {
+test('saved themes survive Android 16 outer-context attachment, splash and relaunch without early service access', () => {
   const temp = mkdtempSync(join(tmpdir(), 'spendwise-native-theme-'));
   try {
     for (const [path, contents] of Object.entries(stubs)) {
@@ -128,29 +141,41 @@ test('saved native mode is restored before splash and persists only appearance o
       import android.content.*; import android.content.res.*; import android.os.*; import com.getcapacitor.*;
       public class AppearanceHarness {
         static void check(boolean b,String message){if(!b)throw new AssertionError(message);}
-        static class TestActivity extends MainActivity {void start(){attachBaseContext(new Context());onCreate(new Bundle());}}
+        static class TestActivity extends MainActivity {void start(){Context base=new Context();base.outer=this;attachBaseContext(base);onCreate(new Bundle());}}
         public static void main(String[] args) {
-          for(int sdk:new int[]{30,31}) for(String saved:new String[]{"LIGHT","DARK","SYSTEM","corrupt"}) {
+          for(int sdk:new int[]{36,30,31}) for(String saved:new String[]{"LIGHT","DARK","SYSTEM","corrupt"}) {
             Build.VERSION.SDK_INT=sdk; Context.values.clear();Context.values.put("mode",saved);
             for(int os:new int[]{16,32}) {
               Resources.SYSTEM.config.uiMode=os;
               BridgeActivity.events.clear();androidx.appcompat.app.AppCompatDelegate.mode=-99;
+              android.app.UiModeManager.INSTANCE.mode=-99;Context.lastServiceContext=null;
               TestActivity a=new TestActivity();a.start();
               int expected=saved.equals("DARK")?2:saved.equals("LIGHT")?1:-1;
               if(sdk==30) {
                 check(BridgeActivity.events.get(0).equals("attach:"+expected),"saved mode must precede AppCompat attach");
                 check(BridgeActivity.events.get(1).equals("splash:"+expected),"saved mode must precede splash");
               }
-              if(sdk==31)check(android.app.UiModeManager.INSTANCE.mode==(expected==-1?0:expected),"persisted app mode including SYSTEM reset");
+              if(sdk>=31)check(android.app.UiModeManager.INSTANCE.mode==(expected==-1?0:expected),"persisted app mode including SYSTEM reset");
+              if(sdk>=31) {
+                String splash="splash-modern:"+(expected==-1?0:expected);
+                check(BridgeActivity.events.contains(splash),"modern saved mode applied before splash");
+                check(BridgeActivity.events.indexOf(splash)<BridgeActivity.events.indexOf("create"),"splash precedes Capacitor initialization");
+              }
               check(BridgeActivity.events.contains("SpendWiseAppearancePlugin"),"appearance bridge must be registered");
               boolean dark=saved.equals("DARK")||(!saved.equals("LIGHT")&&os==32);
               check(a.window.background==(dark?0xff05080c:0xfff8fafc),"native background follows resolved saved preference");
               check(a.window.lightStatus==!dark&&a.window.lightNavigation==!dark,"system icons match selected appearance");
               check(a.window.flags==8192,"appearance must preserve secure flags");
               check(a.getBridge().web.background==a.window.background,"WebView background follows native appearance");
+              if(sdk>=31)check(Context.lastServiceContext==Context.APPLICATION,"UiModeManager must use initialized application context");
+              Configuration changed=new Configuration();changed.uiMode=os==16?32:16;
+              a.onConfigurationChanged(changed);
+              check(a.window.background==(dark?0xff05080c:0xfff8fafc),"configuration change preserves selected appearance");
+              TestActivity relaunched=new TestActivity();relaunched.start();
+              check(relaunched.window.background==a.window.background,"second startup retains saved theme without attachment failure");
             }
           }
-          MainActivity a=new MainActivity();SpendWiseAppearancePlugin plugin=new SpendWiseAppearancePlugin();plugin.activity=a;
+          TestActivity a=new TestActivity();a.start();SpendWiseAppearancePlugin plugin=new SpendWiseAppearancePlugin();plugin.activity=a;
           for(String mode:new String[]{"LIGHT","DARK","SYSTEM"}) {
             PluginCall call=new PluginCall(mode);plugin.setThemeMode(call);
             check(call.error==null&&mode.equals(call.result.get("mode")),"valid mode acknowledged");

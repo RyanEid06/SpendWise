@@ -1,0 +1,7 @@
+appId: com.spendwise.app
+---
+- launchApp:
+    stopApp: false
+- assertVisible: "Money Remaining"
+- assertVisible: "Home"
+- assertVisible: "Add Expense"

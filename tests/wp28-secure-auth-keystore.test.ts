@@ -374,7 +374,7 @@ test('WP28 legacy migration contract no longer silently disables App Lock and CI
   assert.equal(packageJson.scripts['test:wp28'], 'tsx --test tests/wp28-secure-auth-keystore.test.ts');
   assert.equal(packageJson.version, '2.0.2');
   assert.equal(versionJson.versionName, '2.0.2');
-  assert.equal(versionJson.versionCode, 8);
+  assert.equal(versionJson.versionCode, 9);
 });
 
 test('WP28 security state contains no plaintext PIN field or secret key material', () => {

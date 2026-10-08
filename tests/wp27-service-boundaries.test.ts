@@ -243,5 +243,5 @@ test('WP27 preserves approved release metadata', () => {
   const versionJson = JSON.parse(read('version.json')) as { versionName: string; versionCode: number };
   assert.equal(packageJson.version, '2.0.2');
   assert.equal(versionJson.versionName, '2.0.2');
-  assert.equal(versionJson.versionCode, 8);
+  assert.equal(versionJson.versionCode, 9);
 });

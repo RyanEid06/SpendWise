@@ -1,0 +1,15 @@
+appId: com.spendwise.app
+---
+# Prove the code-7 APK itself can reopen its persisted financial fixture before update.
+- stopApp
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: "Money Remaining"
+    timeout: 30000
+- assertVisible: ".*1,250.*"
+- tapOn: "History"
+- extendedWaitUntil:
+    visible: "WP33.5-06 signed startup receipt.*"
+    timeout: 15000
+- assertVisible: "Home"
