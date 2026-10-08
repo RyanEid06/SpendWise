@@ -15,9 +15,13 @@ appId: com.spendwise.app
     duration: 500
 - tapOn: "Choose Photo"
 - pressKey: back
-# This gate configures immediate App Lock. Android's observed credential screen
-# opens the PIN input directly, without a "Use PIN" biometric choice.
-- runFlow: ../helpers/android-device-pin.yaml
+# The Android photo picker can remain a foreground dialog (no app onStop).
+# Authenticate when it actually backgrounds the app, including direct PIN UI.
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "SpendWise is Locked|Unlock SpendWise|Use PIN"
+    file: ../helpers/android-device-pin.yaml
 - extendedWaitUntil:
     visible: "Add Expense"
     timeout: 30000
