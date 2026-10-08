@@ -42,7 +42,7 @@ public class SpendWiseAcquisitionPlugin extends Plugin {
             String name = file.getName();
             // Verified against ioncamera-android 1.0.2 source. No recursive sweep;
             // exported backups, WebView cache, media .swm and user files are excluded.
-            boolean owned = name.matches("(?:\\.Pic|PIC_\\d{8}_\\d{6}|[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})\\.(?:jpg|jpeg|png)");
+            boolean owned = name.matches("(?:(?:\\.Pic|(?:PIC|IMG)_\\d{8}_\\d{6})\\.(?:jpg|jpeg|png)|[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}\\.[a-zA-Z0-9]{1,10})");
             File target = file.getCanonicalFile();
             if (owned && canonical.equals(target.getParentFile()) && target.isFile() && !target.delete()) {
                 throw new IOException("ACQUISITION_CLEANUP_FAILED");

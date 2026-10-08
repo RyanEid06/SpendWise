@@ -160,3 +160,43 @@ test('recovered photo remains available and intentional Cancel discards it', asy
   await expect(editor).toBeHidden();
   expect(await page.evaluate(() => localStorage.getItem('spendwise_encrypted_expense_draft_v1'))).toBeNull();
 });
+
+test('accepted photo capacity uses encrypted IndexedDB and can recover and Save beyond localStorage quota', async ({ page }) => {
+  await startFresh(page);
+  // High-entropy pixels make a real JPEG whose prepared copies cannot fit the
+  // old localStorage envelope. Exercise actual preparation and encrypted storage.
+  const bytes = await page.evaluate(async () => {
+    const canvas = document.createElement('canvas'); canvas.width = canvas.height = 1600;
+    const context = canvas.getContext('2d')!;
+    const image = context.createImageData(1600, 1600);
+    for (let offset = 0; offset < image.data.length; offset += 65536) crypto.getRandomValues(image.data.subarray(offset, offset + 65536));
+    for (let offset = 3; offset < image.data.length; offset += 4) image.data[offset] = 255;
+    context.putImageData(image, 0, 0);
+    const blob = await new Promise<Blob>(resolve => canvas.toBlob(value => resolve(value!), 'image/jpeg', 0.95));
+    return Array.from(new Uint8Array(await blob.arrayBuffer()));
+  });
+  await page.getByRole('button', { name: 'Add Expense', exact: true }).click();
+  const editor = page.getByRole('dialog', { name: 'Add Expense' });
+  await editor.getByRole('spinbutton').fill('10');
+  await editor.getByRole('textbox', { name: /Description/ }).fill('WP05 capacity');
+  await editor.getByTestId('tool-photos-button').click();
+  const chooser = page.waitForEvent('filechooser');
+  await editor.getByRole('button', { name: 'Choose Photo', exact: true }).click();
+  await (await chooser).setFiles(Array.from({ length: 8 }, (_, i) => ({ name: `capacity-${i}.jpg`, mimeType: 'image/jpeg', buffer: Buffer.from(bytes) })));
+  await expect(editor.getByRole('button', { name: 'Remove photo', exact: true })).toHaveCount(8);
+  await expect(editor.getByTestId('draft-status')).toHaveText('Unfinished expense protected');
+  const encryptedBytes = await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>(resolve => { const request = indexedDB.open('spendwise_draft_crypto_v1', 2); request.onsuccess = () => resolve(request.result); });
+    const value = await new Promise<any>(resolve => { const request = db.transaction('envelopes').objectStore('envelopes').get('draft'); request.onsuccess = () => resolve(request.result); });
+    db.close();
+    return value.data.byteLength;
+  });
+  expect(encryptedBytes).toBeGreaterThan(5 * 1024 * 1024);
+  expect((await page.evaluate(() => localStorage.getItem('spendwise_encrypted_expense_draft_v1')))?.length).toBeLessThan(100);
+  await page.reload();
+  await expect(editor.getByRole('button', { name: 'Remove photo', exact: true })).toHaveCount(8);
+  await editor.getByRole('button', { name: 'Save Expense', exact: true }).click();
+  await expect(editor).toBeHidden();
+  await page.reload();
+  await expect(page.getByText('WP05 capacity', { exact: true })).toHaveCount(1);
+});

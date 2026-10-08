@@ -30,6 +30,7 @@ run_wp05_recovery() {
   run_flow wp05-add .maestro/wp05/add.yaml
   node scripts/wp33-5-05-native-probe.mjs add "$RESULT_ROOT/add-fields.json"
   adb shell input keyevent KEYCODE_HOME
+  sleep 2 # Wait for Android onStop; an immediate start can skip appStateChange(false).
   wp05_launch_unlock background
   run_flow wp05-background-fields .maestro/wp05/assert-add.yaml
   # Android's real "Don't keep activities" destroys the background Activity while

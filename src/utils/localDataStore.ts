@@ -6,7 +6,7 @@ import { applySpendWiseSchema } from '../data/databaseSchema';
 import { nativeEncryptedDatabaseService } from '../data/NativeEncryptedDatabaseService';
 import { diagnostics, measureDiagnostic } from '../services/diagnostics/diagnostics';
 import { type DraftWrite, type StoredExpenseDraft, NATIVE_EXPENSE_DRAFT_KEY, WEB_EXPENSE_DRAFT_KEY, validateStoredDraft } from '../data/ExpenseDraft';
-import { decryptWebDraft, encryptWebDraft } from '../data/WebEncryptedDraft';
+import { clearWebDraft, decryptWebDraft, encryptWebDraft } from '../data/WebEncryptedDraft';
 import {
   cloneFinancialState,
   FinancialState,
@@ -183,7 +183,7 @@ export class LocalDataStoreImpl {
       if (!this.draftReadError && (!id || this.expenseDraft?.id !== id)) return;
       if (this.native) await this.withNativeTransaction(db => this.deleteDraftRows(db));
       else this.storage!.removeItem(WEB_EXPENSE_DRAFT_KEY);
-      this.forgetDraft();
+      await this.forgetDraft();
     });
   }
 
@@ -192,17 +192,18 @@ export class LocalDataStoreImpl {
     await db.run('DELETE FROM expense_draft_media', [], false);
   }
 
-  private forgetDraft(): void {
+  private async forgetDraft(): Promise<void> {
     this.draftReadError = null;
     this.expenseDraft = null;
     this.webDraftMedia = {};
     this.draftMediaIds.clear();
+    if (!this.native) await clearWebDraft().catch(() => undefined);
   }
 
   private async loadExpenseDraft(): Promise<void> {
     try {
       const raw = this.native ? await this.getMeta(this.requireDb(), NATIVE_EXPENSE_DRAFT_KEY) : this.storage!.getItem(WEB_EXPENSE_DRAFT_KEY);
-      if (!raw) { this.forgetDraft(); return; }
+      if (!raw) { await this.forgetDraft(); return; }
       if (this.native) this.expenseDraft = validateStoredDraft(JSON.parse(raw));
       else {
         const saved = await decryptWebDraft(raw) as DraftWrite;
@@ -242,7 +243,7 @@ export class LocalDataStoreImpl {
       } else {
         this.persistWeb(next, clearDraft);
       }
-      if (clearDraft) this.forgetDraft();
+      if (clearDraft) await this.forgetDraft();
       this.state = next;
     });
   }
@@ -275,7 +276,7 @@ export class LocalDataStoreImpl {
       } else {
         this.persistWeb(next, clearDraft);
       }
-      if (clearDraft) this.forgetDraft();
+      if (clearDraft) await this.forgetDraft();
       this.state = next;
     });
   }
@@ -304,7 +305,7 @@ export class LocalDataStoreImpl {
       } else {
         this.persistWeb(next, clearDraft);
       }
-      if (clearDraft) this.forgetDraft();
+      if (clearDraft) await this.forgetDraft();
       this.state = next;
       return detached;
     });
@@ -405,7 +406,7 @@ export class LocalDataStoreImpl {
       } else {
         this.persistWeb(next, true);
       }
-      this.forgetDraft();
+      await this.forgetDraft();
       this.state = next;
       return detached;
     });

@@ -124,6 +124,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
   protectAcquisition,
   onDraftStateChange,
 }) => {
+  const selectionGenerationRef = useRef(0);
   const mountedRef = useRef(true);
   const preparationRequestIdRef = useRef(0);
   const requestIdRef = useRef(0);
@@ -186,6 +187,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
   };
 
   const resetSelection = () => {
+    selectionGenerationRef.current += 1;
     setInterrupted(false);
     preparationRequestIdRef.current += 1;
     requestIdRef.current += 1;
@@ -204,6 +206,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
     acquisitionInFlightRef.current = true;
     setIsAcquiring(true);
     setError(null);
+    const selectionGeneration = selectionGenerationRef.current;
     const prepare = async (): Promise<AttachmentDraft[]> => {
       const acquired = source === 'camera' ? await takePhoto() : (await choosePhotos(1))[0] || null;
       if (!acquired) return [];
@@ -217,11 +220,12 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
       setIsPreparing(true);
       await waitForPhotoUiPaint();
       const file = await acquired.loadFile();
-      return [await AttachmentStorage.prepareImageDraft(file, 'purchase')];
+      const draft = await AttachmentStorage.prepareImageDraft(file, 'purchase');
+      return selectionGeneration === selectionGenerationRef.current ? [draft] : [];
     };
     try {
       const photos = await (protectAcquisition ? protectAcquisition(prepare) : prepare());
-      if (!mountedRef.current || photos.length === 0) return;
+      if (!mountedRef.current || selectionGeneration !== selectionGenerationRef.current || photos.length === 0) return;
       const draft = photos[0];
       const preparedPreviewUrl = URL.createObjectURL(draft.blob);
       clearPreparedPreview();

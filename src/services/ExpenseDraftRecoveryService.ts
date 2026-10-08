@@ -16,18 +16,20 @@ export class ExpenseDraftRecoveryService {
   private photos = new WeakMap<AttachmentDraft, { meta: StoredDraftPhoto; data: string }>();
   private closedIds = new Set<string>();
   private acquisitions = new Map<string, ExpenseEditorDraft>();
+  private acquisitionTasks = new Map<string, Promise<void>>();
 
   constructor(private readonly store: DraftStore = LocalDataStore) {}
 
   persist(state: ExpenseEditorDraft): Promise<void> {
     if (this.acquisitions.has(state.id)) {
       this.acquisitions.set(state.id, state);
-      return Promise.resolve();
+      return this.acquisitionTasks.get(state.id)!;
     }
     return this.enqueue(() => this.write(state));
   }
 
   acquire(state: ExpenseEditorDraft, target: 'photos' | 'smart' | 'receipt', language: 'en' | 'fr' | 'ar', operation: () => Promise<AttachmentDraft[]>): Promise<AttachmentDraft[]> {
+    if (this.acquisitions.has(state.id)) return Promise.reject(new Error('EXPENSE_DRAFT_ACQUISITION_IN_PROGRESS'));
     this.acquisitions.set(state.id, state);
     let photos: AttachmentDraft[] = [];
     const task = this.enqueue(async () => {
@@ -41,8 +43,17 @@ export class ExpenseDraftRecoveryService {
           ? { ...latest, attachments: latest.attachments.concat(photos) }
           : { ...latest, [target]: { photo: photos[0], result: null, interrupted: false, currencyCode: latest.currencyCode, language } };
         await this.write(next);
-      } finally { this.acquisitions.delete(state.id); }
+      } catch (error) {
+        // Acquiring a replacement can fail after manual fields changed. Protect
+        // that latest work before reporting the acquisition failure.
+        await this.write(this.acquisitions.get(state.id)!);
+        throw error;
+      } finally {
+        this.acquisitions.delete(state.id);
+        this.acquisitionTasks.delete(state.id);
+      }
     });
+    this.acquisitionTasks.set(state.id, task);
     return task.then(() => photos);
   }
 

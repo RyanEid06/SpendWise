@@ -4,6 +4,9 @@ export const BACKUP_PASSPHRASE = 'wp32-public-fixture-passphrase';
 
 export async function clearBrowserState(page: Page) {
   await page.goto('/');
+  // Startup writes its initialization marker asynchronously. Wait for that
+  // first document before clearing it, so it cannot race the fresh reload.
+  await page.waitForFunction(() => localStorage.getItem('spendwise_clean_init_v3') === 'true');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
 }

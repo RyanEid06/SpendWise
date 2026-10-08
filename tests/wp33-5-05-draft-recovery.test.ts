@@ -193,6 +193,35 @@ test('camera/picker ownership survives editor destruction and unlock waits for e
   assert.equal((await h.service.restore())?.attachments.length, 1);
 });
 
+test('failed acquisition protects edits made while preparing and never acknowledges them early', async () => {
+  const h = await harness();
+  let reject!: (error: Error) => void;
+  const pending = new Promise<ReturnType<typeof photo>[]>((_, fail) => { reject = fail; });
+  const acquiring = h.service.acquire(draft(), 'photos', 'en', () => pending);
+  let acknowledged = false;
+  const writing = h.service.persist(draft({ amountText: '99' })).then(() => { acknowledged = true; });
+  const writingFailure = assert.rejects(writing, /PICKER_READ_FAILED/);
+  await new Promise(resolve => setTimeout(resolve, 10));
+  assert.equal(acknowledged, false);
+  reject(new Error('PICKER_READ_FAILED'));
+  await assert.rejects(acquiring, /PICKER_READ_FAILED/);
+  await writingFailure;
+  assert.equal((await h.service.restore())?.amountText, '99');
+});
+
+test('draft-wide acquisition single-flight preserves its owner across tools', async () => {
+  const h = await harness();
+  let release!: (photos: ReturnType<typeof photo>[]) => void;
+  const pending = new Promise<ReturnType<typeof photo>[]>(resolve => { release = resolve; });
+  const first = h.service.acquire(draft(), 'smart', 'en', () => pending);
+  await assert.rejects(h.service.acquire(draft(), 'receipt', 'en', async () => [photo()]), /ACQUISITION_IN_PROGRESS/);
+  release([photo()]);
+  await first;
+  const restored = (await h.service.restore())!;
+  assert.notEqual(restored.smart?.photo, null);
+  assert.equal(restored.receipt, null);
+});
+
 test('interrupted Edit preserves identity and removals; failed Update leaves recovery intact', async () => {
   const h = await harness();
   await h.store.createExpenseWithAttachments(expense, []);

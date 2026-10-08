@@ -146,6 +146,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
   protectAcquisition,
   onDraftStateChange,
 }) => {
+  const selectionGenerationRef = useRef(0);
   const mountedRef = useRef(true);
   const preparationRequestIdRef = useRef(0);
   const requestIdRef = useRef(0);
@@ -208,6 +209,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
   };
 
   const resetSelection = () => {
+    selectionGenerationRef.current += 1;
     setInterrupted(false);
     preparationRequestIdRef.current += 1;
     requestIdRef.current += 1;
@@ -226,6 +228,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
     acquisitionInFlightRef.current = true;
     setIsAcquiring(true);
     setError(null);
+    const selectionGeneration = selectionGenerationRef.current;
     const prepare = async (): Promise<AttachmentDraft[]> => {
       const acquired = source === 'camera' ? await takePhoto() : (await choosePhotos(1))[0] || null;
       if (!acquired) return [];
@@ -239,11 +242,12 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
       setIsPreparing(true);
       await waitForPhotoUiPaint();
       const file = await acquired.loadFile();
-      return [await AttachmentStorage.prepareImageDraft(file, 'receipt')];
+      const draft = await AttachmentStorage.prepareImageDraft(file, 'receipt');
+      return selectionGeneration === selectionGenerationRef.current ? [draft] : [];
     };
     try {
       const photos = await (protectAcquisition ? protectAcquisition(prepare) : prepare());
-      if (!mountedRef.current || photos.length === 0) return;
+      if (!mountedRef.current || selectionGeneration !== selectionGenerationRef.current || photos.length === 0) return;
       const draft = photos[0];
       const preparedPreviewUrl = URL.createObjectURL(draft.blob);
       clearPreparedPreview();

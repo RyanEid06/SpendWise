@@ -11,11 +11,15 @@ public class SpendWiseAcquisitionPluginTest {
         File camera = new File(root, "PIC_20261007_120000.jpg");
         File picker = new File(root, "12345678-1234-1234-1234-123456789012.jpg");
         File plain = new File(root, ".Pic.jpg");
+        File interrupted = new File(root, "IMG_20261007_120000.png");
+        File providerCopy = new File(root, "12345678-1234-1234-1234-123456789012.heic");
+        File providerWebp = new File(root, "22345678-1234-1234-1234-123456789012.webp");
         File other = new File(root, "user-photo.jpg");
         File secure = new File(root, "expense.swm");
-        for (File file : new File[]{camera, picker, plain, other, secure}) assertTrue(file.createNewFile());
+        for (File file : new File[]{camera, picker, plain, interrupted, providerCopy, providerWebp, other, secure}) assertTrue(file.createNewFile());
         SpendWiseAcquisitionPlugin.cleanup(root);
         assertFalse(camera.exists()); assertFalse(picker.exists()); assertFalse(plain.exists());
+        assertFalse(interrupted.exists()); assertFalse(providerCopy.exists()); assertFalse(providerWebp.exists());
         assertTrue(other.exists()); assertTrue(secure.exists());
     }
 

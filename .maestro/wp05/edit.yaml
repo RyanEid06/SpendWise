@@ -5,7 +5,7 @@ appId: com.spendwise.app
 - tapOn: '37\.25, Amount \*'
 - eraseText
 - inputText: "31.75"
-- tapOn: "Description / Merchant .*"
+- tapOn: "WP05 Native Recovery"
 - eraseText
 - inputText: "WP05 Native Edited"
 - tapOn: "Food & Beverage"

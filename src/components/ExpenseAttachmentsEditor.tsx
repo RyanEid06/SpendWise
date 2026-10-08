@@ -111,7 +111,6 @@ export const ExpenseAttachmentsEditor: React.FC<ExpenseAttachmentsEditorProps> =
     return () => {
       preparationGenerationRef.current += 1;
       acquisitionInFlightRef.current = false;
-      cancelledPendingIdsRef.current.clear();
     };
   }, []);
 
