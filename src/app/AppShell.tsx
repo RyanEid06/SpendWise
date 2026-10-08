@@ -194,6 +194,7 @@ export const AppShell: React.FC<AppShellProps> = ({ startupHomeFrameTiming }) =>
           : (ar ? 'تعذر استعادة العمل بأمان. حاول مجدداً أو تجاهل العمل.' : fr ? 'Récupération sûre impossible. Réessayez ou supprimez le travail.' : 'Unfinished work could not be recovered safely. Retry or discard it.')}
       confirmText={recovery.issue === 'missing-expense' ? (ar ? 'متابعة' : fr ? 'Continuer' : 'Continue') : (ar ? 'إعادة المحاولة' : fr ? 'Réessayer' : 'Retry')}
       cancelText={ar ? 'تجاهل' : fr ? 'Supprimer' : 'Discard'}
+      dismissOnBack={false}
       onConfirm={recovery.issue === 'missing-expense' ? recovery.continueAsNew : recovery.retry}
       onCancel={() => { void recovery.discard().catch(() => setRecoveryActionError(true)); }} />;
   }

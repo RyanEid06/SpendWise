@@ -21,6 +21,7 @@ public class MainActivity extends BridgeActivity {
         SplashScreen.installSplashScreen(this);
         registerPlugin(SpendWiseSecurityPlugin.class);
         registerPlugin(SpendWiseAppearancePlugin.class);
+        registerPlugin(SpendWiseAcquisitionPlugin.class);
         super.onCreate(savedInstanceState);
         SpendWiseAppearance.applySurfaces(this, getBridge());
     }

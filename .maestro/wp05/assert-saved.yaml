@@ -10,6 +10,6 @@ appId: com.spendwise.app
 - assertVisible: "View photos"
 - tapOn: "View photos"
 - assertVisible: "Receipt"
-- tapOn: "Close preview"
+- tapOn: "Close photo"
 - tapOn: "Close details"
 - tapOn: "Home"

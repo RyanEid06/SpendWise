@@ -2,6 +2,11 @@
 // The origin's nonextractable key is structured-cloned into IndexedDB; only ciphertext
 // is persisted in localStorage or in the existing browser financial transaction journal.
 let keyPromise: Promise<CryptoKey> | null = null;
+function base64(bytes: Uint8Array): string {
+  let raw = '';
+  for (let i = 0; i < bytes.length; i += 8192) raw += String.fromCharCode(...bytes.subarray(i, i + 8192));
+  return btoa(raw);
+}
 function draftKey(): Promise<CryptoKey> {
   if (!keyPromise) keyPromise = new Promise<CryptoKey>((resolve, reject) => {
     const request = indexedDB.open('spendwise_draft_crypto_v1', 1);
@@ -35,13 +40,20 @@ export async function encryptWebDraft(value: unknown): Promise<string> {
   const bytes = new TextEncoder().encode(JSON.stringify(value));
   try {
     const data = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: new TextEncoder().encode('SpendWise draft v1') }, await draftKey(), bytes);
-    return JSON.stringify({ version: 1, iv: Array.from(iv), data: Array.from(new Uint8Array(data)) });
+    return JSON.stringify({ version: 2, iv: base64(iv), data: base64(new Uint8Array(data)) });
   } finally { bytes.fill(0); }
 }
 export async function decryptWebDraft(raw: string): Promise<unknown> {
   const value = JSON.parse(raw);
-  if (value.version !== 1 || !Array.isArray(value.iv) || value.iv.length !== 12 || !Array.isArray(value.data)) throw new Error('EXPENSE_DRAFT_ENVELOPE_INVALID');
-  const bytes = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: new Uint8Array(value.iv), additionalData: new TextEncoder().encode('SpendWise draft v1') }, await draftKey(), new Uint8Array(value.data)));
+  const decode = (raw: string) => Uint8Array.from(atob(raw), char => char.charCodeAt(0));
+  let iv: Uint8Array<ArrayBuffer>, data: Uint8Array<ArrayBuffer>;
+  if (value.version === 2 && typeof value.iv === 'string' && typeof value.data === 'string') {
+    iv = decode(value.iv); data = decode(value.data);
+  } else if (value.version === 1 && Array.isArray(value.iv) && Array.isArray(value.data)) {
+    iv = new Uint8Array(value.iv); data = new Uint8Array(value.data);
+  } else throw new Error('EXPENSE_DRAFT_ENVELOPE_INVALID');
+  if (iv.length !== 12 || data.length < 16) throw new Error('EXPENSE_DRAFT_ENVELOPE_INVALID');
+  const bytes = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv, additionalData: new TextEncoder().encode('SpendWise draft v1') }, await draftKey(), data));
   try { return JSON.parse(new TextDecoder().decode(bytes)); }
   finally { bytes.fill(0); }
 }

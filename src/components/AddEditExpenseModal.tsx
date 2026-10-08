@@ -114,8 +114,9 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
   const [smartCapturePreparing, setSmartCapturePreparing] = useState(false);
   const [receiptPreparing, setReceiptPreparing] = useState(false);
   const [attachmentsPreparing, setAttachmentsPreparing] = useState(false);
+  const [acquisitionPending, setAcquisitionPending] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const isPhotoPreparing = smartCapturePreparing || receiptPreparing || attachmentsPreparing;
+  const isPhotoPreparing = acquisitionPending || smartCapturePreparing || receiptPreparing || attachmentsPreparing;
   const visibleDraftStatus = isPhotoPreparing ? 'saving' : draftStatus;
 
   const persistedAttachmentCount = useMemo(() => {
@@ -135,6 +136,14 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
     smart: smartDraft, receipt: receiptDraft,
   }), [draftId, initialExpense, currencyCode, amountText, descriptionText, selectedCategory,
     selectedDateMillis, noteText, activeTool, attachmentDrafts, removedAttachmentIds, smartDraft, receiptDraft]);
+
+  const protectAcquisition = (target: 'photos' | 'smart' | 'receipt') => protectDraft
+    ? async (operation: () => Promise<AttachmentDraft[]>) => {
+      setAcquisitionPending(true);
+      try { return await expenseDraftRecoveryService.acquire(snapshot, target, language, operation); }
+      finally { setAcquisitionPending(false); }
+    }
+    : undefined;
 
   useLayoutEffect(() => {
     if (!protectDraft || terminal.current) return;
@@ -279,8 +288,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
     setSaveError(null);
 
     try {
-      if (protectDraft) await expenseDraftRecoveryService.persist(snapshot);
-      await onSave(
+      const save = async () => { await onSave(
         amount,
         descriptionText.trim(),
         selectedCategory,
@@ -291,7 +299,9 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
           removedAttachmentIds,
           recoveryDraftId: protectDraft ? draftId : undefined,
         }
-      );
+      ); };
+      if (protectDraft) await expenseDraftRecoveryService.commit(snapshot, save);
+      else await save();
     } catch {
       terminal.current = false;
       setSaveError(ta(language, 'attachmentSaveError'));
@@ -531,6 +541,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
                   disabled={isSaving}
                   onPreparingChange={setSmartCapturePreparing}
                   recoveryState={recoveryDraft?.smart}
+                  protectAcquisition={protectAcquisition('smart')}
                   onDraftStateChange={setSmartDraft}
                   onApply={handleSmartCaptureApply}
                 />
@@ -543,6 +554,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
                   disabled={isSaving}
                   onPreparingChange={setReceiptPreparing}
                   recoveryState={recoveryDraft?.receipt}
+                  protectAcquisition={protectAcquisition('receipt')}
                   onDraftStateChange={setReceiptDraft}
                   onApply={handleReceiptScanApply}
                 />
@@ -550,6 +562,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
 
               <RetainedScreen active={activeTool === 'photos'}>
                 <ExpenseAttachmentsEditor
+                  protectAcquisition={protectAcquisition('photos')}
                   expenseId={initialExpense?.id}
                   language={language}
                   drafts={attachmentDrafts}

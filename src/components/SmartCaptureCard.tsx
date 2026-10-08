@@ -17,6 +17,7 @@ import {
 } from '../utils/imageAcquisition';
 
 interface SmartCaptureCardProps {
+  protectAcquisition?: (operation: () => Promise<AttachmentDraft[]>) => Promise<AttachmentDraft[]>;
   recoveryState?: DraftToolState<SmartCaptureResult> | null;
   onDraftStateChange?: (state: DraftToolState<SmartCaptureResult>) => void;
   language: Language;
@@ -120,8 +121,10 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
   onPreparingChange,
   onApply,
   recoveryState,
+  protectAcquisition,
   onDraftStateChange,
 }) => {
+  const mountedRef = useRef(true);
   const preparationRequestIdRef = useRef(0);
   const requestIdRef = useRef(0);
   const acquisitionInFlightRef = useRef(false);
@@ -164,7 +167,9 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
   }, []);
 
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       preparationRequestIdRef.current += 1;
       requestIdRef.current += 1;
       acquisitionInFlightRef.current = false;
@@ -196,56 +201,39 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
 
   const beginPhotoSelection = async (source: PhotoAcquisitionSource) => {
     if (disabled || acquisitionInFlightRef.current || isAnalyzing) return;
-
     acquisitionInFlightRef.current = true;
     setIsAcquiring(true);
     setError(null);
-
-    let acquired = null;
-    try {
-      acquired =
-        source === 'camera' ? await takePhoto() : (await choosePhotos(1))[0] || null;
-    } catch (acquisitionError) {
-      setError(photoAcquisitionErrorText(language, acquisitionError));
-      return;
-    } finally {
-      acquisitionInFlightRef.current = false;
-      setIsAcquiring(false);
-    }
-
-    if (!acquired) return;
-
-    requestIdRef.current += 1;
-    analysisInFlightRef.current = false;
-    const preparationRequestId = ++preparationRequestIdRef.current;
-    clearPreparedPreview();
-    setPreviewUrl(acquired.previewUrl);
-    setPreparedDraft(null);
-    setResult(null);
-    setError(null);
-    setIsAnalyzing(false);
-    setIsPreparing(true);
-
-    await waitForPhotoUiPaint();
-
-    try {
+    const prepare = async (): Promise<AttachmentDraft[]> => {
+      const acquired = source === 'camera' ? await takePhoto() : (await choosePhotos(1))[0] || null;
+      if (!acquired) return [];
+      requestIdRef.current += 1;
+      analysisInFlightRef.current = false;
+      clearPreparedPreview();
+      setPreviewUrl(acquired.previewUrl);
+      setPreparedDraft(null);
+      setResult(null);
+      setIsAnalyzing(false);
+      setIsPreparing(true);
+      await waitForPhotoUiPaint();
       const file = await acquired.loadFile();
-      const draft = await AttachmentStorage.prepareImageDraft(file, 'purchase');
-      if (preparationRequestId !== preparationRequestIdRef.current) return;
-
+      return [await AttachmentStorage.prepareImageDraft(file, 'purchase')];
+    };
+    try {
+      const photos = await (protectAcquisition ? protectAcquisition(prepare) : prepare());
+      if (!mountedRef.current || photos.length === 0) return;
+      const draft = photos[0];
       const preparedPreviewUrl = URL.createObjectURL(draft.blob);
       clearPreparedPreview();
       preparedPreviewUrlRef.current = preparedPreviewUrl;
       setPreparedDraft(draft);
+      setInterrupted(false);
       setPreviewUrl(preparedPreviewUrl);
-    } catch {
-      if (preparationRequestId !== preparationRequestIdRef.current) return;
-      setPreparedDraft(null);
-      setError(t(language, 'smartCaptureInvalidImage'));
+    } catch (error) {
+      if (mountedRef.current) setError(photoAcquisitionErrorText(language, error));
     } finally {
-      if (preparationRequestId === preparationRequestIdRef.current) {
-        setIsPreparing(false);
-      }
+      acquisitionInFlightRef.current = false;
+      if (mountedRef.current) { setIsAcquiring(false); setIsPreparing(false); }
     }
   };
 

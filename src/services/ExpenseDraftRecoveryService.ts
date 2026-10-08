@@ -1,5 +1,6 @@
 import type { AttachmentDraft } from '../utils/attachmentStorage';
 import { LocalDataStore, type LocalDataStoreImpl } from '../utils/localDataStore';
+import { cleanupNativeAcquisitionFiles } from '../utils/imageAcquisition';
 import { type DraftToolState, type ExpenseEditorDraft, type StoredExpenseDraft, type StoredDraftPhoto, validateStoredDraft } from '../data/ExpenseDraft';
 
 type DraftStore = Pick<LocalDataStoreImpl, 'getExpenseDraft' | 'readExpenseDraftMedia' | 'writeExpenseDraft' | 'discardExpenseDraft'>;
@@ -13,11 +14,57 @@ function encode(bytes: Uint8Array): string {
 export class ExpenseDraftRecoveryService {
   private queue: Promise<void> = Promise.resolve();
   private photos = new WeakMap<AttachmentDraft, { meta: StoredDraftPhoto; data: string }>();
+  private closedIds = new Set<string>();
+  private acquisitions = new Map<string, ExpenseEditorDraft>();
 
   constructor(private readonly store: DraftStore = LocalDataStore) {}
 
   persist(state: ExpenseEditorDraft): Promise<void> {
-    const task = this.queue.then(async () => {
+    if (this.acquisitions.has(state.id)) {
+      this.acquisitions.set(state.id, state);
+      return Promise.resolve();
+    }
+    return this.enqueue(() => this.write(state));
+  }
+
+  acquire(state: ExpenseEditorDraft, target: 'photos' | 'smart' | 'receipt', language: 'en' | 'fr' | 'ar', operation: () => Promise<AttachmentDraft[]>): Promise<AttachmentDraft[]> {
+    this.acquisitions.set(state.id, state);
+    let photos: AttachmentDraft[] = [];
+    const task = this.enqueue(async () => {
+      try {
+        if (this.closedIds.has(state.id)) throw new Error('EXPENSE_DRAFT_CLOSED');
+        await this.write(state);
+        try { photos = await operation(); }
+        finally { await cleanupNativeAcquisitionFiles(); }
+        const latest = this.acquisitions.get(state.id)!;
+        const next = photos.length === 0 ? latest : target === 'photos'
+          ? { ...latest, attachments: latest.attachments.concat(photos) }
+          : { ...latest, [target]: { photo: photos[0], result: null, interrupted: false, currencyCode: latest.currencyCode, language } };
+        await this.write(next);
+      } finally { this.acquisitions.delete(state.id); }
+    });
+    return task.then(() => photos);
+  }
+
+  // Reserve the entire Save, including private-media promotion, before unlock can
+  // restore another editor. A killed process still retains the last SQLCipher draft.
+  commit(state: ExpenseEditorDraft, save: () => Promise<void>): Promise<void> {
+    return this.enqueue(async () => {
+      if (this.closedIds.has(state.id)) throw new Error('EXPENSE_DRAFT_CLOSED');
+      await this.write(state);
+      await save();
+      this.closedIds.add(state.id);
+    });
+  }
+
+  private enqueue(operation: () => Promise<void>): Promise<void> {
+    const task = this.queue.then(operation);
+    this.queue = task.catch(() => undefined);
+    return task;
+  }
+
+  private async write(state: ExpenseEditorDraft): Promise<void> {
+      if (this.closedIds.has(state.id)) return;
       const photos = new Map<string, { meta: StoredDraftPhoto; data: string }>();
       const photoId = async (photo: AttachmentDraft | null): Promise<string | null> => {
         if (!photo) return null;
@@ -44,9 +91,6 @@ export class ExpenseDraftRecoveryService {
       const stored: StoredExpenseDraft = { ...fields, attachmentIds, photos: [], smart: await tool(smart), receipt: await tool(receipt) };
       stored.photos = [...photos.values()].map(p => p.meta);
       await this.store.writeExpenseDraft({ draft: validateStoredDraft(stored), media: Object.fromEntries([...photos.values()].map(p => [p.meta.id, p.data])) });
-    });
-    this.queue = task.catch(() => undefined);
-    return task;
   }
 
   async restore(): Promise<ExpenseEditorDraft | null> {
@@ -74,9 +118,11 @@ export class ExpenseDraftRecoveryService {
     return { ...fields, attachments: attachmentIds.map(id => photos.get(id)!), smart: hydrate(smart), receipt: hydrate(receipt) };
   }
 
-  async discard(id: string): Promise<void> {
-    await this.queue;
-    await this.store.discardExpenseDraft(id);
+  discard(id?: string): Promise<void> {
+    return this.enqueue(async () => {
+      await this.store.discardExpenseDraft(id);
+      if (id) this.closedIds.add(id);
+    });
   }
 }
 

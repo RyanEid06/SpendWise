@@ -48,7 +48,7 @@ export function useExpenseDraftRecovery(options: {
     discard: async () => {
       // Read failures preserve the opaque protected snapshot until an explicit discard.
       const id = draft?.id ?? LocalDataStore.getExpenseDraft()?.id;
-      if (id) await expenseDraftRecoveryService.discard(id);
+      await expenseDraftRecoveryService.discard(id);
       setDraft(null);
       setIssue(null);
     },

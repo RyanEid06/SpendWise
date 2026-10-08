@@ -39,6 +39,7 @@ type WebFinancialJournal = {
   phase: 'prepared' | 'committed';
   original: SerializedState;
   target: SerializedState;
+  clearDraft?: boolean;
 };
 
 function parseArray(key: string, raw: string | null): unknown[] {
@@ -179,7 +180,6 @@ export function financialStatesEqual(a: FinancialState, b: FinancialState): bool
 
 function readSerializedState(storage: KeyValueStore): SerializedState {
   return {
-    draft: storage.getItem(WEB_EXPENSE_DRAFT_KEY),
     expenses: storage.getItem(LEGACY_FINANCIAL_KEYS.EXPENSES),
     budgets: storage.getItem(LEGACY_FINANCIAL_KEYS.BUDGETS),
     attachments: storage.getItem(LEGACY_FINANCIAL_KEYS.ATTACHMENTS),
@@ -226,6 +226,7 @@ export function recoverWebFinancialTransaction(storage: KeyValueStore): void {
     throw new Error('WEB_FINANCIAL_TRANSACTION_CORRUPT');
   }
   applySerializedState(storage, journal.phase === 'committed' ? journal.target : journal.original);
+  if (journal.phase === 'committed' && journal.clearDraft) storage.removeItem(WEB_EXPENSE_DRAFT_KEY);
   storage.removeItem(LEGACY_FINANCIAL_KEYS.WEB_TXN);
 }
 
@@ -233,8 +234,9 @@ export function persistWebFinancialState(storage: KeyValueStore, input: Financia
   const state = validateFinancialState(cloneFinancialState(input));
   const original = readSerializedState(storage);
   const target = toSerializedState(state);
-  target.draft = clearDraft ? null : original.draft;
-  const journal: WebFinancialJournal = { version: 1, phase: 'prepared', original, target };
+  // Keep ciphertext in its existing slot until the commit point. Copying a photo
+  // envelope into the journal can exhaust localStorage despite a protected draft.
+  const journal: WebFinancialJournal = { version: 1, phase: 'prepared', original, target, clearDraft };
   storage.setItem(LEGACY_FINANCIAL_KEYS.WEB_TXN, JSON.stringify(journal));
   try {
     applySerializedState(storage, target);
@@ -250,6 +252,7 @@ export function persistWebFinancialState(storage: KeyValueStore, input: Financia
     throw error;
   }
   try {
+    if (clearDraft) storage.removeItem(WEB_EXPENSE_DRAFT_KEY);
     storage.removeItem(LEGACY_FINANCIAL_KEYS.WEB_TXN);
   } catch {
     // A committed journal is safe: startup will roll forward and clean it up.

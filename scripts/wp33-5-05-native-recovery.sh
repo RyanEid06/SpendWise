@@ -32,6 +32,19 @@ run_wp05_recovery() {
   adb shell input keyevent KEYCODE_HOME
   wp05_launch_unlock background
   run_flow wp05-background-fields .maestro/wp05/assert-add.yaml
+  # Android's real "Don't keep activities" destroys the background Activity while
+  # preserving the process. Record unchanged PID independently of force-stop tests.
+  local activity_pid
+  activity_pid="$(adb shell pidof "$APP_ID" | tr -d '\r')"
+  adb shell settings put global always_finish_activities 1
+  adb shell input keyevent KEYCODE_HOME
+  sleep 2
+  adb shell dumpsys activity activities > "$RESULT_ROOT/destroyed-activity.txt"
+  adb shell settings put global always_finish_activities 0
+  wp05_launch_unlock activity-recreation
+  [[ "$(adb shell pidof "$APP_ID" | tr -d '\r')" = "$activity_pid" ]]
+  run_flow wp05-recreated-activity .maestro/wp05/assert-add.yaml
+  printf '{"pid":%s,"mechanism":"always_finish_activities","sameProcess":true}\n' "$activity_pid" > "$RESULT_ROOT/activity-recreation.json"
   wp05_kill_reopen partial-add
   run_flow wp05-recovered-fields .maestro/wp05/assert-add.yaml
   node scripts/wp33-5-05-native-probe.mjs add "$RESULT_ROOT/recovered-add-fields.json"

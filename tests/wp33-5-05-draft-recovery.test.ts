@@ -120,6 +120,79 @@ test('serialized rapid writes and Discard do not resurrect a queued draft', asyn
   assert.equal(await (await harness(h.sql)).service.restore(), null);
 });
 
+test('unlock during pending recovered Save waits for commit and cannot resurrect the editor', async () => {
+  const h = await harness();
+  await h.service.persist(draft({ attachments: [photo()] }));
+  let release!: () => void;
+  const pending = new Promise<void>(resolve => { release = resolve; });
+  const saving = h.service.commit(draft(), async () => {
+    await pending;
+    await h.store.createExpenseWithAttachments(expense, [], 'draft-1');
+  });
+  let restored = false;
+  const reopening = h.service.restore().then(value => { restored = true; return value; });
+  await new Promise(resolve => setTimeout(resolve, 10));
+  assert.equal(restored, false);
+  release();
+  await saving;
+  assert.equal(await reopening, null);
+  await h.service.persist(draft({ amountText: 'late unmounted callback' }));
+  assert.equal(await h.service.restore(), null);
+});
+
+test('near-quota protected browser photo does not get duplicated into the Save journal', () => {
+  const ciphertext = 'x'.repeat(700_000);
+  const values = new Map<string, string>([[WEB_EXPENSE_DRAFT_KEY, ciphertext]]);
+  const storage = {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      const bytes = [...values].filter(([k]) => k !== key).reduce((n, [, v]) => n + v.length, value.length);
+      if (bytes > 900_000) throw new Error('QUOTA_EXCEEDED');
+      values.set(key, value);
+    },
+    removeItem: (key: string) => { values.delete(key); },
+  };
+  persistWebFinancialState(storage, { expenses: [expense], budgets: [], attachments: [], currencyCode: 'USD' }, true);
+  assert.equal(storage.getItem(WEB_EXPENSE_DRAFT_KEY), null);
+  assert.equal(JSON.parse(storage.getItem('spendwise_expenses')!)[0].id, expense.id);
+});
+
+test('malformed recovery data leaves valid ledger usable and opaque work explicitly discardable', async () => {
+  const values = new Map<string, string>([['spendwise_expenses', JSON.stringify([expense])], [WEB_EXPENSE_DRAFT_KEY, '{broken']]);
+  const storage = { getItem: (k: string) => values.get(k) ?? null, setItem: (k: string, v: string) => { values.set(k,v); }, removeItem: (k: string) => { values.delete(k); } };
+  const store = new LocalDataStoreImpl();
+  await store.init(storage);
+  assert.equal(store.getExpenses()[0].description, 'Original');
+  const service = new ExpenseDraftRecoveryService(store);
+  await assert.rejects(service.restore());
+  assert.equal(values.get(WEB_EXPENSE_DRAFT_KEY), '{broken');
+  await service.discard();
+  assert.equal(await service.restore(), null);
+  assert.equal(store.getExpenses().length, 1);
+});
+
+test('camera/picker ownership survives editor destruction and unlock waits for encrypted handoff', async () => {
+  const h = await harness();
+  await h.service.persist(draft());
+  let release!: (photos: ReturnType<typeof photo>[]) => void;
+  const pending = new Promise<ReturnType<typeof photo>[]>(resolve => { release = resolve; });
+  const acquiring = h.service.acquire(draft(), 'photos', 'en', () => pending);
+  const staleEffect = h.service.persist(draft({ amountText: '13.' }));
+  let finished = false;
+  const unlock = h.service.restore().then(value => { finished = true; return value; });
+  await new Promise(resolve => setTimeout(resolve, 10));
+  assert.equal(finished, false);
+  release([photo()]);
+  await Promise.all([acquiring, staleEffect]);
+  const recovered = (await unlock)!;
+  assert.equal(recovered.amountText, '13.');
+  assert.equal(recovered.attachments.length, 1);
+  assert.equal((h.sql.prepare('SELECT COUNT(*) n FROM expense_draft_media').get() as any).n, 1);
+  const cancellation = await h.service.acquire(recovered, 'photos', 'en', async () => []);
+  assert.equal(cancellation.length, 0);
+  assert.equal((await h.service.restore())?.attachments.length, 1);
+});
+
 test('interrupted Edit preserves identity and removals; failed Update leaves recovery intact', async () => {
   const h = await harness();
   await h.store.createExpenseWithAttachments(expense, []);

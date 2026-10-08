@@ -4,5 +4,5 @@ appId: com.spendwise.app
     visible: "Add Expense"
     timeout: 30000
 - assertVisible: '37\.25, Amount \*'
-- assertVisible: "WP05 Native Recovery, Description / Merchant .*"
+- assertVisible: "WP05 Native Recovery"
 - assertVisible: "Unfinished expense protected"

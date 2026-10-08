@@ -5,12 +5,13 @@ import subprocess
 import sys
 
 app = 'com.spendwise.app'
-listing = subprocess.run(['adb', 'shell', 'run-as', app, 'find', 'databases', 'files', 'shared_prefs', 'cache', '-type', 'f'], capture_output=True, text=True, timeout=30)
+roots = ['databases', 'files', 'shared_prefs', 'cache', 'app_webview', '/sdcard/Android/data/' + app + '/files', '/sdcard/Android/data/' + app + '/cache']
+listing = subprocess.run(['adb', 'shell', 'run-as', app, 'find', *roots, '-type', 'f'], capture_output=True, text=True, timeout=30)
 receipts = []
 databases = 0
 for path in listing.stdout.splitlines():
     path = path.strip()
-    if not path or not path.startswith(('databases/', 'files/', 'shared_prefs/', 'cache/')) or '..' in path:
+    if not path or not any(path.startswith(root + '/') for root in roots) or '..' in path:
         raise RuntimeError('Invalid private inventory path')
     raw = subprocess.check_output(['adb', 'exec-out', 'run-as', app, 'cat', path], timeout=30)
     if path.startswith('databases/') and 'spendwise_secure_v1' in path and path.endswith('.db'):

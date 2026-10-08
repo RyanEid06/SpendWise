@@ -36,21 +36,53 @@ test('unfinished Add restores all meaningful fields after restart and clears aft
 
 test('interrupted Edit restores identity and attachment removals without creating an expense', async ({ page }) => {
   await startFresh(page);
-  await addExpense(page, 'WP05 Original', '5');
+  await page.getByRole('button', { name: 'Add Expense', exact: true }).click();
+  const add = page.getByRole('dialog', { name: 'Add Expense' });
+  await add.getByRole('spinbutton').fill('5');
+  await add.getByRole('textbox', { name: /Description/ }).fill('WP05 Original');
+  await add.getByTestId('tool-photos-button').click();
+  const chooser = page.waitForEvent('filechooser');
+  await add.getByRole('button', { name: 'Choose Photo', exact: true }).click();
+  await (await chooser).setFiles('tests/fixtures/media/wp32-photo-01.jpg');
+  await expect(add.getByTestId('draft-status')).toHaveText('Unfinished expense protected');
+  await add.getByRole('button', { name: 'Save Expense', exact: true }).click();
+  await expect(add).toBeHidden();
   await page.getByRole('button', { name: /^WP05 Original,/ }).click();
   const editor = page.getByRole('dialog', { name: 'Edit Expense' });
   await editor.getByRole('spinbutton').fill('31.75');
   await editor.getByRole('textbox', { name: /Description/ }).fill('WP05 Edited');
+  await editor.getByTestId('tool-photos-button').click();
+  await editor.getByRole('button', { name: 'Remove photo', exact: true }).click();
   await expect(editor.getByTestId('draft-status')).toHaveText('Unfinished expense protected');
   await page.reload();
   await expect(editor).toBeVisible();
   await expect(editor.getByRole('spinbutton')).toHaveValue('31.75');
+  await expect(editor.getByRole('button', { name: 'Remove photo', exact: true })).toHaveCount(0);
   await editor.getByRole('button', { name: 'Update Expense' }).click();
   await expect(editor).toBeHidden();
   await page.reload();
   const expenses = await page.evaluate(() => JSON.parse(localStorage.getItem('spendwise_expenses')!));
   expect(expenses).toHaveLength(1);
   expect(expenses[0]).toMatchObject({ id: 1, amount: 31.75, description: 'WP05 Edited', category: 'Food' });
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('spendwise_expense_attachments_v1') || '[]'))).toHaveLength(0);
+});
+
+test('malformed draft reaches authenticated Retry/Discard and Back never destroys work', async ({ page }) => {
+  await startFresh(page);
+  await addExpense(page, 'WP05 valid ledger', '5');
+  await page.evaluate(() => localStorage.setItem('spendwise_encrypted_expense_draft_v1', '{broken'));
+  await page.reload();
+  const prompt = page.getByRole('alertdialog', { name: 'Unfinished expense' });
+  await expect(prompt).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => window.dispatchEvent(new Event('spendwise-native-back')));
+  await expect(prompt).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('spendwise_encrypted_expense_draft_v1'))).toBe('{broken');
+  await prompt.getByRole('button', { name: 'Retry', exact: true }).click();
+  await expect(prompt).toBeVisible();
+  await prompt.getByRole('button', { name: 'Discard', exact: true }).click();
+  await expect(prompt).toBeHidden();
+  await expect(page.getByText('WP05 valid ledger', { exact: true })).toHaveCount(1);
 });
 
 test('interrupted Smart Capture restores its photo and offers manual retry without duplicate Apply', async ({ page }) => {

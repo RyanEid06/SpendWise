@@ -21,6 +21,7 @@ appId: com.spendwise.app
     index: 0
 - tapOn:
     id: "com.google.android.providers.media.module:id/button_add"
+- runFlow: ../helpers/android-device-pin.yaml
 - extendedWaitUntil:
     visible: "Attach Photos · 1"
     timeout: 30000

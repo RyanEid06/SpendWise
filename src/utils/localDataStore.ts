@@ -76,6 +76,7 @@ export class LocalDataStoreImpl {
   private expenseDraft: StoredExpenseDraft | null = null;
   private webDraftMedia: Record<string, string> = {};
   private draftMediaIds = new Set<string>();
+  private draftReadError: unknown = null;
 
   async init(storage: KeyValueStore): Promise<void> {
     if (this.initialized) return;
@@ -88,12 +89,7 @@ export class LocalDataStoreImpl {
         recoverWebFinancialTransaction(storage);
         return readLegacyFinancialState(storage);
       });
-      const rawDraft = storage.getItem(WEB_EXPENSE_DRAFT_KEY);
-      if (rawDraft) {
-        const saved = await decryptWebDraft(rawDraft) as DraftWrite;
-        this.expenseDraft = validateStoredDraft(saved.draft);
-        this.webDraftMedia = saved.media;
-      }
+      await this.loadExpenseDraft();
       this.initialized = true;
       diagnostics.setState({ databaseOpen: true });
       return;
@@ -103,9 +99,7 @@ export class LocalDataStoreImpl {
     await measureDiagnostic('storage.schema', () => this.applySchemaMigrations());
     await measureDiagnostic('storage.migration', () => this.migrateLegacyLocalStorage(storage));
     this.state = await measureDiagnostic('storage.read', () => this.loadNativeState());
-    const rawDraft = await this.getMeta(this.requireDb(), NATIVE_EXPENSE_DRAFT_KEY);
-    if (rawDraft) this.expenseDraft = validateStoredDraft(JSON.parse(rawDraft));
-    this.draftMediaIds = new Set(this.expenseDraft?.photos.map(p => p.id) ?? []);
+    await this.loadExpenseDraft();
     await measureDiagnostic('storage.migration', () => nativeEncryptedDatabaseService.finalizePlaintextSourceCleanup(storage));
     this.initialized = true;
     diagnostics.setState({ databaseOpen: true, databaseEncrypted: true });
@@ -149,6 +143,10 @@ export class LocalDataStoreImpl {
     this.requireInitialized();
     // Reads wait for outstanding writes, so unlock never sees half of a snapshot.
     await this.writeQueue;
+    if (this.draftReadError) {
+      await this.loadExpenseDraft();
+      if (this.draftReadError) throw this.draftReadError;
+    }
     if (!this.native) return { ...this.webDraftMedia };
     const rows = await this.requireDb().query('SELECT id, data FROM expense_draft_media');
     return Object.fromEntries((rows.values ?? []).map(row => [rowString(row, 'id'), rowString(row, 'data')]));
@@ -156,6 +154,7 @@ export class LocalDataStoreImpl {
 
   async writeExpenseDraft(input: DraftWrite): Promise<void> {
     await this.enqueueWrite(async () => {
+      if (this.draftReadError) throw this.draftReadError;
       const draft = validateStoredDraft(input.draft);
       if (this.expenseDraft && this.expenseDraft.id !== draft.id) throw new Error('EXPENSE_DRAFT_CONFLICT');
       if (this.native) {
@@ -179,9 +178,9 @@ export class LocalDataStoreImpl {
     });
   }
 
-  async discardExpenseDraft(id: string): Promise<void> {
+  async discardExpenseDraft(id?: string): Promise<void> {
     await this.enqueueWrite(async () => {
-      if (this.expenseDraft?.id !== id) return;
+      if (!this.draftReadError && (!id || this.expenseDraft?.id !== id)) return;
       if (this.native) await this.withNativeTransaction(db => this.deleteDraftRows(db));
       else this.storage!.removeItem(WEB_EXPENSE_DRAFT_KEY);
       this.forgetDraft();
@@ -194,9 +193,29 @@ export class LocalDataStoreImpl {
   }
 
   private forgetDraft(): void {
+    this.draftReadError = null;
     this.expenseDraft = null;
     this.webDraftMedia = {};
     this.draftMediaIds.clear();
+  }
+
+  private async loadExpenseDraft(): Promise<void> {
+    try {
+      const raw = this.native ? await this.getMeta(this.requireDb(), NATIVE_EXPENSE_DRAFT_KEY) : this.storage!.getItem(WEB_EXPENSE_DRAFT_KEY);
+      if (!raw) { this.forgetDraft(); return; }
+      if (this.native) this.expenseDraft = validateStoredDraft(JSON.parse(raw));
+      else {
+        const saved = await decryptWebDraft(raw) as DraftWrite;
+        this.expenseDraft = validateStoredDraft(saved.draft);
+        this.webDraftMedia = saved.media;
+      }
+      this.draftMediaIds = new Set(this.expenseDraft.photos.map(p => p.id));
+      this.draftReadError = null;
+    } catch (error) {
+      // Preserve opaque bytes for authenticated Retry/Discard; a broken draft
+      // must not block an independently validated financial ledger at startup.
+      this.draftReadError = error;
+    }
   }
 
   private assertSavingDraft(id?: string): boolean {
