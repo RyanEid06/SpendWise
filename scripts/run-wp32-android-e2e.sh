@@ -148,7 +148,7 @@ else
   # gallery/picker sequence remains mandatory in the final full main run.
   reset_app
   run_flow bootstrap-onboard .maestro/diagnostic/onboard-current-only.yaml
-  push_download "$FIXTURE_ROOT/wp32-full.swb3" wp32-full.swb3
+  push_download "$FIXTURE_ROOT/wp34-full.swb3" wp32-full.swb3
   run_flow bootstrap-wp34-media .maestro/diagnostic/restore-v3-full-bootstrap.yaml
 fi
 run_flow wp34-ui .maestro/wp34/ui-polish.yaml

@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { validateBackupV2Archive } from '../src/utils/backupV2';
+import { decryptBackupV3Envelope } from '../src/utils/backupV3';
 
 const bash = process.env.WP32_BASH || (process.platform === 'win32'
   ? 'C:/Program Files/Git/bin/bash.exe' : 'bash');
@@ -86,12 +87,36 @@ bash scripts/run-wp32-isolated-gate.sh
 });
 }
 
-function generateFixtures(directory: string) {
+function generateFixtures(directory: string, phase = 'full') {
   const result = spawnSync(process.execPath, [
     'node_modules/tsx/dist/cli.mjs', 'scripts/wp32-generate-portable-fixtures.ts', directory,
-  ], { encoding: 'utf8', env: { ...process.env, WP32_FIXTURE_MONTH: '2027-02' } });
+  ], { encoding: 'utf8', env: { ...process.env, WP32_FIXTURE_MONTH: '2027-02', WP32_NATIVE_PHASE: phase } });
   assert.equal(result.status, 0, result.stderr);
 }
+
+test('targeted WP34 encrypted fixture matches the real media flow category and nine-photo state', async () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'wp34-media-fixture-'));
+  try {
+    generateFixtures(directory, 'wp34-tail');
+    for (const [name, category] of [['wp34-full.swb3', 'Food'], ['wp32-full.swb3', 'Food & Dining']]) {
+      const envelope = new Blob([readFileSync(path.join(directory, name))]);
+      const payload = await decryptBackupV3Envelope(envelope, 'wp32-public-fixture-passphrase');
+      const { manifest, zip } = await validateBackupV2Archive(payload);
+      assert.equal(manifest.mediaIncluded, true);
+      assert.deepEqual(manifest.expenses.map(expense => expense.description), ['WP32 One Photo', 'WP32 Eight Photos']);
+      assert.deepEqual(manifest.expenses.map(expense => expense.category), [category, category]);
+      assert.equal(manifest.attachments.filter(item => item.expenseId === 301).length, 1);
+      assert.equal(manifest.attachments.filter(item => item.expenseId === 302).length, 8);
+      for (const item of manifest.attachments) {
+        assert.deepEqual(await zip.file(item.mediaEntry!)!.async('nodebuffer'), readFileSync('tests/fixtures/media/wp32-photo-01.jpg'));
+      }
+    }
+    const runner = readFileSync('scripts/run-wp32-android-e2e.sh', 'utf8');
+    assert.match(runner, /push_download "\$FIXTURE_ROOT\/wp34-full\.swb3" wp32-full\.swb3/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
 
 test('legacy v1 fixture dates and budget match the month exercised by History', () => {
   const directory = mkdtempSync(path.join(tmpdir(), 'wp32-v1-'));
