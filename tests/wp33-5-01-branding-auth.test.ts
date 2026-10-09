@@ -118,5 +118,5 @@ test('WP33.5-01 steady-state cleanup optimization only skips duplicate validatio
 });
 
 test('WP06 uses the owner-selected candidate version and upgrade code', () => {
-  assert.deepEqual(version, { versionName: '2.0.2', versionCode: 9 });
+  assert.deepEqual(version, { versionName: '2.1.0', versionCode: 10 });
 });

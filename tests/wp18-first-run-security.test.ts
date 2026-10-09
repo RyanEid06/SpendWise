@@ -246,8 +246,8 @@ test('v2.0 Android update identity and release metadata stay aligned', () => {
   const manifest = readFileSync('android/app/src/main/AndroidManifest.xml', 'utf8');
   const workflow = readFileSync('.github/workflows/android-build.yml', 'utf8');
 
-  assert.equal(version.versionName, '2.0.2');
-  assert.equal(version.versionCode, 9);
+  assert.equal(version.versionName, '2.1.0');
+  assert.equal(version.versionCode, 10);
   assert.equal(packageJson.version, version.versionName);
   assert.equal(packageLock.version, version.versionName);
   assert.equal(packageLock.packages?.['']?.version, version.versionName);

@@ -4,24 +4,33 @@ on:
   workflow_dispatch:
     inputs:
       expected_source:
-        description: Exact checked-out WP06 integration commit
+        description: Exact checked-out candidate commit
         required: true
         type: string
       installed_version_code:
-        description: Actual Honor phone baseline; this candidate gate is pinned to code 8
+        description: Owner baseline code (8 or 9); both retained upgrade paths are tested
         required: true
-        default: "8"
+        default: "9"
+        type: string
+      expected_version_name:
+        description: Reviewed candidate version name
+        required: true
+        default: "2.1.0"
+        type: string
+      expected_version_code:
+        description: Reviewed candidate version code
+        required: true
+        default: "10"
         type: string
 
 permissions:
   contents: read
   actions: read
 
-# This remains manually runnable after integration. When a later signed candidate replaces code 9,
-# update the pinned candidate/baseline identities, hashes, and expected installed phone code together.
+# Reviewed candidate pairs and immutable baseline bytes are checked before emulator mutation.
 jobs:
   signed-candidate:
-    if: github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/codex/wp33-5-06-honor-startup-fix')
+    if: github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/codex/wp33-5-06-honor-startup-fix' || github.ref == 'refs/heads/codex/release-v2-1')
     runs-on: ubuntu-latest
     timeout-minutes: 55
     env:
@@ -64,16 +73,18 @@ jobs:
         env:
           EXPECTED_SOURCE: ${{ inputs.expected_source }}
           INSTALLED_CODE: ${{ inputs.installed_version_code }}
+          EXPECTED_NAME: ${{ inputs.expected_version_name }}
+          EXPECTED_CODE: ${{ inputs.expected_version_code }}
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE"
           test "$EXPECTED_SOURCE" = "$GITHUB_SHA"
           VERSION_NAME="$(node -p "require('./version.json').versionName")"
           VERSION_CODE="$(node -p "require('./version.json').versionCode")"
-          [[ "$INSTALLED_CODE" =~ ^[0-9]+$ ]]
-          test "$INSTALLED_CODE" = "8"
-          test "$VERSION_NAME" = "2.0.2"
-          test "$VERSION_CODE" = "9"
+          case "$INSTALLED_CODE" in 8|9) ;; *) exit 1 ;; esac
+          test "$VERSION_NAME" = "$EXPECTED_NAME"
+          test "$VERSION_CODE" = "$EXPECTED_CODE"
+          case "$VERSION_NAME:$VERSION_CODE" in 2.0.2:9|2.1.0:10) ;; *) exit 1 ;; esac
           test "$VERSION_CODE" -gt "$INSTALLED_CODE"
           test "$(node -p "require('./package.json').version")" = "$VERSION_NAME"
           echo "version=$VERSION_NAME" >> "$GITHUB_OUTPUT"
@@ -175,6 +186,27 @@ jobs:
           cp "$apk" "$RUNNER_TEMP/wp33-baseline8/SpendWise-v2.0.2.apk"
           rm -f "$RUNNER_TEMP/wp33-baseline8/artifact.zip"
 
+      - name: Download immutable actual signed code-9 populated-upgrade baseline
+        if: steps.version.outputs.code == '10'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/wp33-baseline9"
+          gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts/11598620592" > "$RUNNER_TEMP/wp33-baseline9/artifact-metadata.json"
+          node -e "const a=require(process.argv[1]); if(a.id!==11598620592||a.name!=='SpendWise-WP06-candidate-1e07a87bfaf9b2924f808d2e30f39a0678b1dbe8'||a.expired!==false||String(a.workflow_run.id)!=='37888797950'||a.workflow_run.head_sha!=='1e07a87bfaf9b2924f808d2e30f39a0678b1dbe8') throw Error('actual signed code-9 artifact workflow identity mismatch')" "$RUNNER_TEMP/wp33-baseline9/artifact-metadata.json"
+          gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts/11598620592/zip" > "$RUNNER_TEMP/wp33-baseline9/artifact.zip"
+          unzip -q "$RUNNER_TEMP/wp33-baseline9/artifact.zip" -d "$RUNNER_TEMP/wp33-baseline9/extracted"
+          apk="$(find "$RUNNER_TEMP/wp33-baseline9/extracted" -type f -name 'SpendWise-v2.0.2.apk' -print -quit)"
+          test -n "$apk"
+          echo "d6494b1fb1e7503f8e8eb50ce5dcf767f7be45a7c3ad70f453bc9f581b1424d6  $apk" | sha256sum --check
+          receipt="$RUNNER_TEMP/wp33-baseline9/extracted/build-receipt.json"
+          test -f "$receipt"
+          node -e "const r=require(process.argv[1]); if(r.package!=='com.spendwise.app'||r.versionName!=='2.0.2'||r.versionCode!==9||r.source!=='1e07a87bfaf9b2924f808d2e30f39a0678b1dbe8'||String(r.runId)!=='37888797950'||r.signingCertificateSha256!=='e279124cd9d2cd6d4c191e2644fd71063993e42d13441a46759fa922f16d5965') throw Error('actual code-9 artifact receipt mismatch')" "$receipt"
+          cp "$apk" "$RUNNER_TEMP/wp33-baseline9/SpendWise-v2.0.2.apk"
+          rm -f "$RUNNER_TEMP/wp33-baseline9/artifact.zip"
+
       - name: Download immutable actual signed code-7 populated-upgrade baseline
         shell: bash
         env:
@@ -227,6 +259,9 @@ jobs:
       - name: Bundle signed startup runner before freeing Node dependencies
         run: npx esbuild scripts/wp33-5-06-signed-startup.ts --bundle --platform=node --format=esm --outfile=artifacts/wp33-5-06-signed-startup.mjs
 
+      - name: Record dependency SBOM
+        run: npm sbom --sbom-format cyclonedx > release/sbom.cdx.json
+
       - name: Free disk for API36 emulator
         shell: bash
         run: |
@@ -250,7 +285,10 @@ jobs:
         env:
           WP36_ALLOW_EMULATOR_MUTATION: "1"
           WP36_EXPECTED_AVD: wp33-signed-startup-api36
-          WP36_CURRENT_APK: ${{ github.workspace }}/release/SpendWise-v2.0.2.apk
+          WP36_CURRENT_APK: ${{ github.workspace }}/release/SpendWise-v${{ steps.version.outputs.version }}.apk
+          WP36_VERSION_NAME: ${{ steps.version.outputs.version }}
+          WP36_VERSION_CODE: ${{ steps.version.outputs.code }}
+          WP36_BASELINE9_APK: ${{ runner.temp }}/wp33-baseline9/SpendWise-v2.0.2.apk
           WP36_BASELINE8_APK: ${{ runner.temp }}/wp33-baseline8/SpendWise-v2.0.2.apk
           WP36_BASELINE7_APK: ${{ runner.temp }}/wp33-baseline7/SpendWise-v2.0.1.apk
           WP36_BUILD_TOOLS: ${{ steps.android-tools.outputs.path }}
@@ -290,7 +328,7 @@ jobs:
           retention-days: 30
 
   fileprovider-api36-instrumentation:
-    if: github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/codex/wp33-5-06-honor-startup-fix')
+    if: github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/codex/wp33-5-06-honor-startup-fix' || github.ref == 'refs/heads/codex/release-v2-1')
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
