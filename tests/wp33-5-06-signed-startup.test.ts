@@ -5,6 +5,7 @@ import { runInNewContext } from 'node:vm';
 import { existsSync, readFileSync as readText } from 'node:fs';
 import {
   assertCleanAppLog,
+  assertCleanInstallTarget,
   parseDisplayRotation,
   assertSafeSyntheticTarget,
   assertStablePid,
@@ -14,6 +15,16 @@ import {
 const workflow = readFileSync('.github/workflows/wp33-5-06-candidate.yml', 'utf8');
 const runner = readFileSync('scripts/wp33-5-06-signed-startup.ts', 'utf8');
 const expectedAvd = 'wp33-signed-startup-api36';
+
+test('clean release install accepts absent package without swallowing adb errors', () => {
+  const calls: string[][] = [];
+  assert.doesNotThrow(() => assertCleanInstallTarget(args => { calls.push(args); return ''; }));
+  assert.deepEqual(calls, [['shell', 'pm', 'list', 'packages', '--user', '0', 'com.spendwise.app']]);
+  assert.throws(() => assertCleanInstallTarget(() => 'package:com.spendwise.app\n'), /clean synthetic AVD/);
+  assert.throws(() => assertCleanInstallTarget(() => 'unexpected package-manager output'), /clean synthetic AVD/);
+  const transportFailure = new Error('adb offline');
+  assert.throws(() => assertCleanInstallTarget(() => { throw transportFailure; }), error => error === transportFailure);
+});
 
 test('code7 workflow receipt accepts the retained artifact and rejects changed provenance', () => {
   const command = workflow.split('\n').find(line => line.includes("throw Error('actual code-7 artifact receipt mismatch')"));

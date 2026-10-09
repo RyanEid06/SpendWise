@@ -59,6 +59,13 @@ export function assertStablePid(samples: string[]): string {
   return pids[0];
 }
 
+export function assertCleanInstallTarget(readAdb: AdbReader): void {
+  // pm path exits 1 when an app is absent. Listing packages succeeds with empty
+  // output for the clean AVD, while transport/package-manager errors still throw.
+  const installed = readAdb(['shell', 'pm', 'list', 'packages', '--user', '0', PACKAGE_ID]).trim();
+  if (installed) throw new Error(`Expected a clean synthetic AVD before candidate install, found: ${installed}`);
+}
+
 export function assertCleanAppLog(log: string): void {
   const lines = log.split(/\r?\n/);
   for (let index = 0; index < lines.length; index++) {
@@ -328,8 +335,7 @@ function main(env: NodeJS.ProcessEnv): void {
     uptime: adb(target.serial, ['shell', 'cat', '/proc/uptime']).trim(),
   }, null, 2) + '\n');
 
-  const existing = adb(target.serial, ['shell', 'pm', 'path', PACKAGE_ID]).trim();
-  if (existing) throw new Error(`Expected a clean synthetic AVD before candidate install, found ${PACKAGE_ID}: ${existing}`);
+  assertCleanInstallTarget(readAdb);
   adb(target.serial, ['install', currentApk]);
   assertInstalledVersion(target.serial, '9');
   adb(target.serial, ['logcat', '-c']);
