@@ -38,6 +38,10 @@ appId: com.spendwise.app
     start: 50%, 80%
     end: 50%, 35%
     duration: 500
+- swipe:
+    start: 50%, 80%
+    end: 50%, 35%
+    duration: 500
 - assertVisible: "WP32 One Photo.*"
 - swipe:
     start: 50%, 35%
