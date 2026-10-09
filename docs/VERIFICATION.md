@@ -1,6 +1,9 @@
 # SpendWise 2.1 automated verification
 
-Release target **2.1.0/code10**, package `com.spendwise.app`.
+Published release **2.1.0/code10**, package `com.spendwise.app`:
+[official release and verification assets](https://github.com/RyanEid06/SpendWise/releases/tag/v2.1.0).
+Tagged application and documentation source:
+`005d1d0f78d5c7917a5d63c848d487d44b50ee91`.
 Final automated application source:
 `d6838dc076913801239de74ab92577b6c7beb30c`.
 The later documentation cleanup changes current documentation and two documentation
@@ -9,6 +12,7 @@ fixture inputs retain the tested tree. The published receipt records the final t
 
 | Gate | Actual result | Evidence |
 | --- | --- | --- |
+| Official tag debug/backend and permanent-signed release build | Passed; published APK independently downloaded and verified | [37975298591](https://github.com/RyanEid06/SpendWise/actions/runs/37975298591) |
 | Android debug, dependency gates and deployed authenticated Gemini | Passed | [37968566745](https://github.com/RyanEid06/SpendWise/actions/runs/37968566745) |
 | Full sequential native + executable web | Passed; 26 retained native JUnit flows, zero failures/errors | [37968599647](https://github.com/RyanEid06/SpendWise/actions/runs/37968599647) |
 | Encrypted recovery | 33/33 native flows; at-rest, reboot/keyguard, process death, photo/Edit recovery | [37968604977](https://github.com/RyanEid06/SpendWise/actions/runs/37968604977) |
@@ -22,16 +26,19 @@ Both retained signed upgrade receipts passed: populated2.0.1/code7 through actua
 production storage after same-certificate updates. This establishes emulator
 functionality, not the owner's physical data/phone acceptance.
 
-The tested signed candidate SHA-256 is
-`42dde15a5480706f5009ed33993f5ad52945ed9ad5f66e4d0bbc0fc2523c0f6d`.
-This is a candidate identity; use the public release `SHA256SUMS` for the final asset.
-Independent Google apksig verification confirmed a valid V2 signature and the
-permanent certificate. Decoded compiled manifest checks found non-debuggable,
+The final published APK SHA-256 is
+`af705a5c4f05a3419dea8cb29630057060697f61bc7ac1e810f4211bbbff36c8`.
+The independently downloaded APK matched public `SHA256SUMS`, the GitHub asset
+digest and the delivered Desktop copy. The public build receipt records exact
+source `005d1d0f78d5c7917a5d63c848d487d44b50ee91`, package/version and run37975298591.
+Independent Google apksig verification of that public APK confirmed a valid V2
+signature and the permanent certificate. Decoded compiled manifest checks found non-debuggable,
 backup-disabled, cleartext-disabled configuration and non-exported providers.
 Embedded Capacitor config retained HTTPS/encryption, without a remote server,
 WebView debugging or mixed-content override. Native64-bit ELF and ZIP16KiB alignment
 passed. Packaged PNG pixel identities match the padded original splash resources.
-CycloneDX SBOM and exact source/build receipt are retained with signed artifacts.
+The public CycloneDX SBOM contains 331 components. Its digest and the exact
+source/build receipt were independently checked against the published assets.
 
 The actual Settings screenshot was reviewed: version2.1.0, nine-photo summary,
 no build-number row and no clipped Settings rows. Prelaunch Light/Dark videos
