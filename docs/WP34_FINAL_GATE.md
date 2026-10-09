@@ -21,6 +21,12 @@ hard-coded for 2.0.2 and is historical, not the 2.1.0 release workflow.
 - [ ] `npm ci`, `npm run verify`, regressions including WP34, and dependency audits.
 - [ ] Android Capacitor sync, Gradle debug build and applicable static checks.
 - [ ] Web E2E and full native suite with `wp32-final-native` PR label.
+      For freeze-branch repairs, the owner authorized `wp34-tail`: restore the
+      established encrypted two-expense/nine-photo fixture, check WP34 UI, then
+      run every remaining backup, compatibility, benchmark, lock and upgrade phase.
+      Earlier green phases retain their recorded source evidence. This targeted
+      run is not full-native acceptance; run `native_phase=full` on final main
+      before release. Main and other PRs default to the full sequence.
 - [ ] Maestro WP34 accessibility/UI behavior checked and non-sensitive Settings screenshot inspected.
       Media Library is FLAG_SECURE and intentionally cannot be screenshot-captured;
       do not weaken this privacy protection for visual tests.

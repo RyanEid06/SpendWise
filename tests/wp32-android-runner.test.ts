@@ -10,6 +10,57 @@ const bash = process.env.WP32_BASH || (process.platform === 'win32'
   ? 'C:/Program Files/Git/bin/bash.exe' : 'bash');
 const shellPath = (value: string) => value.replace(/\\/g, '/');
 
+test('native runner rejects an unknown phase before accessing a device', () => {
+  const result = spawnSync(bash, ['-c', `
+adb() { echo UNEXPECTED_DEVICE_ACCESS; return 99; }
+export -f adb
+bash scripts/run-wp32-android-e2e.sh
+`], { encoding: 'utf8', env: { ...process.env, WP32_NATIVE_PHASE: 'typo', ANDROID_SERIAL: 'emulator-5554' } });
+  assert.equal(result.status, 2, result.stderr);
+  assert.match(result.stderr, /Unknown native phase/);
+  assert.doesNotMatch(result.stdout, /UNEXPECTED_DEVICE_ACCESS/);
+});
+
+for (const failure of ['ui-polish.yaml', 'backup-export-data.yaml']) {
+test(`WP34 tail restores prerequisites and propagates failure in ${failure}`, () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'wp34-targeted-tail-'));
+  try {
+    const result = spawnSync(bash, ['-c', `
+adb() {
+  case "$*" in
+    *'getprop ro.kernel.qemu'*) printf '1\\n' ;;
+    *'emu avd name'*) printf 'wp33-synthetic-api34\\nOK\\n' ;;
+  esac
+}
+maestro() {
+  local flow
+  for flow in "$@"; do :; done
+  printf 'FLOW:%s\\n' "$flow"
+  if [[ "$flow" == *"$WP32_TEST_FAIL_FLOW" ]]; then return 17; fi
+  # The full prefix must not run in this mode.
+  if [[ "$flow" == *empty-navigation.yaml ]]; then return 18; fi
+}
+export -f adb maestro
+bash scripts/run-wp32-android-e2e.sh
+`], { encoding: 'utf8', env: { ...process.env, WP32_NATIVE_PHASE: 'wp34-tail', WP32_TEST_FAIL_FLOW: failure,
+      ANDROID_SERIAL: 'emulator-5554', RESULT_ROOT: shellPath(path.join(directory, 'results')),
+      FIXTURE_ROOT: shellPath(path.join(directory, 'fixtures')) } });
+    assert.equal(result.status, 17, result.stderr);
+    const flows = result.stdout.split(/\r?\n/).filter(line => line.startsWith('FLOW:'));
+    assert.deepEqual(flows, [
+      'FLOW:.maestro/diagnostic/onboard-current-only.yaml',
+      'FLOW:.maestro/diagnostic/restore-v3-full-bootstrap.yaml',
+      'FLOW:.maestro/wp34/ui-polish.yaml',
+      ...(failure === 'backup-export-data.yaml' ? ['FLOW:.maestro/current/backup-export-data.yaml'] : []),
+    ]);
+    assert.match(result.stdout, /native phase: wp34-tail/);
+    assert.doesNotMatch(result.stdout, /completed successfully/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+}
+
 for (const target of ['backup-export-full', 'wp33-5-04-continuity']) {
 test(`isolated ${target} rejects unsafe devices before any mutation`, () => {
   for (const input of [

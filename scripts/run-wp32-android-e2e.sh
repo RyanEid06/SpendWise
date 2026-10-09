@@ -7,6 +7,11 @@ NEW_APK="${NEW_APK:-artifacts/android-e2e/apks/current-debug.apk}"
 V14_APK="${V14_APK:-artifacts/android-e2e/apks/v14-debug.apk}"
 RESULT_ROOT="${RESULT_ROOT:-artifacts/android-e2e/results}"
 FIXTURE_ROOT="${FIXTURE_ROOT:-artifacts/android-e2e/fixtures}"
+NATIVE_PHASE="${WP32_NATIVE_PHASE:-full}"
+case "$NATIVE_PHASE" in
+  full|wp34-tail) ;;
+  *) echo "Unknown native phase: $NATIVE_PHASE" >&2; exit 2 ;;
+esac
 
 # This runner clears app data and uninstalls/reinstalls the package. Refuse to
 # run unless ADB points at the dedicated synthetic emulator used by this gate.
@@ -115,6 +120,8 @@ done
 
 adb uninstall "$APP_ID" >/dev/null 2>&1 || true
 adb install "$NEW_APK" >/dev/null
+echo "== WP32 native phase: $NATIVE_PHASE =="
+if [ "$NATIVE_PHASE" = full ]; then
 # Record each system splash before cold launch and before Maestro attaches.
 adb shell cmd uimode night no
 bash scripts/wp34-record-splash.sh "$RESULT_ROOT/wp34-splash-light"
@@ -136,6 +143,14 @@ run_wp04_continuity
 echo "== Media boundaries and restart durability =="
 reset_app
 run_flow media .maestro/current/media.yaml
+else
+  # Reproduce the UI failure from the established encrypted fixture. The real
+  # gallery/picker sequence remains mandatory in the final full main run.
+  reset_app
+  run_flow bootstrap-onboard .maestro/diagnostic/onboard-current-only.yaml
+  push_download "$FIXTURE_ROOT/wp32-full.swb3" wp32-full.swb3
+  run_flow bootstrap-wp34-media .maestro/diagnostic/restore-v3-full-bootstrap.yaml
+fi
 run_flow wp34-ui .maestro/wp34/ui-polish.yaml
 
 echo "== Secure Backup v3 exports =="
@@ -198,4 +213,4 @@ adb install -r "$NEW_APK" >/dev/null
 adb shell am force-stop "$APP_ID"
 run_flow hardened-upgrade .maestro/migration/hardened-verify.yaml
 
-echo "WP32 Android E2E completed successfully."
+echo "WP32 Android $NATIVE_PHASE phase completed successfully."
