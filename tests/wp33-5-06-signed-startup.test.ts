@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { runInNewContext } from 'node:vm';
 import { existsSync, readFileSync as readText } from 'node:fs';
 import {
   assertCleanAppLog,
@@ -13,6 +14,32 @@ import {
 const workflow = readFileSync('.github/workflows/wp33-5-06-candidate.yml', 'utf8');
 const runner = readFileSync('scripts/wp33-5-06-signed-startup.ts', 'utf8');
 const expectedAvd = 'wp33-signed-startup-api36';
+
+test('code7 workflow receipt accepts the retained artifact and rejects changed provenance', () => {
+  const command = workflow.split('\n').find(line => line.includes("throw Error('actual code-7 artifact receipt mismatch')"));
+  assert.ok(command, 'the retained artifact must have a strict receipt check');
+  const script = command.match(/node -e "(.*)" "\$receipt"/)?.[1];
+  assert.ok(script);
+  // Exact non-secret receipt retained in artifact 11367974300, run 37365477604.
+  const receipt = {
+    source: '3ea40df0221a20e7c722e1d662bc5bae0c5e0370',
+    baseMainCommit: '3423e60e4264a23b56d58b6341c5d2bfa59c0ce1',
+    sourceChanges: ['version.json only'],
+    package: 'com.spendwise.app', versionName: '2.0.1', versionCode: 7,
+    signingCertificateSha256: 'e279124cd9d2cd6d4c191e2644fd71063993e42d13441a46759fa922f16d5965',
+    apkSha256: '27736147ad2ab6b22a706914ef2853e46b587be58a70e714861cae374cf08fa1',
+    runId: '37365477604',
+  };
+  const verify = (value: unknown) => runInNewContext(script, {
+    require: () => value, process: { argv: ['node', 'receipt.json'] },
+  });
+  assert.doesNotThrow(() => verify(receipt));
+  for (const key of Object.keys(receipt)) {
+    assert.throws(() => verify({ ...receipt, [key]: null }), /actual code-7 artifact receipt mismatch/);
+  }
+  assert.throws(() => verify({ ...receipt, sourceChanges: ['version.json'] }), /receipt mismatch/);
+  assert.throws(() => verify({ ...receipt, sourceChanges: ['version.json only', 'other.ts'] }), /receipt mismatch/);
+});
 
 function targetEnv(overrides: Record<string, string | undefined> = {}) {
   return {
