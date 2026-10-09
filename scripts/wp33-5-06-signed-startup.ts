@@ -8,6 +8,7 @@ export type AdbReader = (args: string[]) => string;
 
 const PACKAGE_ID = 'com.spendwise.app';
 const EXPECTED_CERT = 'e279124cd9d2cd6d4c191e2644fd71063993e42d13441a46759fa922f16d5965';
+const BASELINE9_SHA = 'd6494b1fb1e7503f8e8eb50ce5dcf767f7be45a7c3ad70f453bc9f581b1424d6';
 const BASELINE7_SHA = '27736147ad2ab6b22a706914ef2853e46b587be58a70e714861cae374cf08fa1';
 const BASELINE7_SOURCE = '3ea40df0221a20e7c722e1d662bc5bae0c5e0370';
 const BASELINE7_BASE = '3423e60e4264a23b56d58b6341c5d2bfa59c0ce1';
@@ -21,6 +22,15 @@ const SPENDWISE_FATAL = /Force finishing activity com\.spendwise\.app|Process co
 function requireValue(value: string | undefined, name: string): string {
   if (!value?.trim()) throw new Error(`Missing required signed-startup setting: ${name}`);
   return value.trim();
+}
+
+export function candidateVersion(env: GateEnvironment): { versionName: string; versionCode: number } {
+  const versionName = requireValue(env.WP36_VERSION_NAME, 'WP36_VERSION_NAME');
+  const code = requireValue(env.WP36_VERSION_CODE, 'WP36_VERSION_CODE');
+  if (!['2.0.2:9', '2.1.0:10'].includes(`${versionName}:${code}`)) {
+    throw new Error('Unsupported signed candidate version pair');
+  }
+  return { versionName, versionCode: Number(code) };
 }
 
 export function assertSafeSyntheticTarget(env: GateEnvironment, readAdb: AdbReader): { serial: string; avd: string } {
@@ -284,6 +294,11 @@ function verifyBaseline7Receipt(apk: string, buildTools: string): { sha256: stri
   return receipt;
 }
 
+function verifyBaseline9Receipt(apk: string, buildTools: string): void {
+  const receipt = apkContract(apk, buildTools, '9', '2.0.2');
+  if (receipt.sha256 !== BASELINE9_SHA) throw new Error(`Code-9 baseline APK SHA mismatch: ${receipt.sha256}.`);
+}
+
 let guardedTarget: { serial: string; avd: string } | undefined;
 let activeArtifactRoot: string | undefined;
 
@@ -316,15 +331,18 @@ function main(env: NodeJS.ProcessEnv): void {
   }
 
   const currentApk = requireValue(env.WP36_CURRENT_APK, 'WP36_CURRENT_APK');
+  const candidate = candidateVersion(env);
+  const baseline9Apk = candidate.versionCode === 10 ? requireValue(env.WP36_BASELINE9_APK, 'WP36_BASELINE9_APK') : undefined;
   const baseline8Apk = requireValue(env.WP36_BASELINE8_APK, 'WP36_BASELINE8_APK');
   const baseline7Apk = requireValue(env.WP36_BASELINE7_APK, 'WP36_BASELINE7_APK');
   const buildTools = requireValue(env.WP36_BUILD_TOOLS, 'WP36_BUILD_TOOLS');
   const artifactRoot = path.resolve(requireValue(env.WP36_ARTIFACT_ROOT, 'WP36_ARTIFACT_ROOT'));
   mkdirSync(artifactRoot, { recursive: true });
   activeArtifactRoot = artifactRoot;
-  const currentContract = apkContract(currentApk, buildTools, '9', '2.0.2');
+  const currentContract = apkContract(currentApk, buildTools, String(candidate.versionCode), candidate.versionName);
   verifyBaselineReceipt(baseline8Apk, buildTools);
   const baseline7Contract = verifyBaseline7Receipt(baseline7Apk, buildTools);
+  if (baseline9Apk) verifyBaseline9Receipt(baseline9Apk, buildTools);
   if (currentContract.certificate !== EXPECTED_CERT) throw new Error('Candidate signing identity is not the permanent release key.');
   if (baseline7Contract.certificate !== currentContract.certificate) throw new Error('Signed code-7 baseline and candidate do not have the same permanent signing identity.');
   writeFileSync(path.join(artifactRoot, 'runtime-start.json'), JSON.stringify({
@@ -337,7 +355,7 @@ function main(env: NodeJS.ProcessEnv): void {
 
   assertCleanInstallTarget(readAdb);
   adb(target.serial, ['install', currentApk]);
-  assertInstalledVersion(target.serial, '9');
+  assertInstalledVersion(target.serial, String(candidate.versionCode));
   adb(target.serial, ['logcat', '-c']);
   maestro('.maestro/wp33-5-06/clean-first-run.yaml', artifactRoot);
   assertProcessAndUi(target.serial, artifactRoot, 'candidate-clean-first-run-home');
@@ -348,12 +366,12 @@ function main(env: NodeJS.ProcessEnv): void {
   maestro('.maestro/wp33-5-06/seed-populated-expense.yaml', artifactRoot);
   assertProcessAndUi(target.serial, artifactRoot, 'candidate-populated-before-same-build-upgrade');
   adb(target.serial, ['install', '-r', currentApk]);
-  assertInstalledVersion(target.serial, '9');
+  assertInstalledVersion(target.serial, String(candidate.versionCode));
   maestro('.maestro/wp33-5-06/assert-populated-after-same-build-upgrade.yaml', artifactRoot);
   assertProcessAndUi(target.serial, artifactRoot, 'candidate-populated-after-same-build-upgrade');
 
   // Seed with the retained signed code-7 release, then carry the same package data
-  // through actual code-8 and code-9 install-r updates. Code 8 is never launched.
+  // through actual code-8 and candidate install-r updates. Code 8 is never launched.
   adb(target.serial, ['uninstall', PACKAGE_ID]);
   adb(target.serial, ['install', baseline7Apk]);
   const code7Installed = assertInstalledVersion(target.serial, '7');
@@ -377,38 +395,65 @@ function main(env: NodeJS.ProcessEnv): void {
     installedPackage: code8Installed,
   }, null, 2) + '\n');
   adb(target.serial, ['install', '-r', currentApk]);
-  const candidateInstalled = assertInstalledVersion(target.serial, '9');
-  const upgradeReceiptPath = path.join(artifactRoot, 'api36-code7-to-code8-to-code9-install-r.json');
+  const candidateInstalled = assertInstalledVersion(target.serial, String(candidate.versionCode));
+  const upgradeReceiptPath = path.join(artifactRoot, `api36-code7-to-code8-to-code${candidate.versionCode}-install-r.json`);
   writeFileSync(upgradeReceiptPath, JSON.stringify({
     package: PACKAGE_ID,
     baseline7: { versionName: '2.0.1', versionCode: 7, sha256: BASELINE7_SHA, source: BASELINE7_SOURCE, baseMainCommit: BASELINE7_BASE, runId: BASELINE7_RUN_ID, artifactId: BASELINE7_ARTIFACT_ID, launched: true, dataSeeded: true },
     intermediate8: { versionName: '2.0.2', versionCode: 8, sha256: BASELINE_SHA, source: BASELINE_SOURCE, runId: '37809691011', artifactId: '11564128407', installReplace: true, launched: false },
-    candidate9: { versionName: '2.0.2', versionCode: 9, sha256: currentContract.sha256, source: env.GITHUB_SHA, signingCertificateSha256: currentContract.certificate, installReplace: true, launched: true },
+    candidate: { ...candidate, sha256: currentContract.sha256, source: env.GITHUB_SHA, signingCertificateSha256: currentContract.certificate, installReplace: true, launched: true },
     androidApi: 36,
     avd: target.avd,
-    verificationStatus: 'pending-code9-ui-read',
+    verificationStatus: 'pending-candidate-ui-read',
     installedPackage: candidateInstalled,
   }, null, 2) + '\n');
   adb(target.serial, ['logcat', '-c']);
   maestro('.maestro/wp33-5-06/verify-code7-data-after-code9.yaml', artifactRoot);
-  assertProcessAndUi(target.serial, artifactRoot, 'code7-populated-ledger-after-code9-upgrade');
+  assertProcessAndUi(target.serial, artifactRoot, `code7-populated-ledger-after-code${candidate.versionCode}-upgrade`);
   writeFileSync(upgradeReceiptPath, JSON.stringify({
     package: PACKAGE_ID,
     baseline7: { versionName: '2.0.1', versionCode: 7, sha256: BASELINE7_SHA, source: BASELINE7_SOURCE, baseMainCommit: BASELINE7_BASE, runId: BASELINE7_RUN_ID, artifactId: BASELINE7_ARTIFACT_ID, launched: true, dataSeeded: true },
     intermediate8: { versionName: '2.0.2', versionCode: 8, sha256: BASELINE_SHA, source: BASELINE_SOURCE, runId: '37809691011', artifactId: '11564128407', installReplace: true, launched: false },
-    candidate9: { versionName: '2.0.2', versionCode: 9, sha256: currentContract.sha256, source: env.GITHUB_SHA, signingCertificateSha256: currentContract.certificate, installReplace: true, launched: true },
+    candidate: { ...candidate, sha256: currentContract.sha256, source: env.GITHUB_SHA, signingCertificateSha256: currentContract.certificate, installReplace: true, launched: true },
     androidApi: 36,
     avd: target.avd,
     verificationStatus: 'passed',
-    populatedDataPreservedAcross7To9: true,
+    populatedDataPreservedAcross7ToCandidate: true,
     retainedBudget: '1250',
     retainedExpense: 'WP33.5-06 signed startup receipt',
     productionLedgerReadAfterUpgrade: true,
-    note: 'The code-9 release reopened and displayed the exact code-7 seeded financial records after Android accepted both same-certificate install-r updates. This demonstrates the production encrypted-storage read path functionally; the gate does not export private app database or Keystore bytes.',
+    note: 'The candidate release reopened and displayed the exact code-7 seeded financial records after Android accepted both same-certificate install-r updates. This demonstrates the production encrypted-storage read path functionally; the gate does not export private app database or Keystore bytes.',
     installedPackage: candidateInstalled,
   }, null, 2) + '\n');
+  if (baseline9Apk) {
+    const upgradeRoot = path.join(artifactRoot, 'code9-upgrade');
+    mkdirSync(upgradeRoot, { recursive: true });
+    adb(target.serial, ['uninstall', PACKAGE_ID]);
+    adb(target.serial, ['install', baseline9Apk]);
+    assertInstalledVersion(target.serial, '9');
+    adb(target.serial, ['logcat', '-c']);
+    maestro('.maestro/wp33-5-06/clean-first-run.yaml', upgradeRoot);
+    maestro('.maestro/wp33-5-06/seed-populated-home.yaml', upgradeRoot);
+    maestro('.maestro/wp33-5-06/seed-populated-expense.yaml', upgradeRoot);
+    assertProcessAndUi(target.serial, upgradeRoot, 'code9-populated-before-upgrade');
+    adb(target.serial, ['install', '-r', currentApk]);
+    const installedPackage = assertInstalledVersion(target.serial, '10');
+    const receiptPath = path.join(upgradeRoot, 'api36-code9-to-code10-install-r.json');
+    const receipt = {
+      package: PACKAGE_ID,
+      baseline9: { versionName: '2.0.2', versionCode: 9, sha256: BASELINE9_SHA, source: '1e07a87bfaf9b2924f808d2e30f39a0678b1dbe8', runId: '37888797950', artifactId: '11598620592', dataSeeded: true },
+      candidate: { ...candidate, sha256: currentContract.sha256, source: env.GITHUB_SHA, signingCertificateSha256: currentContract.certificate, installReplace: true },
+      androidApi: 36, avd: target.avd, installedPackage,
+    };
+    writeFileSync(receiptPath, JSON.stringify({ ...receipt, verificationStatus: 'pending-candidate-ui-read' }, null, 2) + '\n');
+    adb(target.serial, ['logcat', '-c']);
+    maestro('.maestro/wp33-5-06/assert-populated-after-same-build-upgrade.yaml', upgradeRoot);
+    assertProcessAndUi(target.serial, upgradeRoot, 'code9-populated-after-code10-upgrade');
+    writeFileSync(receiptPath, JSON.stringify({ ...receipt, verificationStatus: 'passed', productionLedgerReadAfterUpgrade: true,
+      retainedBudget: '1250', retainedExpense: 'WP33.5-06 signed startup receipt' }, null, 2) + '\n');
+  }
   captureFinalAccessibility(target.serial, artifactRoot);
-  process.stdout.write(`SIGNED_STARTUP_API36_PASS serial=${target.serial} avd=${target.avd} upgrade=populated-code7->install-r-code8-unlaunched->install-r-code9-and-read\n`);
+  process.stdout.write(`SIGNED_STARTUP_API36_PASS serial=${target.serial} avd=${target.avd} upgrade=populated-code7->install-r-code8-unlaunched->install-r-code${candidate.versionCode}-and-read\n`);
 }
 
 const invokedFile = process.argv[1]?.replace(/\\/g, '/');

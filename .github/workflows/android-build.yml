@@ -314,6 +314,16 @@ jobs:
           path: release/
           if-no-files-found: error
 
+      - name: Record dependency SBOM
+        run: npm sbom --sbom-format cyclonedx > release/sbom.cdx.json
+
+      - name: Upload release SBOM
+        uses: actions/upload-artifact@v7
+        with:
+          name: SpendWise-v${{ steps.version.outputs.version }}-sbom
+          path: release/sbom.cdx.json
+          if-no-files-found: error
+
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
@@ -322,9 +332,9 @@ jobs:
           APK_PATH: release/SpendWise-v${{ steps.version.outputs.version }}.apk
         run: |
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" "$APK_PATH" --clobber
+            gh release upload "$GITHUB_REF_NAME" "$APK_PATH" release/SHA256SUMS release/build-receipt.json release/sbom.cdx.json --clobber
           else
-            gh release create "$GITHUB_REF_NAME" "$APK_PATH" \
+            gh release create "$GITHUB_REF_NAME" "$APK_PATH" release/SHA256SUMS release/build-receipt.json release/sbom.cdx.json \
               --verify-tag \
               --title "SpendWise $GITHUB_REF_NAME" \
               --generate-notes

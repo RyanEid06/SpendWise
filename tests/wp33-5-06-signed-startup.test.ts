@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { spawnSync } from 'node:child_process';
 import { runInNewContext } from 'node:vm';
 import { existsSync, readFileSync as readText } from 'node:fs';
 import {
   assertCleanAppLog,
   assertCleanInstallTarget,
+  candidateVersion,
   parseDisplayRotation,
   assertSafeSyntheticTarget,
   assertStablePid,
@@ -15,6 +17,32 @@ import {
 const workflow = readFileSync('.github/workflows/wp33-5-06-candidate.yml', 'utf8');
 const runner = readFileSync('scripts/wp33-5-06-signed-startup.ts', 'utf8');
 const expectedAvd = 'wp33-signed-startup-api36';
+
+test('signed candidate version contract accepts reviewed pairs and rejects missing or mixed values', () => {
+  for (const [versionName, code] of [['2.0.2', '9'], ['2.1.0', '10']]) {
+    assert.deepEqual(candidateVersion({ WP36_VERSION_NAME: versionName, WP36_VERSION_CODE: code }),
+      { versionName, versionCode: Number(code) });
+  }
+  for (const [name, code] of [[undefined, undefined], ['2.1.0', '9'], ['2.0.2', '10'], ['2.1.0', '010'], ['2.1.0', '11'], ['2.2.0', '10']]) {
+    assert.throws(() => candidateVersion({ WP36_VERSION_NAME: name, WP36_VERSION_CODE: code }));
+  }
+});
+
+test('workflow shell rejects stale metadata, mixed candidate pairs and unsupported owner baselines', () => {
+  const gate = workflow.match(/          case "\$INSTALLED_CODE"[\s\S]*?(?=          test "\$\(node)/)?.[0];
+  assert.ok(gate);
+  const bash = process.platform === 'win32' ? 'C:/Program Files/Git/bin/bash.exe' : 'bash';
+  const check = (values: Record<string, string>) => spawnSync(bash, ['-c', `set -euo pipefail\n${gate}`], {
+    env: { ...process.env, VERSION_NAME: '2.1.0', VERSION_CODE: '10', EXPECTED_NAME: '2.1.0', EXPECTED_CODE: '10', INSTALLED_CODE: '9', ...values },
+    encoding: 'utf8', windowsHide: true,
+  });
+  for (const baseline of ['8', '9']) assert.equal(check({ INSTALLED_CODE: baseline }).status, 0);
+  assert.equal(check({ VERSION_NAME: '2.0.2', VERSION_CODE: '9', EXPECTED_NAME: '2.0.2', EXPECTED_CODE: '9', INSTALLED_CODE: '8' }).status, 0);
+  for (const values of [{ VERSION_CODE: '9' }, { EXPECTED_NAME: '2.0.2' }, { VERSION_CODE: '11', EXPECTED_CODE: '11' },
+    { INSTALLED_CODE: '10' }, { INSTALLED_CODE: '08' }, { VERSION_CODE: '010', EXPECTED_CODE: '010' }]) {
+    assert.notEqual(check(values).status, 0, JSON.stringify(values));
+  }
+});
 
 test('clean release install accepts absent package without swallowing adb errors', () => {
   const calls: string[][] = [];
@@ -60,6 +88,36 @@ function targetEnv(overrides: Record<string, string | undefined> = {}) {
     ...overrides,
   };
 }
+
+test('code9 workflow receipt accepts retained provenance and rejects every altered field', () => {
+  const command = workflow.split('\n').find(line => line.includes("throw Error('actual code-9 artifact receipt mismatch')"));
+  assert.ok(command);
+  const script = command.match(/node -e "(.*)" "\$receipt"/)?.[1];
+  assert.ok(script);
+  const receipt = {
+    package: 'com.spendwise.app', versionName: '2.0.2', versionCode: 9,
+    source: '1e07a87bfaf9b2924f808d2e30f39a0678b1dbe8', runId: '37888797950',
+    signingCertificateSha256: 'e279124cd9d2cd6d4c191e2644fd71063993e42d13441a46759fa922f16d5965',
+  };
+  const verify = (value: unknown) => runInNewContext(script, { require: () => value, process: { argv: ['node', 'receipt.json'] } });
+  assert.doesNotThrow(() => verify(receipt));
+  for (const key of Object.keys(receipt)) assert.throws(() => verify({ ...receipt, [key]: null }), /receipt mismatch/);
+});
+
+test('code10 requires immutable code9 before mutation and reads populated ledger after replace install', () => {
+  assert.match(workflow, /11598620592/);
+  assert.match(workflow, /d6494b1fb1e7503f8e8eb50ce5dcf767f7be45a7c3ad70f453bc9f581b1424d6/);
+  const contract = runner.indexOf('verifyBaseline9Receipt(baseline9Apk, buildTools)');
+  const firstInstall = runner.indexOf("adb(target.serial, ['install', currentApk])");
+  assert.ok(contract >= 0 && contract < firstInstall);
+  const install = runner.indexOf("adb(target.serial, ['install', baseline9Apk])");
+  const seed = runner.indexOf("maestro('.maestro/wp33-5-06/seed-populated-expense.yaml', upgradeRoot)");
+  const replace = runner.indexOf("adb(target.serial, ['install', '-r', currentApk])", seed);
+  const read = runner.indexOf("maestro('.maestro/wp33-5-06/assert-populated-after-same-build-upgrade.yaml', upgradeRoot)");
+  assert.ok(install >= 0 && install < seed && seed < replace && replace < read);
+  assert.match(runner, /code9-upgrade/);
+  assert.match(runner, /api36-code9-to-code10-install-r\.json/);
+});
 
 test('signed startup target guard never contacts a physical device', () => {
   let calls = 0;
@@ -153,8 +211,10 @@ test('signed startup workflow pins source, version, signer, API36 AVD, and basel
   assert.match(workflow, /refs\/heads\/codex\/wp33-5-06-honor-startup-fix/);
   assert.match(workflow, /refs\/heads\/main/);
   assert.match(workflow, /test "\$EXPECTED_SOURCE" = "\$GITHUB_SHA"/);
-  assert.match(workflow, /test "\$VERSION_CODE" = "9"/);
-  assert.match(workflow, /test "\$INSTALLED_CODE" = "8"/);
+  assert.match(workflow, /test "\$VERSION_CODE" = "\$EXPECTED_CODE"/);
+  assert.match(workflow, /test "\$VERSION_NAME" = "\$EXPECTED_NAME"/);
+  assert.match(workflow, /case "\$VERSION_NAME:\$VERSION_CODE" in 2\.0\.2:9\|2\.1\.0:10\)/);
+  assert.match(workflow, /case "\$INSTALLED_CODE" in 8\|9\)/);
   assert.match(workflow, /e279124cd9d2cd6d4c191e2644fd71063993e42d13441a46759fa922f16d5965/);
   assert.match(workflow, /11564128407/);
   assert.match(workflow, /37809691011/);
@@ -203,7 +263,7 @@ test('signed release flow covers saved appearance modes and real lifecycle trans
   assert.match(runner, /productionLedgerReadAfterUpgrade: true/);
 });
 
-test('real signed upgrade seeds code 7, installs code 8 without launching, and verifies code 9 data', () => {
+test('real signed upgrade seeds code 7, installs code 8 without launching, and verifies candidate data', () => {
   assert.match(workflow, /11367974300/);
   assert.match(workflow, /37365477604/);
   assert.match(workflow, /f083da5fec05d1eec5fae9bf8b1078003da94479/);
@@ -232,8 +292,8 @@ test('real signed upgrade seeds code 7, installs code 8 without launching, and v
   assert.match(baselineVerification, /stopApp/);
   assert.match(verification, /1,250/);
   assert.match(verification, /WP33\.5-06 signed startup receipt/);
-  assert.match(runner, /api36-code7-to-code8-to-code9-install-r\.json/);
-  assert.match(runner, /verificationStatus: 'pending-code9-ui-read'/);
+  assert.match(runner, /api36-code7-to-code8-to-code\$\{candidate\.versionCode\}-install-r\.json/);
+  assert.match(runner, /verificationStatus: 'pending-candidate-ui-read'/);
   assert.match(runner, /verificationStatus: 'passed'/);
   assert.match(runner, /captureFailureEvidence\(error\)/);
 });
