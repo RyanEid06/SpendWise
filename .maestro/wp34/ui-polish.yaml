@@ -47,5 +47,9 @@ appId: com.spendwise.app
     start: 50%, 35%
     end: 50%, 80%
     duration: 500
+- swipe:
+    start: 50%, 35%
+    end: 50%, 80%
+    duration: 500
 - tapOn: "All"
 - assertVisible: "All"
