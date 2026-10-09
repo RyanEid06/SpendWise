@@ -184,7 +184,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/wp33-baseline7"
           # Retained artifact SpendWise-v2.0.1-release from the original signed run.
           gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts/11367974300" > "$RUNNER_TEMP/wp33-baseline7/artifact-metadata.json"
-          node -e "const a=require(process.argv[1]); if(a.id!==11367974300||a.name!=='SpendWise-v2.0.1-release'||a.expired!==false||String(a.workflow_run.id)!=='37365477604'||a.workflow_run.head_sha!=='3ea40df0221a20e7c722e1d662bc5bae0c5e0370') throw Error('actual signed code-7 artifact identity mismatch')" "$RUNNER_TEMP/wp33-baseline7/artifact-metadata.json"
+          node -e "const a=require(process.argv[1]); if(a.id!==11367974300||a.name!=='SpendWise-v2.0.1-release'||a.expired!==false||String(a.workflow_run.id)!=='37365477604'||a.workflow_run.head_sha!=='f083da5fec05d1eec5fae9bf8b1078003da94479'||a.workflow_run.head_branch!=='codex/build-spendwise-v2.0.1') throw Error('actual signed code-7 artifact workflow identity mismatch')" "$RUNNER_TEMP/wp33-baseline7/artifact-metadata.json"
           gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts/11367974300/zip" > "$RUNNER_TEMP/wp33-baseline7/artifact.zip"
           unzip -q "$RUNNER_TEMP/wp33-baseline7/artifact.zip" -d "$RUNNER_TEMP/wp33-baseline7/extracted"
           apk="$(find "$RUNNER_TEMP/wp33-baseline7/extracted" -type f -name 'SpendWise-v2.0.1.apk' -print -quit)"
@@ -192,6 +192,8 @@ jobs:
           echo "27736147ad2ab6b22a706914ef2853e46b587be58a70e714861cae374cf08fa1  $apk" | sha256sum --check
           receipt="$(find "$RUNNER_TEMP/wp33-baseline7/extracted" -type f -name 'build-receipt.json' -print -quit)"
           test -n "$receipt"
+          # This wrapper run checked out f083da5; its parent is the separately
+          # recorded application source 3ea40df. Validate both identities.
           node -e "const r=require(process.argv[1]); if(r.package!=='com.spendwise.app'||r.versionName!=='2.0.1'||r.versionCode!==7||r.source!=='3ea40df0221a20e7c722e1d662bc5bae0c5e0370'||r.baseMainCommit!=='3423e60e4264a23b56d58b6341c5d2bfa59c0ce1'||String(r.runId)!=='37365477604'||r.apkSha256!=='27736147ad2ab6b22a706914ef2853e46b587be58a70e714861cae374cf08fa1'||r.signingCertificateSha256!=='e279124cd9d2cd6d4c191e2644fd71063993e42d13441a46759fa922f16d5965'||!Array.isArray(r.sourceChanges)||r.sourceChanges.length!==1||r.sourceChanges[0]!=='version.json') throw Error('actual code-7 artifact receipt mismatch')" "$receipt"
           cp "$apk" "$RUNNER_TEMP/wp33-baseline7/SpendWise-v2.0.1.apk"
           rm -f "$RUNNER_TEMP/wp33-baseline7/artifact.zip"

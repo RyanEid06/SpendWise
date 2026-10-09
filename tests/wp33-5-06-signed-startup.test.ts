@@ -158,6 +158,7 @@ test('signed release flow covers saved appearance modes and real lifecycle trans
 test('real signed upgrade seeds code 7, installs code 8 without launching, and verifies code 9 data', () => {
   assert.match(workflow, /11367974300/);
   assert.match(workflow, /37365477604/);
+  assert.match(workflow, /f083da5fec05d1eec5fae9bf8b1078003da94479/);
   assert.match(workflow, /SpendWise-v2\.0\.1-release/);
   assert.match(workflow, /27736147ad2ab6b22a706914ef2853e46b587be58a70e714861cae374cf08fa1/);
   assert.match(workflow, /3ea40df0221a20e7c722e1d662bc5bae0c5e0370/);
