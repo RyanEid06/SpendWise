@@ -1,0 +1,9 @@
+appId: com.spendwise.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: "Money Remaining"
+    timeout: 30000
+- assertVisible: "Home"
+- assertVisible: "Add Expense"

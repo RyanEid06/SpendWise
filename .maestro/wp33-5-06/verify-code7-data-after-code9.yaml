@@ -1,0 +1,14 @@
+appId: com.spendwise.app
+---
+# These are the same records seeded and cold-reopened by signed code 7, now read by signed code 9.
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: "Money Remaining"
+    timeout: 30000
+- assertVisible: ".*1,250.*"
+- tapOn: "History"
+- extendedWaitUntil:
+    visible: "WP33.5-06 signed startup receipt.*"
+    timeout: 15000
+- assertVisible: "Home"

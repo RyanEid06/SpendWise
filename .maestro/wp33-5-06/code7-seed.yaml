@@ -1,0 +1,25 @@
+appId: com.spendwise.app
+---
+# This flow intentionally runs against the immutable signed v2.0.1/code-7 APK.
+- launchApp:
+    stopApp: false
+- runFlow: ../helpers/onboard-current.yaml
+- assertVisible: "Money Remaining"
+- assertVisible: "Home"
+- tapOn: "Set Monthly Budget"
+- tapOn: "Monthly Budget .*"
+- inputText: "1250"
+- pressKey: enter
+- extendedWaitUntil:
+    visible: ".*1,250.*"
+    timeout: 15000
+- tapOn: "Add Expense"
+- tapOn: "Amount .*"
+- inputText: "18.75"
+- tapOn: "Description / Merchant .*"
+- inputText: "WP33.5-06 signed startup receipt"
+- tapOn: "Save Expense"
+- tapOn: "History"
+- extendedWaitUntil:
+    visible: "WP33.5-06 signed startup receipt.*"
+    timeout: 15000

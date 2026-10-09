@@ -1,36 +1,37 @@
-name: WP33.5-06 Signed Candidate
+name: WP33.5-06 Signed API36 Startup Candidate
 
 on:
-  push:
-    branches:
-      - codex/wp33-5-06-integration-regression
   workflow_dispatch:
     inputs:
       expected_source:
-        description: Exact WP06 commit whose integration gates passed
+        description: Exact checked-out WP06 integration commit
         required: true
         type: string
       installed_version_code:
-        description: Installed version baseline (last known Honor code 7; verify upgrade on phone)
+        description: Actual Honor phone baseline; this candidate gate is pinned to code 8
         required: true
+        default: "8"
         type: string
 
 permissions:
   contents: read
+  actions: read
 
+# This remains manually runnable after integration. When a later signed candidate replaces code 9,
+# update the pinned candidate/baseline identities, hashes, and expected installed phone code together.
 jobs:
   signed-candidate:
-    if: github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/codex/wp33-5-06-integration-regression' || github.ref == 'refs/heads/main')
+    if: github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/codex/wp33-5-06-honor-startup-fix')
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 55
     env:
       VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
 
     steps:
-      - name: Checkout
+      - name: Checkout exact dispatched source
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.sha }}
 
       - name: Setup Node
         uses: actions/setup-node@v7
@@ -44,10 +45,20 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      - name: Locate Android build tools
+        id: android-tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          tools_dir="$(find "$sdk_root/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)"
+          test -n "$tools_dir"
+          echo "path=$tools_dir" >> "$GITHUB_OUTPUT"
+
       - name: Install dependencies
         run: npm ci
 
-      - name: Validate candidate source and version
+      - name: Validate source and fixed candidate version
         id: version
         shell: bash
         env:
@@ -60,12 +71,17 @@ jobs:
           VERSION_NAME="$(node -p "require('./version.json').versionName")"
           VERSION_CODE="$(node -p "require('./version.json').versionCode")"
           [[ "$INSTALLED_CODE" =~ ^[0-9]+$ ]]
+          test "$INSTALLED_CODE" = "8"
           test "$VERSION_NAME" = "2.0.2"
-          test "$VERSION_CODE" -ge 8
+          test "$VERSION_CODE" = "9"
           test "$VERSION_CODE" -gt "$INSTALLED_CODE"
           test "$(node -p "require('./package.json').version")" = "$VERSION_NAME"
           echo "version=$VERSION_NAME" >> "$GITHUB_OUTPUT"
           echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+
+      - name: Validate signed startup guard and provenance tests
+        run: node --import tsx --test tests/wp33-5-06-signed-startup.test.ts
+
       - name: Validate signing secrets
         shell: bash
         env:
@@ -83,14 +99,6 @@ jobs:
           done
           exit "$missing"
 
-      - name: Restore release keystore
-        shell: bash
-        env:
-          SPENDWISE_KEYSTORE_BASE64: ${{ secrets.SPENDWISE_KEYSTORE_BASE64 }}
-        run: |
-          printf '%s' "$SPENDWISE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/spendwise-release.jks"
-          chmod 600 "$RUNNER_TEMP/spendwise-release.jks"
-
       - name: Verify web app
         run: npm run verify
 
@@ -102,20 +110,27 @@ jobs:
 
       - name: Build signed release APK
         working-directory: android
+        shell: bash
         env:
-          SPENDWISE_KEYSTORE_PATH: ${{ runner.temp }}/spendwise-release.jks
+          SPENDWISE_KEYSTORE_BASE64: ${{ secrets.SPENDWISE_KEYSTORE_BASE64 }}
           SPENDWISE_KEYSTORE_PASSWORD: ${{ secrets.SPENDWISE_KEYSTORE_PASSWORD }}
           SPENDWISE_KEY_ALIAS: ${{ secrets.SPENDWISE_KEY_ALIAS }}
           SPENDWISE_KEY_PASSWORD: ${{ secrets.SPENDWISE_KEY_PASSWORD }}
-        run: ./gradlew clean assembleRelease
+        run: |
+          set -euo pipefail
+          keystore="$RUNNER_TEMP/spendwise-release.jks"
+          trap 'rm -f "$keystore"' EXIT
+          printf '%s' "$SPENDWISE_KEYSTORE_BASE64" | base64 --decode > "$keystore"
+          chmod 600 "$keystore"
+          SPENDWISE_KEYSTORE_PATH="$keystore" ./gradlew clean assembleRelease
 
-      - name: Prepare versioned APK
+      - name: Prepare versioned signed APK
         shell: bash
         run: |
           mkdir -p release
           cp android/app/build/outputs/apk/release/app-release.apk "release/SpendWise-v${{ steps.version.outputs.version }}.apk"
 
-      - name: Verify APK signature, version, and provenance
+      - name: Verify candidate APK signing identity, version, and provenance
         shell: bash
         env:
           APK_VERSION: ${{ steps.version.outputs.version }}
@@ -137,15 +152,211 @@ jobs:
           const signature=fs.readFileSync('release/signature.txt','utf8');
           const signers=[...signature.matchAll(/^(?:Signer #\d+ |V\d+ Signer: )certificate SHA-256 digest: ([a-fA-F0-9]+)\r?$/gm)].map(match=>match[1].toLowerCase());
           if(!signers.length || signers.some(signer=>signer!=='e279124cd9d2cd6d4c191e2644fd71063993e42d13441a46759fa922f16d5965')) throw Error('APK signing identity differs from previous official releases');
-          const signer=signers[0];
           const source=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
-          fs.writeFileSync('release/build-receipt.json',JSON.stringify({package:match[1],versionName:match[3],versionCode:Number(match[2]),source,signingCertificateSha256:signer,runId:process.env.GITHUB_RUN_ID},null,2)+'\n');
+          fs.writeFileSync('release/build-receipt.json',JSON.stringify({package:match[1],versionName:match[3],versionCode:Number(match[2]),source,signingCertificateSha256:signers[0],runId:process.env.GITHUB_RUN_ID},null,2)+'\n');
           NODE
           (cd release && sha256sum "SpendWise-v$APK_VERSION.apk" > SHA256SUMS)
 
-      - name: Upload signed release APK
+      - name: Download immutable actual signed code-8 baseline
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/wp33-baseline8"
+          gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts/11564128407/zip" > "$RUNNER_TEMP/wp33-baseline8/artifact.zip"
+          unzip -q "$RUNNER_TEMP/wp33-baseline8/artifact.zip" -d "$RUNNER_TEMP/wp33-baseline8/extracted"
+          apk="$(find "$RUNNER_TEMP/wp33-baseline8/extracted" -type f -name 'SpendWise-v2.0.2.apk' -print -quit)"
+          test -n "$apk"
+          echo "e1552b48e07b17e845bbd8274c2a6ac3d56a91a7bc2b9de3088cbed88c5311ca  $apk" | sha256sum --check
+          receipt="$RUNNER_TEMP/wp33-baseline8/extracted/build-receipt.json"
+          test -f "$receipt"
+          node -e "const r=require(process.argv[1]); if(r.package!=='com.spendwise.app'||r.versionName!=='2.0.2'||r.versionCode!==8||r.source!=='ae32af7ebe2bdbfd2aa48bf11046bdddeac51a50'||String(r.runId)!=='37809691011'||r.signingCertificateSha256!=='e279124cd9d2cd6d4c191e2644fd71063993e42d13441a46759fa922f16d5965') throw Error('actual code-8 artifact receipt mismatch')" "$receipt"
+          cp "$apk" "$RUNNER_TEMP/wp33-baseline8/SpendWise-v2.0.2.apk"
+          rm -f "$RUNNER_TEMP/wp33-baseline8/artifact.zip"
+
+      - name: Download immutable actual signed code-7 populated-upgrade baseline
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/wp33-baseline7"
+          # Retained artifact SpendWise-v2.0.1-release from the original signed run.
+          gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts/11367974300" > "$RUNNER_TEMP/wp33-baseline7/artifact-metadata.json"
+          node -e "const a=require(process.argv[1]); if(a.id!==11367974300||a.name!=='SpendWise-v2.0.1-release'||a.expired!==false||String(a.workflow_run.id)!=='37365477604'||a.workflow_run.head_sha!=='f083da5fec05d1eec5fae9bf8b1078003da94479'||a.workflow_run.head_branch!=='codex/build-spendwise-v2.0.1') throw Error('actual signed code-7 artifact workflow identity mismatch')" "$RUNNER_TEMP/wp33-baseline7/artifact-metadata.json"
+          gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts/11367974300/zip" > "$RUNNER_TEMP/wp33-baseline7/artifact.zip"
+          unzip -q "$RUNNER_TEMP/wp33-baseline7/artifact.zip" -d "$RUNNER_TEMP/wp33-baseline7/extracted"
+          apk="$(find "$RUNNER_TEMP/wp33-baseline7/extracted" -type f -name 'SpendWise-v2.0.1.apk' -print -quit)"
+          test -n "$apk"
+          echo "27736147ad2ab6b22a706914ef2853e46b587be58a70e714861cae374cf08fa1  $apk" | sha256sum --check
+          receipt="$(find "$RUNNER_TEMP/wp33-baseline7/extracted" -type f -name 'build-receipt.json' -print -quit)"
+          test -n "$receipt"
+          # This wrapper run checked out f083da5; its parent is the separately
+          # recorded application source 3ea40df. Validate both identities.
+          node -e "const r=require(process.argv[1]); if(r.package!=='com.spendwise.app'||r.versionName!=='2.0.1'||r.versionCode!==7||r.source!=='3ea40df0221a20e7c722e1d662bc5bae0c5e0370'||r.baseMainCommit!=='3423e60e4264a23b56d58b6341c5d2bfa59c0ce1'||String(r.runId)!=='37365477604'||r.apkSha256!=='27736147ad2ab6b22a706914ef2853e46b587be58a70e714861cae374cf08fa1'||r.signingCertificateSha256!=='e279124cd9d2cd6d4c191e2644fd71063993e42d13441a46759fa922f16d5965'||!Array.isArray(r.sourceChanges)||r.sourceChanges.length!==1||r.sourceChanges[0]!=='version.json only') throw Error('actual code-7 artifact receipt mismatch')" "$receipt"
+          cp "$apk" "$RUNNER_TEMP/wp33-baseline7/SpendWise-v2.0.1.apk"
+          rm -f "$RUNNER_TEMP/wp33-baseline7/artifact.zip"
+
+      - name: Install pinned Maestro CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/maestro-2.11.0.zip"
+          install_root="$RUNNER_TEMP/maestro-2.11.0"
+          curl --fail --location --retry 3 \
+            "https://github.com/mobile-dev-inc/Maestro/releases/download/cli-2.11.0/maestro.zip" \
+            --output "$archive"
+          echo "5384593cb4e7a106489e75a821d157dd43f4e438df6bc308b72e82c685e1283a  $archive" | sha256sum --check
+          mkdir -p "$install_root"
+          unzip -q "$archive" -d "$install_root"
+          maestro_bin="$(find "$install_root" -type f -path '*/bin/maestro' -print -quit)"
+          test -n "$maestro_bin"
+          chmod +x "$maestro_bin"
+          echo "$(dirname "$maestro_bin")" >> "$GITHUB_PATH"
+          "$maestro_bin" --version
+
+      - name: Enable KVM
+        shell: bash
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Bundle signed startup runner before freeing Node dependencies
+        run: npx esbuild scripts/wp33-5-06-signed-startup.ts --bundle --platform=node --format=esm --outfile=artifacts/wp33-5-06-signed-startup.mjs
+
+      - name: Free disk for API36 emulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf node_modules dist android/.gradle android/build android/app/build
+          rm -rf "$HOME/.gradle/caches" "$HOME/.gradle/wrapper/dists"
+          npm cache clean --force || true
+          sudo rm -rf "$ANDROID_SDK_ROOT/ndk" "$ANDROID_SDK_ROOT/cmake"
+          df -h /
+
+      - name: Preinstall Android API36 synthetic emulator image
+        shell: bash
+        run: |
+          set -euo pipefail
+          package="system-images;android-36;google_apis;x86_64"
+          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --install "$package"
+          test -f "$ANDROID_SDK_ROOT/system-images/android-36/google_apis/x86_64/package.xml"
+
+      - name: Launch exact signed APKs on disposable API36 emulator
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        env:
+          WP36_ALLOW_EMULATOR_MUTATION: "1"
+          WP36_EXPECTED_AVD: wp33-signed-startup-api36
+          WP36_CURRENT_APK: ${{ github.workspace }}/release/SpendWise-v2.0.2.apk
+          WP36_BASELINE8_APK: ${{ runner.temp }}/wp33-baseline8/SpendWise-v2.0.2.apk
+          WP36_BASELINE7_APK: ${{ runner.temp }}/wp33-baseline7/SpendWise-v2.0.1.apk
+          WP36_BUILD_TOOLS: ${{ steps.android-tools.outputs.path }}
+          WP36_ARTIFACT_ROOT: ${{ github.workspace }}/artifacts/android-signed-startup-api36
+          ANDROID_SERIAL: emulator-5554
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          avd-name: wp33-signed-startup-api36
+          cores: 2
+          ram-size: 4096M
+          disk-size: 3G
+          disable-animations: true
+          emulator-options: >-
+            -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+            -no-snapshot-save -camera-back none
+          script: node artifacts/wp33-5-06-signed-startup.mjs
+
+      - name: Upload signed APK and provenance
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: SpendWise-WP06-candidate-${{ github.sha }}
           path: release/
-          if-no-files-found: error
+          if-no-files-found: ignore
+          retention-days: 90
+
+      - name: Upload signed API36 startup evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: SpendWise-WP06-signed-startup-api36-${{ github.sha }}
+          path: artifacts/android-signed-startup-api36/
+          if-no-files-found: ignore
+          retention-days: 30
+
+  fileprovider-api36-instrumentation:
+    if: github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/codex/wp33-5-06-honor-startup-fix')
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+    steps:
+      - name: Checkout exact dispatched source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install dependencies and sync Android sources
+        env:
+          EXPECTED_SOURCE: ${{ inputs.expected_source }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE"
+          npm ci
+          npm run build
+          npm run android:sync
+          chmod +x android/gradlew
+
+      - name: Enable KVM for API36 instrumentation
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run API36 debug FileProvider instrumentation on guarded disposable emulator
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        env:
+          WP36_ALLOW_EMULATOR_MUTATION: "1"
+          WP36_EXPECTED_AVD: wp33-fileprovider-api36
+          WP36_ARTIFACT_ROOT: ${{ github.workspace }}/artifacts/android-fileprovider-api36
+          ANDROID_SERIAL: emulator-5554
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          avd-name: wp33-fileprovider-api36
+          cores: 2
+          ram-size: 4096M
+          disk-size: 3G
+          disable-animations: true
+          emulator-options: >-
+            -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+            -no-snapshot-save -camera-back none
+          script: bash scripts/wp33-5-06-fileprovider-instrumentation.sh
+
+      - name: Upload API36 FileProvider instrumentation XML and device logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: SpendWise-WP06-fileprovider-api36-debug-${{ github.sha }}
+          path: artifacts/android-fileprovider-api36/
+          if-no-files-found: warn
+          retention-days: 30

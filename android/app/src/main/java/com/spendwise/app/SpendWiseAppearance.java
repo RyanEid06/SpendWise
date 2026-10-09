@@ -43,13 +43,23 @@ final class SpendWiseAppearance {
         return isValidMode(mode) && preferences(context).edit().putString(MODE_KEY, mode).commit();
     }
 
-    static void restoreBeforeActivity(Context context) {
-        applyNightMode(context, readMode(context));
+    static void restoreBeforeAttachment(Context base) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            applyNightMode(base, readMode(base));
+        }
+    }
+
+    static void restoreAfterAttachment(Context context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            Context application = context.getApplicationContext();
+            applyNightMode(application, readMode(application));
+        }
     }
 
     static void applyNightMode(Context context, String mode) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            UiModeManager manager = (UiModeManager) context.getSystemService(Context.UI_MODE_SERVICE);
+            UiModeManager manager = (UiModeManager) context.getApplicationContext()
+                .getSystemService(Context.UI_MODE_SERVICE);
             if (manager != null) {
                 // AUTO clears the app-specific night qualifier and follows the device.
                 // Unlike setNightMode(), this never changes the device's global setting.

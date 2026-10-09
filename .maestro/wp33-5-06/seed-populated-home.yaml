@@ -1,0 +1,9 @@
+appId: com.spendwise.app
+---
+- tapOn: "Set Monthly Budget"
+- tapOn: "Monthly Budget .*"
+- inputText: "1250"
+- pressKey: enter
+- extendedWaitUntil:
+    visible: ".*1,250.*"
+    timeout: 15000

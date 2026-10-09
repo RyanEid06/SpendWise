@@ -1,0 +1,13 @@
+appId: com.spendwise.app
+---
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: "Money Remaining"
+    timeout: 30000
+- tapOn: "Open Settings"
+- tapOn: "^Appearance (Light|Dark|System)$"
+- tapOn: "^Appearance (Light|Dark|System)$"
+- assertVisible: "^Appearance System$"
+- tapOn: "Back to previous screen"
+- assertVisible: "Money Remaining"
