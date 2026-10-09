@@ -1,0 +1,55 @@
+appId: com.spendwise.app
+---
+# Requires a populated session (run after .maestro/current/media.yaml).
+# Native splash requires ADB frame recording; Maestro's post-launch screenshot is too late.
+# Media Library deliberately sets Android FLAG_SECURE: its screenshots would be
+# black/blank. Verify filters via accessibility assertions, NOT image captures.
+- tapOn: "Open Settings"
+- scrollUntilVisible:
+    element:
+      text: "Clear App Data.*"
+    direction: DOWN
+    timeout: 30000
+- takeScreenshot: wp34-settings-version
+- assertNotVisible: "Build 9"
+- scrollUntilVisible:
+    element:
+      text: "Storage & Media.*"
+    direction: UP
+    timeout: 30000
+- tapOn: "Storage & Media.*"
+- assertVisible: "Photos"
+- tapOn: "Media Library.*"
+- assertVisible: "Media Library"
+- assertVisible: "Photos"
+- assertVisible: "All"
+- assertVisible: "Day"
+- assertVisible: "Category"
+- tapOn: "Day"
+- assertVisible: "WP32 Eight Photos.*"
+- tapOn: "Previous day"
+- assertVisible: "No photos for this selection"
+- tapOn: "Next day"
+- assertVisible: "WP32 Eight Photos.*"
+- tapOn: "Category"
+- assertVisible: "Food & Beverage.*"
+- tapOn: "Food & Beverage.*"
+- swipe:
+    start: 50%, 80%
+    end: 50%, 35%
+    duration: 500
+- swipe:
+    start: 50%, 80%
+    end: 50%, 35%
+    duration: 500
+- assertVisible: "WP32 One Photo.*"
+- swipe:
+    start: 50%, 35%
+    end: 50%, 80%
+    duration: 500
+- swipe:
+    start: 50%, 35%
+    end: 50%, 80%
+    duration: 500
+- tapOn: "All"
+- assertVisible: "All"

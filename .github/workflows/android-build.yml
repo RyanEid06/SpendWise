@@ -120,6 +120,9 @@ jobs:
       - name: Run WP33 privacy and performance regression gate
         run: npm run test:wp33
 
+      - name: Run WP34 final UI regression tests
+        run: npx --no-install tsx --test tests/wp34-ui-polish.test.ts
+
       - name: Upload safe WP33 benchmark receipts
         if: always()
         uses: actions/upload-artifact@v7

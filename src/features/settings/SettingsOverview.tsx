@@ -15,7 +15,7 @@ import {
 import { Language, ThemeMode } from '../../types';
 import { SUPPORTED_CURRENCIES } from '../../utils/currency';
 import { t } from '../../utils/translations';
-import { APP_VERSION_CODE, APP_VERSION_NAME } from '../../utils/appVersion';
+import { APP_VERSION_NAME } from '../../utils/appVersion';
 import { SettingsRow } from './SettingsRow';
 import type { SettingsOverviewCopy } from './settingsCopy';
 
@@ -242,7 +242,6 @@ export const SettingsOverview: React.FC<SettingsOverviewProps> = ({
 
       <div className="px-1 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400">
         <span>{copy.version} <strong className="font-bold text-slate-700 dark:text-slate-300">{APP_VERSION_NAME}</strong></span>
-        <span>{copy.build} <strong className="font-bold text-slate-700 dark:text-slate-300">{APP_VERSION_CODE}</strong></span>
       </div>
 
       <section className="bg-white dark:bg-[#111928] border border-rose-200 dark:border-rose-900/50 rounded-3xl overflow-hidden">

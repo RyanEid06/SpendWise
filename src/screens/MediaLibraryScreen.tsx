@@ -1,22 +1,29 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Download, Image as ImageIcon, RefreshCw, ShieldCheck, X } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Image as ImageIcon, RefreshCw, ShieldCheck, X } from 'lucide-react';
 import type { ExpenseAttachment, Language } from '../types';
 import { AttachmentStorage } from '../utils/attachmentStorage';
 import type { MediaIntegrityReport } from '../utils/mediaIntegrity';
 import { StorageManager } from '../utils/storage';
 import { exportBlobFile } from '../utils/fileExport';
-import { groupMediaByExpenseDate, validMediaTimestamp } from '../utils/mediaLibraryGrouping';
+import { filterMediaGroupsByDay, groupMediaByCategory, groupMediaByExpenseDate, validMediaTimestamp } from '../utils/mediaLibraryGrouping';
+import { dateFromInputValue, dateInputValue, shiftLocalDay, type HistoryViewMode } from '../utils/historyView';
+import { getCategoryInfo } from '../utils/categories';
+import { getLocalizedCategoryName } from '../utils/translations';
 import { ViewportPortal } from '../components/ViewportPortal';
 import { useSensitivePrivacySurface } from '../app/hooks/useSensitivePrivacySurface';
 
 const copy = {
   en: {
     title: 'Media Library', sub: 'Photos stored privately by SpendWise', back: 'Back',
-    photos: 'photos', storage: 'Photo storage', healthy: 'Media integrity looks good',
+    photos: 'Photos', storage: 'Photo storage', healthy: 'Media integrity looks good',
     issues: 'integrity issues', repair: 'Repair safe issues', repaired: 'Safe repair completed',
     empty: 'No SpendWise photos yet', emptySub: 'Photos attached to expenses will appear here.',
     purchase: 'Purchase', receipt: 'Receipt', proof: 'Proof', linked: 'Linked expense',
     created: 'Added', size: 'File size', dimensions: 'Dimensions', export: 'Share / export',
+    all: 'All', day: 'Day', category: 'Category', filters: 'Filter photos',
+    previousDay: 'Previous day', nextDay: 'Next day', chooseDay: 'Choose day',
+    uncategorized: 'Uncategorized', noMatches: 'No photos for this selection',
+    count: 'photos', countSingle: 'photo',
     close: 'Close', unknown: 'Unknown expense', date: 'Date', unknownDate: 'Unknown date', shareTitle: 'SpendWise photo',
   },
   fr: {
@@ -26,6 +33,10 @@ const copy = {
     empty: 'Aucune photo SpendWise', emptySub: 'Les photos jointes aux dépenses apparaîtront ici.',
     purchase: 'Achat', receipt: 'Reçu', proof: 'Preuve', linked: 'Dépense liée',
     created: 'Ajoutée', size: 'Taille du fichier', dimensions: 'Dimensions', export: 'Partager / exporter',
+    all: 'Tout', day: 'Jour', category: 'Catégorie', filters: 'Filtrer les photos',
+    previousDay: 'Jour précédent', nextDay: 'Jour suivant', chooseDay: 'Choisir un jour',
+    uncategorized: 'Sans catégorie', noMatches: 'Aucune photo pour cette sélection',
+    count: 'photos', countSingle: 'photo',
     close: 'Fermer', unknown: 'Dépense inconnue', date: 'Date', unknownDate: 'Date inconnue', shareTitle: 'Photo SpendWise',
   },
   ar: {
@@ -35,6 +46,10 @@ const copy = {
     empty: 'لا توجد صور SpendWise بعد', emptySub: 'ستظهر هنا الصور المرفقة بالمصاريف.',
     purchase: 'شراء', receipt: 'إيصال', proof: 'إثبات', linked: 'المصروف المرتبط',
     created: 'أضيفت', size: 'حجم الملف', dimensions: 'الأبعاد', export: 'مشاركة / تصدير',
+    all: 'الكل', day: 'اليوم', category: 'الفئة', filters: 'تصفية الصور',
+    previousDay: 'اليوم السابق', nextDay: 'اليوم التالي', chooseDay: 'اختر اليوم',
+    uncategorized: 'غير مصنفة', noMatches: 'لا توجد صور لهذا الاختيار',
+    count: 'صور', countSingle: 'صورة',
     close: 'إغلاق', unknown: 'مصروف غير معروف', date: 'التاريخ', unknownDate: 'تاريخ غير معروف', shareTitle: 'صورة SpendWise',
   },
 } as const;
@@ -105,6 +120,9 @@ export const MediaLibraryScreen: React.FC<{ language: Language; onClose: () => v
   const [attachments, setAttachments] = useState<ExpenseAttachment[]>([]);
   const [report, setReport] = useState<MediaIntegrityReport | null>(null);
   const [selected, setSelected] = useState<ExpenseAttachment | null>(null);
+  const [viewMode, setViewMode] = useState<HistoryViewMode>('ALL');
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const expenses = useMemo(() => StorageManager.getExpenses(), [attachments]);
   const expensesById = useMemo(
@@ -115,6 +133,13 @@ export const MediaLibraryScreen: React.FC<{ language: Language; onClose: () => v
     () => groupMediaByExpenseDate(attachments, expenses),
     [attachments, expenses]
   );
+
+  const categoryGroups = useMemo(
+    () => groupMediaByCategory(attachments, expenses),
+    [attachments, expenses]
+  );
+  const dayAnchor = selectedDay ?? mediaGroups.find((group) => group.timestamp !== null)?.timestamp ?? Date.now();
+  const displayedGroups = viewMode === 'DAY' ? filterMediaGroupsByDay(mediaGroups, dayAnchor) : mediaGroups;
 
   const refresh = async () => {
     setAttachments(AttachmentStorage.getAllAttachments().sort((a, b) => b.createdAt - a.createdAt));
@@ -129,6 +154,26 @@ export const MediaLibraryScreen: React.FC<{ language: Language; onClose: () => v
   }, [selected, onClose]);
 
   const selectedExpense = selected ? expensesById.get(selected.expenseId) || null : null;
+
+  const renderPhotos = (items: ExpenseAttachment[]) => (
+    <div className="grid grid-cols-2 gap-2">
+      {items.map((item) => {
+        const expense = expensesById.get(item.expenseId);
+        return (
+          <button key={item.id} type="button" onClick={() => setSelected(item)}
+            className="text-left rtl:text-right rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111928] active:scale-[0.99]">
+            <LazyAttachmentImage item={item} className="aspect-square" />
+            <div className="p-2.5 space-y-1">
+              <div className="text-xs font-bold truncate">{expense?.description || text.unknown}</div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 flex justify-between gap-1">
+                <span>{text[item.kind]}</span><span>{humanBytes(item.byteSize)}</span>
+              </div>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
 
   const shareSelected = async () => {
     if (!selected) return;
@@ -163,35 +208,95 @@ export const MediaLibraryScreen: React.FC<{ language: Language; onClose: () => v
         </div>
       </div>
 
-      {report && (
-        <div className={`rounded-2xl border p-3 text-xs flex items-center justify-between gap-3 ${report.healthy ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/30' : 'border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30'}`}>
+      {report && !report.healthy && (
+        <div className="rounded-2xl border p-3 text-xs flex items-center justify-between gap-3 border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 shrink-0" />
-            <span>{report.healthy ? text.healthy : `${report.issues.length} ${text.issues}`}</span>
+            <span>{report.issues.length} {text.issues}</span>
           </div>
-          {!report.healthy && (
-            <button type="button" onClick={async () => {
+          <button type="button" onClick={async () => {
               await AttachmentStorage.repairIntegrity();
               setMessage(text.repaired);
               await refresh();
             }} className="min-h-[48px] px-3 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-950 font-bold flex items-center gap-1">
               <RefreshCw className="w-3.5 h-3.5" />{text.repair}
-            </button>
-          )}
+          </button>
+        </div>
+      )}
+
+      <div className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-slate-200/70 dark:bg-slate-900/80"
+        role="tablist" aria-label={text.filters}>
+        {([['ALL', text.all], ['DAY', text.day], ['CATEGORY', text.category]] as const).map(([mode, label]) => (
+          <button key={mode} type="button" role="tab" aria-selected={viewMode === mode}
+            onClick={() => { setViewMode(mode); if (mode === 'CATEGORY') setExpandedCategory(null); }}
+            className={`min-h-[48px] rounded-xl px-2 text-xs font-bold transition-colors ${viewMode === mode
+              ? 'bg-white dark:bg-[#111928] text-slate-900 dark:text-white shadow-xs'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {viewMode === 'DAY' && (
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => setSelectedDay(shiftLocalDay(dayAnchor, -1))}
+            className="w-12 h-12 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111928] flex items-center justify-center"
+            aria-label={text.previousDay}><ChevronLeft className="w-4 h-4 rtl:rotate-180" /></button>
+          <label className="flex-1 min-w-0">
+            <span className="sr-only">{text.chooseDay}</span>
+            <input type="date" value={dateInputValue(dayAnchor)}
+              onChange={(event) => {
+                const next = dateFromInputValue(event.target.value);
+                if (next !== null) setSelectedDay(next);
+              }}
+              className="w-full min-h-[48px] rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111928] px-3 text-sm font-semibold text-slate-900 dark:text-white" />
+          </label>
+          <button type="button" onClick={() => setSelectedDay(shiftLocalDay(dayAnchor, 1))}
+            className="w-12 h-12 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111928] flex items-center justify-center"
+            aria-label={text.nextDay}><ChevronRight className="w-4 h-4 rtl:rotate-180" /></button>
         </div>
       )}
 
       {message && <div className="text-xs rounded-xl bg-emerald-50 dark:bg-emerald-950/30 p-3">{message}</div>}
 
-      {attachments.length === 0 ? (
+      {attachments.length === 0 || (viewMode === 'DAY' && displayedGroups.length === 0) ||
+        (viewMode === 'CATEGORY' && categoryGroups.length === 0) ? (
         <div className="py-14 text-center space-y-2">
           <ImageIcon className="w-8 h-8 mx-auto text-slate-400" />
-          <div className="font-bold">{text.empty}</div>
-          <div className="text-xs text-slate-500">{text.emptySub}</div>
+          <div className="font-bold">{attachments.length === 0 ? text.empty : text.noMatches}</div>
+          {attachments.length === 0 && <div className="text-xs text-slate-500">{text.emptySub}</div>}
+        </div>
+      ) : viewMode === 'CATEGORY' ? (
+        <div className="space-y-2.5">
+          {categoryGroups.map((group) => {
+            const key = group.category ?? '__uncategorized__';
+            const expanded = expandedCategory === key;
+            return (
+              <section key={key} className="rounded-2xl bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 overflow-hidden">
+                <button type="button" aria-expanded={expanded}
+                  onClick={() => setExpandedCategory(expanded ? null : key)}
+                  className="w-full min-h-[56px] px-3.5 py-2.5 flex items-center justify-between gap-3 text-left rtl:text-right">
+                  <span className="flex items-center gap-2.5 min-w-0">
+                    <span className="text-lg shrink-0" aria-hidden="true">{group.category ? getCategoryInfo(group.category).iconEmoji : '🏷️'}</span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-bold text-slate-900 dark:text-white truncate">
+                        {group.category ? getLocalizedCategoryName(group.category, language) : text.uncategorized}
+                      </span>
+                      <span className="block text-[11px] text-slate-500 dark:text-slate-400">{group.items.length} {group.items.length === 1 ? text.countSingle : text.count}</span>
+                    </span>
+                  </span>
+                  <ChevronDown className={`w-4 h-4 shrink-0 text-slate-400 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                </button>
+                {expanded && <div className="p-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/70">
+                  {renderPhotos(group.items)}
+                </div>}
+              </section>
+            );
+          })}
         </div>
       ) : (
         <div className="space-y-5">
-          {mediaGroups.map((group) => (
+          {displayedGroups.map((group) => (
             <section key={group.key} aria-label={group.timestamp ? formatMediaDate(group.timestamp, language, true) : text.unknownDate}>
               <div className="mb-2 flex items-center gap-3">
                 <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-200 shrink-0">
@@ -199,23 +304,7 @@ export const MediaLibraryScreen: React.FC<{ language: Language; onClose: () => v
                 </h3>
                 <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1" aria-hidden="true" />
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                {group.items.map((item) => {
-                  const expense = expensesById.get(item.expenseId);
-                  return (
-                    <button key={item.id} type="button" onClick={() => setSelected(item)}
-                      className="text-left rtl:text-right rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111928] active:scale-[0.99]">
-                      <LazyAttachmentImage item={item} className="aspect-square" />
-                      <div className="p-2.5 space-y-1">
-                        <div className="text-xs font-bold truncate">{expense?.description || text.unknown}</div>
-                        <div className="text-[10px] text-slate-500 dark:text-slate-400 flex justify-between gap-1">
-                          <span>{text[item.kind]}</span><span>{humanBytes(item.byteSize)}</span>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+              {renderPhotos(group.items)}
             </section>
           ))}
         </div>

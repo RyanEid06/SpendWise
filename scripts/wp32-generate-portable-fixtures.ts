@@ -70,10 +70,10 @@ const v3State: FinancialState = {
   currencyCode: 'USD',
 };
 
-async function saveV3(name: string, includeMedia: boolean) {
+async function saveV3(name: string, includeMedia: boolean, state: FinancialState = v3State) {
   const payload = await createBackupV2Archive({
     appVersion: '1.4.0-wp32-fixture',
-    state: v3State,
+    state,
     settings,
     includeMedia,
     readMedia: async () => new Blob([photoBytes], { type: 'image/jpeg' }),
@@ -88,5 +88,14 @@ async function saveV3(name: string, includeMedia: boolean) {
 
 await saveV3('wp32-data.swb3', false);
 await saveV3('wp32-full.swb3', true);
+
+if (process.env.WP32_NATIVE_PHASE === 'wp34-tail') {
+  // Match the real gallery flow's persisted Food identity without changing
+  // the historical compatibility fixtures' custom Food & Dining category.
+  await saveV3('wp34-full.swb3', true, {
+    ...v3State,
+    expenses: v3State.expenses.map(expense => ({ ...expense, category: 'Food' })),
+  });
+}
 
 console.log('Generated WP32 portable fixtures in ' + output);

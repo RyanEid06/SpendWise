@@ -1,14 +1,66 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { validateBackupV2Archive } from '../src/utils/backupV2';
+import { decryptBackupV3Envelope } from '../src/utils/backupV3';
 
 const bash = process.env.WP32_BASH || (process.platform === 'win32'
   ? 'C:/Program Files/Git/bin/bash.exe' : 'bash');
 const shellPath = (value: string) => value.replace(/\\/g, '/');
+
+test('native runner rejects an unknown phase before accessing a device', () => {
+  const result = spawnSync(bash, ['-c', `
+adb() { echo UNEXPECTED_DEVICE_ACCESS; return 99; }
+export -f adb
+bash scripts/run-wp32-android-e2e.sh
+`], { encoding: 'utf8', env: { ...process.env, WP32_NATIVE_PHASE: 'typo', ANDROID_SERIAL: 'emulator-5554' } });
+  assert.equal(result.status, 2, result.stderr);
+  assert.match(result.stderr, /Unknown native phase/);
+  assert.doesNotMatch(result.stdout, /UNEXPECTED_DEVICE_ACCESS/);
+});
+
+for (const failure of ['ui-polish.yaml', 'backup-export-data.yaml']) {
+test(`WP34 tail restores prerequisites and propagates failure in ${failure}`, () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'wp34-targeted-tail-'));
+  try {
+    const result = spawnSync(bash, ['-c', `
+adb() {
+  case "$*" in
+    *'getprop ro.kernel.qemu'*) printf '1\\n' ;;
+    *'emu avd name'*) printf 'wp33-synthetic-api34\\nOK\\n' ;;
+  esac
+}
+maestro() {
+  local flow
+  for flow in "$@"; do :; done
+  printf 'FLOW:%s\\n' "$flow"
+  if [[ "$flow" == *"$WP32_TEST_FAIL_FLOW" ]]; then return 17; fi
+  # The full prefix must not run in this mode.
+  if [[ "$flow" == *empty-navigation.yaml ]]; then return 18; fi
+}
+export -f adb maestro
+bash scripts/run-wp32-android-e2e.sh
+`], { encoding: 'utf8', env: { ...process.env, WP32_NATIVE_PHASE: 'wp34-tail', WP32_TEST_FAIL_FLOW: failure,
+      ANDROID_SERIAL: 'emulator-5554', RESULT_ROOT: shellPath(path.join(directory, 'results')),
+      FIXTURE_ROOT: shellPath(path.join(directory, 'fixtures')) } });
+    assert.equal(result.status, 17, result.stderr);
+    const flows = result.stdout.split(/\r?\n/).filter(line => line.startsWith('FLOW:'));
+    assert.deepEqual(flows, [
+      'FLOW:.maestro/diagnostic/onboard-current-only.yaml',
+      'FLOW:.maestro/diagnostic/restore-v3-full-bootstrap.yaml',
+      'FLOW:.maestro/wp34/ui-polish.yaml',
+      ...(failure === 'backup-export-data.yaml' ? ['FLOW:.maestro/current/backup-export-data.yaml'] : []),
+    ]);
+    assert.match(result.stdout, /native phase: wp34-tail/);
+    assert.doesNotMatch(result.stdout, /completed successfully/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+}
 
 for (const target of ['backup-export-full', 'wp33-5-04-continuity']) {
 test(`isolated ${target} rejects unsafe devices before any mutation`, () => {
@@ -35,12 +87,36 @@ bash scripts/run-wp32-isolated-gate.sh
 });
 }
 
-function generateFixtures(directory: string) {
+function generateFixtures(directory: string, phase = 'full') {
   const result = spawnSync(process.execPath, [
     'node_modules/tsx/dist/cli.mjs', 'scripts/wp32-generate-portable-fixtures.ts', directory,
-  ], { encoding: 'utf8', env: { ...process.env, WP32_FIXTURE_MONTH: '2027-02' } });
+  ], { encoding: 'utf8', env: { ...process.env, WP32_FIXTURE_MONTH: '2027-02', WP32_NATIVE_PHASE: phase } });
   assert.equal(result.status, 0, result.stderr);
 }
+
+test('targeted WP34 encrypted fixture matches the real media flow category and nine-photo state', async () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'wp34-media-fixture-'));
+  try {
+    generateFixtures(directory, 'wp34-tail');
+    for (const [name, category] of [['wp34-full.swb3', 'Food'], ['wp32-full.swb3', 'Food & Dining']]) {
+      const envelope = new Blob([readFileSync(path.join(directory, name))]);
+      const payload = await decryptBackupV3Envelope(envelope, 'wp32-public-fixture-passphrase');
+      const { manifest, zip } = await validateBackupV2Archive(payload);
+      assert.equal(manifest.mediaIncluded, true);
+      assert.deepEqual(manifest.expenses.map(expense => expense.description), ['WP32 One Photo', 'WP32 Eight Photos']);
+      assert.deepEqual(manifest.expenses.map(expense => expense.category), [category, category]);
+      assert.equal(manifest.attachments.filter(item => item.expenseId === 301).length, 1);
+      assert.equal(manifest.attachments.filter(item => item.expenseId === 302).length, 8);
+      for (const item of manifest.attachments) {
+        assert.deepEqual(await zip.file(item.mediaEntry!)!.async('nodebuffer'), readFileSync('tests/fixtures/media/wp32-photo-01.jpg'));
+      }
+    }
+    const runner = readFileSync('scripts/run-wp32-android-e2e.sh', 'utf8');
+    assert.match(runner, /push_download "\$FIXTURE_ROOT\/wp34-full\.swb3" wp32-full\.swb3/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
 
 test('legacy v1 fixture dates and budget match the month exercised by History', () => {
   const directory = mkdtempSync(path.join(tmpdir(), 'wp32-v1-'));
@@ -88,14 +164,77 @@ test('both Android entrypoints parse before any emulator work begins', () => {
   }
 });
 
+test('WP32 end-to-end runner rejects a phone before it can clear or uninstall SpendWise', () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'wp32-device-guard-'));
+  const calls = path.join(directory, 'adb-calls.txt');
+  try {
+    const result = spawnSync(bash, ['-c', `
+adb() { printf '%s\\n' "$*" >> "$WP32_ADB_CALLS"; }
+export -f adb
+bash scripts/run-wp32-android-e2e.sh
+`], { encoding: 'utf8', env: { ...process.env, ANDROID_SERIAL: 'HONOR-X9d', WP32_ADB_CALLS: shellPath(calls), RESULT_ROOT: shellPath(path.join(directory, 'results')), FIXTURE_ROOT: shellPath(path.join(directory, 'fixtures')) } });
+    assert.equal(result.status, 2, result.stderr);
+    assert.equal(existsSync(calls), false);
+    assert.match(result.stderr, /emulator|synthetic/i);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('WP34 splash runner captures light and dark before each launch and restores light', () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'wp34-splash-modes-'));
+  const calls = path.join(directory, 'adb-calls.txt');
+  try {
+    const commands = path.join(directory, 'commands');
+    mkdirSync(commands);
+    const ffmpeg = path.join(commands, 'ffmpeg');
+    writeFileSync(ffmpeg, '#!/usr/bin/env bash\nexit 0\n');
+    chmodSync(ffmpeg, 0o755);
+    const result = spawnSync(bash, ['-c', `
+adb() {
+  printf '%s\\n' "$*" >> "$WP32_ADB_CALLS"
+  case "$*" in
+    *'getprop ro.kernel.qemu'*) printf '1\\n' ;;
+    *'emu avd name'*) printf 'wp33-synthetic-api34\\nOK\\n' ;;
+  esac
+}
+maestro() { return 12; }
+export -f adb maestro
+bash scripts/run-wp32-android-e2e.sh
+`], { encoding: 'utf8', env: { ...process.env, ANDROID_SERIAL: 'emulator-5554', PATH: `${shellPath(commands)}:${process.env.PATH}`, WP32_ADB_CALLS: shellPath(calls), RESULT_ROOT: shellPath(path.join(directory, 'results')), FIXTURE_ROOT: shellPath(path.join(directory, 'fixtures')) } });
+    assert.equal(result.status, 12, result.stderr);
+    const log = readFileSync(calls, 'utf8').split(/\r?\n/);
+    const light = log.indexOf('shell cmd uimode night no');
+    const dark = log.indexOf('shell cmd uimode night yes');
+    const recordings = log.flatMap((line, index) => line.includes('shell screenrecord') ? [index] : []);
+    const launches = log.flatMap((line, index) => line.includes('shell am start -n com.spendwise.app/.MainActivity') ? [index] : []);
+    const restoreLight = log.indexOf('shell cmd uimode night no', light + 1);
+    assert.ok(light >= 0 && dark > light && restoreLight > dark);
+    assert.equal(recordings.length, 2);
+    assert.equal(launches.length, 2);
+    assert.ok(light < recordings[0] && recordings[0] < launches[0]);
+    assert.ok(dark < recordings[1] && recordings[1] < launches[1]);
+    assert.ok(restoreLight < log.indexOf('shell pm clear com.spendwise.app'));
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test('Maestro owns app startup without a preceding host accessibility session', () => {
   for (const file of ['scripts/run-wp32-android-e2e.sh', 'scripts/run-wp32-backup-restore-targeted.sh']) {
     const directory = mkdtempSync(path.join(tmpdir(), 'wp32-launch-'));
     try {
+      const commands = path.join(directory, 'commands');
+      mkdirSync(commands);
+      const ffmpeg = path.join(commands, 'ffmpeg');
+      writeFileSync(ffmpeg, '#!/usr/bin/env bash\nexit 0\n');
+      chmodSync(ffmpeg, 0o755);
       const result = spawnSync(bash, ['-c', `
 set -euo pipefail
 host_started=0
 adb() {
+  if [[ "$*" == *'getprop ro.kernel.qemu' ]]; then printf '1\\n'; fi
+  if [[ "$*" == *'emu avd name' ]]; then printf 'wp33-synthetic-api34\\nOK\\n'; fi
   if [[ "$*" == 'shell am start '* ]]; then host_started=1; fi
   if [[ "$*" == 'shell dumpsys activity activities' ]]; then
     printf 'mResumedActivity com.spendwise.app/.MainActivity\\n'
@@ -109,9 +248,11 @@ maestro() {
   echo MAESTRO_COLD_LAUNCH_READY
   return 12
 }
+export -f adb maestro
 source "$WP32_ENTRYPOINT"
 `], { encoding: 'utf8', env: {
         ...process.env, WP32_ENTRYPOINT: file,
+        ANDROID_SERIAL: 'emulator-5554', PATH: `${shellPath(commands)}:${process.env.PATH}`,
         RESULT_ROOT: shellPath(path.join(directory, 'results')).replace(/^([A-Za-z]):/, (_, drive) => `/${drive.toLowerCase()}`),
         FIXTURE_ROOT: shellPath(path.join(directory, 'fixtures')).replace(/^([A-Za-z]):/, (_, drive) => `/${drive.toLowerCase()}`),
       } });
