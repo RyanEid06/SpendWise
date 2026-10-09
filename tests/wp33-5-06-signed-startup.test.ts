@@ -178,8 +178,18 @@ test('signed release flow covers saved appearance modes and real lifecycle trans
       assert.match(text, /Open Settings/);
       assert.match(text, /Appearance/);
       assert.match(text, new RegExp(mode, 'i'));
+      const rowSelector = text.match(/tapOn: "(\^Appearance[^"\n]+)"/)?.[1];
+      assert.ok(rowSelector, 'Android exposes the collapsed appearance button as label plus value');
+      assert.ok(new RegExp(rowSelector).test('Appearance System'), 'match the real API36 AX row before selecting a mode');
+      const persistedSelector = text.match(/assertVisible: "(\^Appearance[^"\n]+)"/)?.[1];
+      assert.ok(persistedSelector, 'verify the combined collapsed row, after hiding all mode options');
+      const expectedMode = mode[0].toUpperCase() + mode.slice(1);
+      assert.ok(new RegExp(persistedSelector).test(`Appearance ${expectedMode}`));
+      assert.equal(new RegExp(persistedSelector).test(`Appearance ${expectedMode === 'System' ? 'Light' : 'System'}`), false, 'a different persisted mode must fail');
+      assert.match(text, /tapOn: "Back to previous screen"/);
+      assert.doesNotMatch(text, /tapOn: "Home"/, 'Settings uses header back navigation and has no bottom Home tab');
       if (stage === 'verify') {
-        assert.equal((text.match(/tapOn: "Appearance"/g) ?? []).length, 2, `${mode} verify flow must collapse options before asserting the persisted row value`);
+        assert.equal((text.match(/tapOn: "\^Appearance/g) ?? []).length, 2, `${mode} verify flow must collapse options before asserting the persisted row value`);
       }
     }
   }

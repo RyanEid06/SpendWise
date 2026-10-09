@@ -1,10 +1,9 @@
 appId: com.spendwise.app
 ---
 - tapOn: "Open Settings"
-- tapOn: "Appearance"
+- tapOn: "^Appearance (Light|Dark|System)$"
 - tapOn: "System"
-- tapOn: "Appearance"
-- assertVisible: "Appearance"
-- assertVisible: "System"
-- tapOn: "Home"
+- tapOn: "^Appearance (Light|Dark|System)$"
+- assertVisible: "^Appearance System$"
+- tapOn: "Back to previous screen"
 - assertVisible: "Money Remaining"
