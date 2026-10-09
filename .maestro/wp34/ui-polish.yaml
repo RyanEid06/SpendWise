@@ -19,7 +19,7 @@ appId: com.spendwise.app
     timeout: 30000
 - tapOn: "Storage & Media.*"
 - assertVisible: "Photos"
-- tapOn: "Media Library"
+- tapOn: "Media Library.*"
 - assertVisible: "Media Library"
 - assertVisible: "Photos"
 - assertVisible: "All"
