@@ -12,7 +12,7 @@ const app = readFileSync('src/app/AppShell.tsx', 'utf8');
 const appNavigation = readFileSync('src/app/navigation/useAppNavigation.ts', 'utf8');
 const themeLanguage = readFileSync('src/app/hooks/useThemeLanguage.ts', 'utf8');
 const css = readFileSync('src/index.css', 'utf8');
-const freeze = readFileSync('ROADMAP.md', 'utf8');
+const freeze = readFileSync('docs/DEVELOPMENT.md', 'utf8');
 
 test('bottom navigation is frozen to exactly four primary destinations', () => {
   const entries = navigation.match(/\{ screen: '(home|history|insights|statistics)'/g) || [];
@@ -92,8 +92,8 @@ test('large-ledger statistics and local analysis remain functional', () => {
   assert.ok(elapsed < 6000, `large-ledger regression took ${elapsed}ms`);
 });
 
-test('freeze document explicitly prevents roadmap creep after WP16', () => {
+test('current development contract records the frozen release scope', () => {
   assert.match(freeze, /Four primary destinations/);
   assert.match(freeze, /No social\/accounts system/);
-  assert.match(freeze, /After WP16 acceptance/);
+  assert.match(freeze, /Release scope is frozen for 2\.1/);
 });
