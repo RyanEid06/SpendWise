@@ -14,10 +14,10 @@ appId: com.spendwise.app
 - assertNotVisible: "Build 9"
 - scrollUntilVisible:
     element:
-      text: "Storage & Media"
+      text: "Storage & Media.*"
     direction: UP
     timeout: 30000
-- tapOn: "Storage & Media"
+- tapOn: "Storage & Media.*"
 - assertVisible: "Photos"
 - tapOn: "Media Library"
 - assertVisible: "Media Library"
