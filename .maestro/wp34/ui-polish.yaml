@@ -7,7 +7,7 @@ appId: com.spendwise.app
 - tapOn: "Open Settings"
 - scrollUntilVisible:
     element:
-      text: "Clear App Data"
+      text: "Clear App Data.*"
     direction: DOWN
     timeout: 30000
 - takeScreenshot: wp34-settings-version
