@@ -717,7 +717,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         <section className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800/80 rounded-3xl p-4 space-y-3">
           <div className="grid grid-cols-3 gap-2 text-xs">
             <div className="rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/70 dark:border-slate-800/60 p-3">
-              <div className="text-slate-500 dark:text-slate-400">{copy.photos}</div>
+              <div className="text-slate-500 dark:text-slate-400">{copy.photosLabel}</div>
               <div className="mt-1 font-extrabold tabular-nums">{mediaSummary?.photoCount ?? 0}</div>
             </div>
             <div className="rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/70 dark:border-slate-800/60 p-3">

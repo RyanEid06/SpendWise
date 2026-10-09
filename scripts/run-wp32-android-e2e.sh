@@ -8,6 +8,23 @@ V14_APK="${V14_APK:-artifacts/android-e2e/apks/v14-debug.apk}"
 RESULT_ROOT="${RESULT_ROOT:-artifacts/android-e2e/results}"
 FIXTURE_ROOT="${FIXTURE_ROOT:-artifacts/android-e2e/fixtures}"
 
+# This runner clears app data and uninstalls/reinstalls the package. Refuse to
+# run unless ADB points at the dedicated synthetic emulator used by this gate.
+export ANDROID_SERIAL="${ANDROID_SERIAL:-emulator-5554}"
+[[ "$ANDROID_SERIAL" =~ ^emulator-[0-9]+$ ]] || {
+  echo "Refusing WP32 data-reset suite on non-emulator device: $ANDROID_SERIAL" >&2
+  exit 2
+}
+[ "$(adb -s "$ANDROID_SERIAL" shell getprop ro.kernel.qemu | tr -d '\r')" = "1" ] || {
+  echo "Refusing WP32 data-reset suite: target is not a verified emulator." >&2
+  exit 2
+}
+wp32_avd="$(adb -s "$ANDROID_SERIAL" emu avd name | head -n 1 | tr -d '\r')"
+[[ "$wp32_avd" =~ ^wp33-synthetic(-[A-Za-z0-9_-]+)?$ ]] || {
+  echo "Refusing WP32 data-reset suite on unexpected AVD: $wp32_avd" >&2
+  exit 2
+}
+
 mkdir -p "$RESULT_ROOT" "$FIXTURE_ROOT"
 source scripts/wp32-android-helpers.sh
 source scripts/wp33-5-04-native-continuity.sh
@@ -27,6 +44,7 @@ capture_failure() {
 }
 
 cleanup() {
+  adb shell cmd uimode night no >/dev/null 2>&1 || true
   restore_wp04_ime_setting || true
   adb shell cmd connectivity airplane-mode disable >/dev/null 2>&1 || true
   adb shell locksettings clear --old 2468 >/dev/null 2>&1 || true
@@ -97,6 +115,12 @@ done
 
 adb uninstall "$APP_ID" >/dev/null 2>&1 || true
 adb install "$NEW_APK" >/dev/null
+# Record each system splash before cold launch and before Maestro attaches.
+adb shell cmd uimode night no
+bash scripts/wp34-record-splash.sh "$RESULT_ROOT/wp34-splash-light"
+adb shell cmd uimode night yes
+bash scripts/wp34-record-splash.sh "$RESULT_ROOT/wp34-splash-dark"
+adb shell cmd uimode night no
 reset_app
 run_flow empty-navigation .maestro/current/empty-navigation.yaml
 reset_app
@@ -112,6 +136,7 @@ run_wp04_continuity
 echo "== Media boundaries and restart durability =="
 reset_app
 run_flow media .maestro/current/media.yaml
+run_flow wp34-ui .maestro/wp34/ui-polish.yaml
 
 echo "== Secure Backup v3 exports =="
 run_flow export-v3-data .maestro/current/backup-export-data.yaml
