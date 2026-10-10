@@ -1,9 +1,9 @@
 # SpendWise WP35 — Gemini Reliability, Honest AI Progress UX & Safe-Area Fix
 
-**Status:** Implementation plan only; no code changes.  
-**Baseline:** Uploaded `SpendWise-main (1)(2).zip`, version 2.1.0, Oct 9 snapshot; reconcile with current `main` after WP34 is merged before creating branches.  
-**Deployment:** Render Free web service, `https://spendwise-api-v9sv.onrender.com`; Google AI Studio Gemini API; GitHub Actions.  
-**Scope:** All four AI features: Smart Capture, Receipt Scanner, Spending Analysis / Smart Flags, Statistics AI Trend Insights. Also Add/Edit Expense modal safe areas.  
+**Status:** Implementation plan only; no code changes.
+**Baseline:** Uploaded `SpendWise-main (1)(2).zip`, version 2.1.0, Oct 9 snapshot; reconcile with current `main` after WP34 is merged before creating branches.
+**Deployment:** Render Free web service, `https://spendwise-api-v9sv.onrender.com`; Google AI Studio Gemini API; GitHub Actions.
+**Scope:** All four AI features: Smart Capture, Receipt Scanner, Spending Analysis / Smart Flags, Statistics AI Trend Insights. Also Add/Edit Expense modal safe areas.
 **Non-goals:** No changes to encryption, expense storage, backup schemas, identity signing algorithms, release signing, or the security threat model without explicit review. No fake progress percentages, no periodic keep-alive workaround, no new paid subscription.
 
 ## Verified evidence and architecture facts
