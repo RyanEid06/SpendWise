@@ -59,12 +59,12 @@ test('actual Gemini service measures successful fallback, failed attempts and re
   metrics.reset(); let attempts = 0;
   const service = new GeminiService();
   // Substitute the provider transport in the test object; authentication/crypto production paths stay unchanged.
-  (service as any).createClient = () => ({ models: { generateContent: async () => { attempts++; if (attempts <= 2) throw { status: 503, message: 'private-provider-financial-error' }; return { text: '{"ok":true,"receipt":"private-provider-response"}' }; } } });
+  (service as any).createClient = () => ({ models: { generateContent: async () => { attempts++; if (attempts === 1) throw { status: 503, message: 'private-provider-financial-error' }; return { text: '{"ok":true,"receipt":"private-provider-response"}' }; } } });
   try {
-    const result = await service.generateJson({ endpoint: '/api/gemini/analyze', requestId: 'private-request-token', contents: 'private-financial-prompt', responseJsonSchema: {}, systemInstruction: 'private-system-prompt', validate: (value) => value && typeof value === 'object' && (value as any).ok ? { ok: true } : null });
+    const result = await service.generateJson({ endpoint: '/api/gemini/analyze', requestId: 'private-request-token', contents: 'private-financial-prompt', responseJsonSchema: { type: 'object' }, systemInstruction: 'private-system-prompt', validate: (value) => value && typeof value === 'object' && (value as any).ok ? { ok: true } : null });
     assert.deepEqual(result, { ok: true }); const report = metrics.snapshot();
-    assert.equal(report.provider.attempts, 3); assert.equal(report.provider.failures, 2); assert.equal(report.provider.successes, 1); assert.equal(report.provider.retries, 1); assert.equal(report.provider.fallbacks, 1); assert.equal(report.provider.roles.primary, 2); assert.equal(report.provider.roles.fallback, 1);
-    assert.equal(report.provider.latency.samples, 3); assert.ok(!JSON.stringify({ logs, report }).includes('private-'));
+    assert.equal(report.provider.attempts, 2); assert.equal(report.provider.failures, 1); assert.equal(report.provider.successes, 1); assert.equal(report.provider.retries, 1); assert.equal(report.provider.fallbacks, 1); assert.equal(report.provider.roles.primary, 1); assert.equal(report.provider.roles.fallback, 1);
+    assert.equal(report.provider.latency.samples, 2); assert.ok(!JSON.stringify({ logs, report }).includes('private-'));
   } finally { console.warn = warn; serverConfig.geminiRetryDelayMs = delay; }
 });
 

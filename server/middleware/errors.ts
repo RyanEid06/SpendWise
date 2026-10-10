@@ -10,6 +10,7 @@ import {
 import { boundedLog } from '../observability/safeLogging';
 
 export function sendAiFailure(res: Response, error: unknown) {
+  if (res.destroyed || res.writableEnded) return res;
   const failure =
     error instanceof AiReliabilityError
       ? error

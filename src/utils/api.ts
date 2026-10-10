@@ -1,4 +1,5 @@
 import { AuthenticatedApiClient } from '../security/AuthenticatedApiClient';
+import { AI_END_TO_END_TIMEOUT_MS, AI_PROCESSING_TIMEOUT_MS, withOperationDeadline } from '../security/aiOperationBudget';
 import { diagnostics } from '../services/diagnostics/diagnostics';
 import {
   SpendWiseApiError,
@@ -34,15 +35,28 @@ export async function fetchWithTimeout(
 export async function apiFetch(
   path: string,
   init: RequestInit = {},
-  timeoutMs = 15000
+  timeoutMs?: number
 ): Promise<Response> {
-  return authenticatedApiClient.fetch(path, init, timeoutMs);
+  if (!path.startsWith('/api/gemini/')) return authenticatedApiClient.fetch(path, init, timeoutMs ?? 15000);
+  const requestId = crypto.randomUUID();
+  const headers = new Headers(init.headers); headers.set('X-Request-ID', requestId);
+  const start = performance.now();
+  let outcome = 'failure'; let code: string | undefined;
+  try {
+    const response = await withOperationDeadline(signal => authenticatedApiClient.fetch(path, { ...init, headers, signal }, timeoutMs ?? AI_PROCESSING_TIMEOUT_MS), AI_END_TO_END_TIMEOUT_MS, init.signal);
+    outcome = response.ok ? 'success' : 'failure';
+    return response;
+  } catch (error) {
+    code = normalizeApiException(error).kind; outcome = code === 'cancelled' ? 'aborted' : 'failure'; throw error;
+  } finally {
+    console.info('[AI operation]', JSON.stringify({ requestId, phase: 'operation', outcome, code, elapsedMs: Math.round(performance.now() - start) }));
+  }
 }
 
 export async function apiFetchJson<T>(
   path: string,
   init: RequestInit = {},
-  timeoutMs = 15000
+  timeoutMs?: number
 ): Promise<T> {
   const startedAt = performance.now();
   try {

@@ -1,3 +1,4 @@
+import { AI_PROCESSING_TIMEOUT_MS } from '../../security/aiOperationBudget';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AiAnalysisResult, Expense, Language } from '../../types';
 import { apiFetchJson } from '../../utils/api';
@@ -32,9 +33,11 @@ export function useAiAnalysis({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const requestGateRef = useRef(new AiRequestGate());
+  const operationAbortRef = useRef<AbortController | null>(null);
 
   const reloadCached = useCallback(() => {
     requestGateRef.current.invalidate();
+    operationAbortRef.current?.abort();
     setIsLoading(false);
     setResult(StorageManager.getCachedAnalysis(getMonthKey(currentMonthYear)));
     setError(null);
@@ -47,6 +50,7 @@ export function useAiAnalysis({
 
   useEffect(() => () => {
     requestGateRef.current.invalidate();
+    operationAbortRef.current?.abort();
   }, []);
 
   const analyze = useCallback(async () => {
@@ -66,6 +70,7 @@ export function useAiAnalysis({
 
     const requestId = requestGateRef.current.begin();
     if (requestId === null) return;
+    const controller = new AbortController(); operationAbortRef.current = controller;
 
     setIsLoading(true);
     setError(null);
@@ -80,13 +85,14 @@ export function useAiAnalysis({
         '/api/gemini/analyze',
         {
           method: 'POST',
+          signal: controller.signal,
           body: JSON.stringify({
             summary,
             currencyCode,
             language,
           }),
         },
-        30000
+        AI_PROCESSING_TIMEOUT_MS
       );
 
       if (!requestGateRef.current.isCurrent(requestId)) return;
@@ -111,6 +117,7 @@ export function useAiAnalysis({
 
   const reset = useCallback(() => {
     requestGateRef.current.invalidate();
+    operationAbortRef.current?.abort();
     setIsLoading(false);
     setResult(null);
     setError(null);

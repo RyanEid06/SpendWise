@@ -17,7 +17,7 @@ import {
 export const analysisRouter = Router();
 
 analysisRouter.post('/analyze', async (req, res) => {
-  const requestId = aiRequestId();
+  const requestId = res.locals.requestId || aiRequestId();
   try {
     const body = asObject(req.body);
     const summary = sanitizeHistoricalSummary(body?.summary);
@@ -34,6 +34,8 @@ analysisRouter.post('/analyze', async (req, res) => {
     const parsed = await geminiService.generateJson({
       endpoint: '/api/gemini/analyze',
       requestId,
+      signal: res.locals.aiSignal,
+      deadline: res.locals.aiDeadline,
       contents: buildSpendingPrompt(summary, currencyCode, language),
       responseJsonSchema: spendingResponseSchema,
       systemInstruction:

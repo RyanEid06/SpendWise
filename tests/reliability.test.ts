@@ -9,18 +9,18 @@ import {
 } from '../server/geminiReliability';
 import { classifyApiFailure } from '../src/utils/apiErrors';
 
-test('classifies provider 5xx as transient and rate limit as non-retryable', () => {
+test('classifies provider 5xx and temporary rate limits as eligible for bounded retry', () => {
   assert.equal(normalizeGeminiFailure({ status: 503 }).code, 'AI_TEMPORARILY_UNAVAILABLE');
   assert.equal(normalizeGeminiFailure({ status: 503 }).retryable, true);
   assert.equal(normalizeGeminiFailure({ status: 429 }).code, 'AI_RATE_LIMITED');
-  assert.equal(normalizeGeminiFailure({ status: 429 }).retryable, false);
+  assert.equal(normalizeGeminiFailure({ status: 429 }).retryable, true);
 });
 
-test('normalizes timeouts without retrying them', () => {
+test('normalizes timeouts as eligible only for the bounded shared retry loop', () => {
   const error = new Error('request timed out');
   const failure = normalizeGeminiFailure(error);
   assert.equal(failure.code, 'AI_TIMEOUT');
-  assert.equal(failure.retryable, false);
+  assert.equal(failure.retryable, true);
 });
 
 test('retries one transient failure and then succeeds', async () => {
@@ -109,7 +109,7 @@ test('falls back to the secondary model only after transient provider unavailabi
   });
 
   assert.equal(result, true);
-  assert.deepEqual(models, ['primary-model', 'primary-model', 'fallback-model']);
+  assert.deepEqual(models, ['primary-model', 'fallback-model']);
 });
 
 test('falls back across models on rate limits and surfaces 429 only after all are exhausted', async () => {

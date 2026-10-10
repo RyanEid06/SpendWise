@@ -2,6 +2,7 @@ import {
   InstallationIdentitySigner,
   installationIdentitySigner,
 } from './InstallationIdentityService';
+import { withOperationDeadline } from './aiOperationBudget';
 
 interface RegistrationResponse {
   installationId: string;
@@ -55,19 +56,21 @@ export class AuthenticatedApiClient {
   ): Promise<Response> {
     const target = this.url(path);
     if (
-      import.meta.env.PROD &&
+      import.meta.env?.PROD &&
       /^http:\/\//i.test(target)
     ) {
       throw new Error('Production SpendWise API requires HTTPS.');
     }
 
-    const controller = new AbortController();
-    const timer = window.setTimeout(() => controller.abort(), timeoutMs);
-    try {
-      return await fetch(target, { ...init, signal: controller.signal });
-    } finally {
-      window.clearTimeout(timer);
-    }
+    return withOperationDeadline(async signal => {
+      const response = await fetch(target, { ...init, signal });
+      // Fetch resolves on headers. Keep both deadline and cancellation active
+      // until the body arrives; a late body must not become a successful result.
+      const body = await response.arrayBuffer();
+      return new Response(response.status === 204 ? null : body, {
+        status: response.status, statusText: response.statusText, headers: response.headers,
+      });
+    }, timeoutMs, init.signal);
   }
 
   private readInstallationId(): string | null {
@@ -194,20 +197,37 @@ export class AuthenticatedApiClient {
     init: RequestInit = {},
     timeoutMs = 15_000
   ): Promise<Response> {
+    let processingRemainingMs = timeoutMs;
     const send = async () => {
       const token = await this.getAccessToken();
+      init.signal?.throwIfAborted();
       const headers = new Headers(init.headers);
       if (init.body != null && !headers.has('Content-Type')) {
         headers.set('Content-Type', 'application/json');
       }
       headers.set('Authorization', 'Bearer ' + token);
-      return this.rawFetch(path, { ...init, headers }, timeoutMs);
+      const started = performance.now();
+      let outcome = 'failure'; let code: string | undefined;
+      try {
+        const response = await this.rawFetch(path, { ...init, headers }, Math.max(1, processingRemainingMs));
+        outcome = response.ok ? 'success' : 'failure'; return response;
+      } catch (error) {
+        code = error instanceof Error && error.name === 'TimeoutError' ? 'AI_TIMEOUT' : init.signal?.aborted ? 'AI_CANCELLED' : error instanceof TypeError ? 'AI_NETWORK_ERROR' : 'AI_REQUEST_FAILED';
+        throw error;
+      } finally {
+        const elapsedMs = performance.now() - started; processingRemainingMs -= elapsedMs;
+        const requestId = headers.get('X-Request-ID');
+        if (requestId && /^[a-f0-9-]{36}$/i.test(requestId)) console.info('[AI processing]', JSON.stringify({ requestId, phase: 'ai_dispatch', outcome, code, elapsedMs: Math.round(elapsedMs) }));
+      }
     };
 
     let response = await send();
     if (response.status === 401) {
-      this.invalidateSession();
-      response = await send();
+      let code = ''; try { code = (await response.clone().json()).error; } catch {}
+      if (['INVALID_ACCESS_TOKEN', 'ACCESS_TOKEN_EXPIRED', 'API_UNAUTHORIZED'].includes(code) && processingRemainingMs > 0) {
+        this.invalidateSession();
+        response = await send();
+      }
     }
     return response;
   }

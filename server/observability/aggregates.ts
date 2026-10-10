@@ -1,7 +1,7 @@
 import { serverConfig } from '../config';
 
 export const API_ROUTES = ['/api/health', '/api/auth/register', '/api/auth/challenge', '/api/auth/verify', '/api/gemini/analyze', '/api/gemini/explain-trends', '/api/gemini/smart-capture', '/api/gemini/scan-receipt', 'other'] as const;
-export const FAILURE_REASONS = ['API_UNAUTHORIZED', 'INVALID_ACCESS_TOKEN', 'ACCESS_TOKEN_EXPIRED', 'INVALID_REGISTRATION', 'INVALID_PUBLIC_KEY', 'UNSUPPORTED_SIGNING_ALGORITHM', 'INVALID_CHALLENGE_REQUEST', 'UNKNOWN_INSTALLATION', 'INSTALLATION_REVOKED', 'INVALID_PROOF_REQUEST', 'INVALID_PROOF', 'INVALID_CHALLENGE', 'CHALLENGE_EXPIRED', 'INVALID_SIGNATURE', 'AUTH_SERVICE_ERROR', 'INVALID_JSON', 'INVALID_REQUEST', 'REQUEST_TOO_LARGE', 'HTTPS_REQUIRED', 'ORIGIN_NOT_ALLOWED', 'AI_NOT_CONFIGURED', 'AI_TIMEOUT', 'AI_RATE_LIMITED', 'AI_TEMPORARILY_UNAVAILABLE', 'AI_INVALID_RESPONSE', 'AI_REQUEST_FAILED', 'INTERNAL_ERROR', 'UNHANDLED_API_ERROR', 'PROVIDER_RETRY', 'PROVIDER_FALLBACK', 'GLOBAL_QUOTA_REJECTED', 'INSTALLATION_QUOTA_REJECTED', 'registration_rate_limited', 'registration_daily_limited', 'challenge_installation_rate_limited', 'challenge_ip_rate_limited', 'ai_installation_rate_limited', 'ai_ip_rate_limited', 'ai_installation_daily_limited', 'ai_global_cost_guardrail', 'UNKNOWN_TECHNICAL_ERROR'] as const;
+export const FAILURE_REASONS = ['API_UNAUTHORIZED', 'INVALID_ACCESS_TOKEN', 'ACCESS_TOKEN_EXPIRED', 'INVALID_REGISTRATION', 'INVALID_PUBLIC_KEY', 'UNSUPPORTED_SIGNING_ALGORITHM', 'INVALID_CHALLENGE_REQUEST', 'UNKNOWN_INSTALLATION', 'INSTALLATION_REVOKED', 'INVALID_PROOF_REQUEST', 'INVALID_PROOF', 'INVALID_CHALLENGE', 'CHALLENGE_EXPIRED', 'INVALID_SIGNATURE', 'AUTH_SERVICE_ERROR', 'INVALID_JSON', 'INVALID_REQUEST', 'REQUEST_TOO_LARGE', 'HTTPS_REQUIRED', 'ORIGIN_NOT_ALLOWED', 'AI_NOT_CONFIGURED', 'AI_TIMEOUT', 'AI_DEADLINE_EXCEEDED', 'AI_CANCELLED', 'AI_NETWORK_ERROR', 'AI_QUOTA_EXHAUSTED', 'AI_CONTENT_BLOCKED', 'PROVIDER_SUCCESS', 'AI_RATE_LIMITED', 'AI_TEMPORARILY_UNAVAILABLE', 'AI_INVALID_RESPONSE', 'AI_REQUEST_FAILED', 'INTERNAL_ERROR', 'UNHANDLED_API_ERROR', 'PROVIDER_RETRY', 'PROVIDER_FALLBACK', 'GLOBAL_QUOTA_REJECTED', 'INSTALLATION_QUOTA_REJECTED', 'registration_rate_limited', 'registration_daily_limited', 'challenge_installation_rate_limited', 'challenge_ip_rate_limited', 'ai_installation_rate_limited', 'ai_ip_rate_limited', 'ai_installation_daily_limited', 'ai_global_cost_guardrail', 'UNKNOWN_TECHNICAL_ERROR'] as const;
 export type SafeRoute = typeof API_ROUTES[number];
 export type FailureReason = typeof FAILURE_REASONS[number];
 export function normalizeRoute(value: unknown): SafeRoute {
@@ -33,10 +33,11 @@ export class OperationalAggregates {
   private provider = { attempts: 0, successes: 0, failures: 0, retries: 0, fallbacks: 0, roles: { primary: 0, fallback: 0, other: 0 } };
   private startedAt = Date.now();
   private readonly useBounds: { dailyAdmissionLimit: number; maxAttemptsPerAdmission: number; theoreticalDailyAttemptCeiling: number };
-  constructor(bounds: { dailyAdmissionLimit?: number; modelCount?: number } = {}) {
+  constructor(bounds: { dailyAdmissionLimit?: number; modelCount?: number; maxAttempts?: number } = {}) {
     const daily = Number.isSafeInteger(bounds.dailyAdmissionLimit) && bounds.dailyAdmissionLimit! >= 0 ? bounds.dailyAdmissionLimit! : 0;
     const models = Number.isSafeInteger(bounds.modelCount) && bounds.modelCount! > 0 ? bounds.modelCount! : 0;
-    this.useBounds = { dailyAdmissionLimit: daily, maxAttemptsPerAdmission: models * 2, theoreticalDailyAttemptCeiling: daily * models * 2 };
+    const attempts = bounds.maxAttempts == null ? models * 2 : Math.max(1, Math.min(3, Math.floor(bounds.maxAttempts)));
+    this.useBounds = { dailyAdmissionLimit: daily, maxAttemptsPerAdmission: attempts, theoreticalDailyAttemptCeiling: daily * attempts };
   }
   recordRequest(route: unknown, status: number, elapsedMs: number, aborted: boolean): void {
     const label = normalizeRoute(route); const bucket = this.routes[label];
@@ -72,7 +73,7 @@ export class OperationalAggregates {
     this.provider = { attempts: 0, successes: 0, failures: 0, retries: 0, fallbacks: 0, roles: { primary: 0, fallback: 0, other: 0 } };
   }
 }
-export const operationalAggregates = new OperationalAggregates({ dailyAdmissionLimit: serverConfig.aiGlobalDailyLimit, modelCount: serverConfig.geminiModels.length });
+export const operationalAggregates = new OperationalAggregates({ dailyAdmissionLimit: serverConfig.aiGlobalDailyLimit, maxAttempts: serverConfig.geminiMaxAttempts });
 export function startAggregateReporting(metrics: OperationalAggregates, emit: (snapshot: ReturnType<OperationalAggregates['snapshot']>) => void = (snapshot) => console.info('[Operations]', snapshot), intervalMs = 60_000): () => void {
   const timer = setInterval(() => { try { emit(metrics.snapshot()); } catch {} }, Math.max(10, intervalMs)); timer.unref();
   return () => clearInterval(timer);

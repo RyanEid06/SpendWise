@@ -20,6 +20,7 @@ import { analysisRouter } from './routes/analysis';
 import { trendsRouter } from './routes/trends';
 import { smartCaptureRouter } from './routes/smartCapture';
 import { receiptScanRouter } from './routes/receiptScan';
+import { aiOperationContext } from './middleware/aiOperationContext';
 
 export function createServerApp() {
   const app = express();
@@ -35,6 +36,7 @@ export function createServerApp() {
   // a potentially large AI request body.
   app.use(
     '/api/gemini',
+    aiOperationContext,
     requireInstallationAccess,
     rateLimitGemini,
     boundedAiJsonBody

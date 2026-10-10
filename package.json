@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "lint": "tsc --noEmit",
     "android:sync": "cap sync android",
+    "test:wp35:runtime": "tsx --test tests/wp35-gemini-runtime.test.ts tests/wp35-client-runtime.test.ts tests/wp35-runtime-observability.test.ts tests/reliability.test.ts tests/wp27-service-boundaries.test.ts tests/wp28-secure-auth-keystore.test.ts tests/wp29-encrypted-at-rest.test.ts tests/wp30-secure-backup-v3.test.ts tests/wp31-backend-security.test.ts tests/wp32-failure-injection.test.ts tests/wp33-backend-observability.test.ts tests/wp33-backend-integration.test.ts",
     "test:reliability": "tsx --test tests/reliability.test.ts",
     "test:currency": "tsx --test tests/currency.test.ts",
     "test:persistence": "tsx --test tests/persistence.test.ts",

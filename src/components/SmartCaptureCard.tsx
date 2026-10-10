@@ -1,3 +1,4 @@
+import { AI_PROCESSING_TIMEOUT_MS } from '../security/aiOperationBudget';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AlertCircle, Camera, CheckCircle2, ImagePlus, Loader2, Sparkles, X } from 'lucide-react';
 import { Language, SmartCaptureResult } from '../types';
@@ -128,6 +129,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
   const mountedRef = useRef(true);
   const preparationRequestIdRef = useRef(0);
   const requestIdRef = useRef(0);
+  const operationAbortRef = useRef<AbortController | null>(null);
   const acquisitionInFlightRef = useRef(false);
   const analysisInFlightRef = useRef(false);
   const preparedPreviewUrlRef = useRef<string | null>(null);
@@ -149,6 +151,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
     if (previousContext.current.currencyCode === currencyCode && previousContext.current.language === language) return;
     previousContext.current = { currencyCode, language };
     requestIdRef.current += 1;
+    operationAbortRef.current?.abort();
     analysisInFlightRef.current = false;
     setResult(null);
     setError(null);
@@ -173,6 +176,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
       mountedRef.current = false;
       preparationRequestIdRef.current += 1;
       requestIdRef.current += 1;
+      operationAbortRef.current?.abort();
       acquisitionInFlightRef.current = false;
       analysisInFlightRef.current = false;
       if (preparedPreviewUrlRef.current) URL.revokeObjectURL(preparedPreviewUrlRef.current);
@@ -191,6 +195,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
     setInterrupted(false);
     preparationRequestIdRef.current += 1;
     requestIdRef.current += 1;
+    operationAbortRef.current?.abort();
     analysisInFlightRef.current = false;
     clearPreparedPreview();
     setPreviewUrl(null);
@@ -211,6 +216,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
       const acquired = source === 'camera' ? await takePhoto() : (await choosePhotos(1))[0] || null;
       if (!acquired) return [];
       requestIdRef.current += 1;
+      operationAbortRef.current?.abort();
       analysisInFlightRef.current = false;
       clearPreparedPreview();
       setPreviewUrl(null);
@@ -253,6 +259,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
     analysisInFlightRef.current = true;
     setInterrupted(false);
     const requestId = ++requestIdRef.current;
+    const controller = new AbortController(); operationAbortRef.current = controller;
     setIsAnalyzing(true);
     setError(null);
     setResult(null);
@@ -265,6 +272,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
         '/api/gemini/smart-capture',
         {
           method: 'POST',
+          signal: controller.signal,
           body: JSON.stringify({
             imageBase64,
             mimeType: preparedDraft.mimeType,
@@ -272,7 +280,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
             currencyCode,
           }),
         },
-        45000
+        AI_PROCESSING_TIMEOUT_MS
       );
 
       const data = parseSmartCaptureResult(responseData, currencyCode);

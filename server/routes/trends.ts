@@ -15,7 +15,7 @@ import {
 export const trendsRouter = Router();
 
 trendsRouter.post('/explain-trends', async (req, res) => {
-  const requestId = aiRequestId();
+  const requestId = res.locals.requestId || aiRequestId();
   try {
     const body = asObject(req.body);
     const stats = sanitizeStatistics(body?.stats);
@@ -32,6 +32,8 @@ trendsRouter.post('/explain-trends', async (req, res) => {
     const parsed = await geminiService.generateJson({
       endpoint: '/api/gemini/explain-trends',
       requestId,
+      signal: res.locals.aiSignal,
+      deadline: res.locals.aiDeadline,
       contents: buildTrendPrompt(stats, currencyCode, language),
       responseJsonSchema: trendResponseSchema,
       systemInstruction:
