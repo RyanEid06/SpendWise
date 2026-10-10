@@ -18,6 +18,9 @@ export function boundedLog(tag: 'API' | 'AI' | 'Security', details: { [key: stri
     if (typeof details.willRetry === 'boolean') out.willRetry = details.willRetry;
     // Optional grouping accepts only the existing hashed scope, never its input.
     if (typeof details.scopeHash === 'string' && /^[a-f0-9]{16}$/.test(details.scopeHash)) out.scopeHash = details.scopeHash;
+    if (typeof details.requestId === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(details.requestId)) out.requestId = details.requestId;
+    if (['readiness', 'register', 'challenge', 'verify', 'ai_dispatch', 'client_disconnect'].includes(String(details.phase))) out.phase = details.phase;
+    if (['start', 'success', 'failure', 'aborted'].includes(String(details.outcome))) out.outcome = details.outcome;
     emit(out);
   } catch {}
 }

@@ -33,8 +33,9 @@ export function apiCors(req: Request, res: Response, next: NextFunction) {
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
     res.setHeader(
       'Access-Control-Allow-Headers',
-      'Content-Type,Authorization,X-SpendWise-Token'
+      'Content-Type,Authorization,X-SpendWise-Token,X-Request-ID'
     );
+    res.setHeader('Access-Control-Expose-Headers', 'X-Request-ID');
   }
 
   if (req.method === 'OPTIONS') return res.sendStatus(204);
