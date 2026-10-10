@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { addExpense, startFresh } from './helpers';
+import { addExpense, mockReadyAuthenticatedBackend, startFresh } from './helpers';
 import { t } from '../../../src/utils/translations';
 
 function deferred() {
@@ -280,14 +280,7 @@ test('a completed Analysis cannot reappear under a different language context', 
 });
 
 test.beforeEach(async ({ page }) => {
-  // Keep real client registration/signing; replace only the unavailable test backend.
-  await page.route('**/api/auth/register', route => route.fulfill({ json: { installationId: 'wp04-fixture' } }));
-  await page.route('**/api/auth/challenge', route => route.fulfill({ json: {
-    challengeId: 'wp04-challenge', expiresAt: Date.now() + 60_000, payload: 'wp04-public-test-challenge',
-  } }));
-  await page.route('**/api/auth/verify', route => route.fulfill({ json: {
-    accessToken: 'wp04-public-test-token', expiresAt: Date.now() + 60_000, tokenType: 'Bearer',
-  } }));
+  await mockReadyAuthenticatedBackend(page);
 });
 
 test('Statistics retains selected period and in-flight success through repeated tab switches', async ({ page }) => {

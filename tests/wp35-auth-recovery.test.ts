@@ -41,6 +41,23 @@ function fixture(options: Record<string, unknown> = {}) {
 const flush = async () => { for (let i = 0; i < 200; i++) await Promise.resolve(); };
 const ai = '/api/gemini/analyze';
 
+test('explicit device offline status fails promptly without auth or AI and permits a later online retry', async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  const connectivity = { onLine: false };
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: connectivity });
+  try {
+    const f = fixture();
+    await assert.rejects(f.client.fetch(ai), /offline/i);
+    assert.deepEqual(f.calls, []);
+    connectivity.onLine = true;
+    assert.equal((await f.client.fetch(ai)).status, 200);
+    assert.equal(f.calls.filter(path => path === ai).length, 1);
+  } finally {
+    if (descriptor) Object.defineProperty(globalThis, 'navigator', descriptor);
+    else Reflect.deleteProperty(globalThis, 'navigator');
+  }
+});
+
 test('60s first health response is awaited; proof completes before exactly one authorized AI dispatch', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
   const f = fixture();

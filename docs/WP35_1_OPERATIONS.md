@@ -11,6 +11,9 @@ acceptance remains separately pending in MANUAL_ACCEPTANCE.md.
   at most 24 health probes, 65s per probe to permit a 60s first wake). Retries use
   capped exponential backoff and jitter. Nothing polls while idle. A successful
   JSON health response confirms backend/auth-store readiness, never Gemini availability.
+  An explicit device offline signal fails promptly into the existing local fallback;
+  unknown connectivity retains bounded wake recovery. A later online user request
+  can retry normally. This does not treat an online signal as proof of reachability.
 - Authentication has a separate 30s whole-transaction bound, including key lookup,
   signing, HTTP bodies, backoff and recovery. Subrequests remain bounded to 15s.
   At most three challenge/proof transactions; idempotent registration at most three
@@ -71,7 +74,15 @@ Do not paste credentials, registry exports or backup contents into chat/CI logs.
 1. Confirm Render deployment branch/auto-deploy settings and suspend automatic
    rollout for the maintenance window. Confirm provider/region/free limits and
    that no paid resource will be created. Owner creates the selected database.
-2. Before restart/redeploy, securely export the **complete current** local
+2. **Before the authoritative export**, freeze and drain every source registry
+   writer (registration, proof/touch, revocations, administrative jobs and deny-list
+   edits), without restarting or spinning down the process holding the ephemeral
+   files. Auto-deploy suspension alone does not freeze API writes. Keep this
+   maintenance freeze through import, cutover and the revocation checks in step6.
+   Use an owner-approved ingress/maintenance mechanism; if no safe live export
+   path exists, STOP and resolve that prerequisite with the owner. Do not redeploy
+   an exporter and thereby destroy the only source history.
+   Then, before restart/redeploy, securely export the **complete current** local
    registry and the current `SPENDWISE_DENIED_INSTALLATION_IDS`; make an encrypted
    offline copy. Include revoked records and their key fingerprints. Never
    export private installation keys (they stay on devices). If registry/deny
@@ -83,7 +94,7 @@ Do not paste credentials, registry exports or backup contents into chat/CI logs.
    schema CREATE if allowed by the provider. Runtime needs no DELETE, DDL,
    superuser or role-management privilege. Use the console's secure password flow;
    do not put passwords in SQL history. Check pooled-host region and TLS chain.
-4. Freeze registration/revocation writes during import. Validate **every** exported
+4. Maintain the source write freeze established before export. Validate **every** exported
    record with `parseInstallationPublicKey`, recompute SHA256(base64-decoded SPKI)
    in base64url, compare its fingerprint, and reject malformed fields/duplicate
    IDs/duplicate fingerprints. Preserve ID, SPKI, fingerprint, timestamps and
@@ -112,7 +123,8 @@ Do not paste credentials, registry exports or backup contents into chat/CI logs.
    Test a retained installation ID, real challenge/signature/verification, one
    authenticated AI call, revoked installation denial and database-unavailable503.
    Restart backend and repeat retained-ID/revocation tests; no mass registration.
-   Capture sanitized correlation IDs/durations only. Run an actual15+minute
+   Reopen writes only after retained-ID and revocation checks pass and the owner
+   approves the cutover. Capture sanitized correlation IDs/durations only. Run an actual15+minute
    idle-to-request test only after checking external health monitors are not
    keeping Render awake. Distinguish backend readiness from Gemini completion.
 7. Arrange encrypted `pg_dump` backups outside the service, including revoked

@@ -23,6 +23,9 @@ function safeLocalStorage(): Storage | null {
 class AuthHttpError extends Error {
   constructor(readonly status: number, readonly code: string) { super('Authentication request rejected.'); }
 }
+class DeviceOfflineError extends TypeError {
+  constructor() { super('Device is offline.'); }
+}
 
 export class AuthenticatedApiClient {
   private accessToken: string | null = null;
@@ -66,6 +69,9 @@ export class AuthenticatedApiClient {
     const target = this.baseUrl + (path.startsWith('/') ? path : '/' + path);
     if (import.meta.env?.PROD && /^http:\/\//i.test(target)) throw new Error('Production SpendWise API requires HTTPS.');
     signal?.throwIfAborted();
+    // A confirmed offline device cannot wake Render. Keep cold-start retries for
+    // unknown connectivity; allow the next explicit operation to try again online.
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) throw new DeviceOfflineError();
     const controller = new AbortController();
     const abort = () => controller.abort();
     signal?.addEventListener('abort', abort, { once: true });
@@ -80,6 +86,7 @@ export class AuthenticatedApiClient {
     } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
   }
   private retryable(error: unknown): boolean {
+    if (error instanceof DeviceOfflineError) return false;
     return error instanceof TypeError || error instanceof Error && error.name === 'AbortError' || error instanceof AuthHttpError && error.status >= 500;
   }
   private backoff(attempt: number, signal: AbortSignal) {
