@@ -95,7 +95,7 @@ receiptScanRouter.post('/scan-receipt', async (req, res) => {
 
     const parsed = await geminiService.generateJson({
       endpoint: '/api/gemini/scan-receipt',
-      requestId: aiRequestId(),
+      requestId: aiRequestId(res.locals.requestId),
       contents: {
         parts: [
           { text: receiptPrompt },

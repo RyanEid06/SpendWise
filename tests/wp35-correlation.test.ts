@@ -4,6 +4,14 @@ import { EventEmitter } from 'node:events';
 import { boundedLog } from '../server/observability/safeLogging';
 import { observeApiRequests } from '../server/observability/requestObservability';
 import { OperationalAggregates } from '../server/observability/aggregates';
+import { aiRequestId } from '../server/logging/aiLogging';
+
+test('provider attempts reuse the validated HTTP operation correlation', () => {
+  const id = 'a2cff8bc-3eb0-46d5-9e36-57efa05fc833';
+  assert.equal(aiRequestId(id), id);
+  assert.match(aiRequestId('private-token'), /^[a-f0-9-]{36}$/);
+  assert.notEqual(aiRequestId('private-token'), 'private-token');
+});
 
 test('phase logs accept only UUID correlation and finite status vocabulary', () => {
   const logs: any[] = [];
