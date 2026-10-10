@@ -11,6 +11,8 @@ export interface InstallationPublicIdentity {
 }
 
 export interface InstallationIdentitySigner {
+  /** Native keys survive reload; the existing browser fallback is memory-only. */
+  readonly persistent?: boolean;
   getPublicIdentity(): Promise<InstallationPublicIdentity>;
   sign(payload: string): Promise<string>;
 }
@@ -64,6 +66,8 @@ export class DefaultInstallationIdentitySigner
     private readonly nativeAdapter: AndroidSecurityAdapter =
       androidSecurityAdapter
   ) {}
+
+  get persistent(): boolean { return this.nativeAdapter.isAvailable(); }
 
   async getPublicIdentity(): Promise<InstallationPublicIdentity> {
     if (this.nativeAdapter.isAvailable()) {

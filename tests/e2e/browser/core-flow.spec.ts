@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { addExpense, openSettings, setBudget, startFresh } from './helpers';
+import { addExpense, mockReadyAuthenticatedBackend, openSettings, setBudget, startFresh } from './helpers';
 
 test('fresh onboarding -> budget -> expense -> reload persists', async ({ page }) => {
   await startFresh(page);
@@ -85,6 +85,7 @@ for (const [language, dir, settingsLabel] of [
 
 
 test('AI backend interruption falls back locally without crashing or mutating the ledger', async ({ page }) => {
+  await mockReadyAuthenticatedBackend(page);
   await startFresh(page);
   await addExpense(page, 'WP32 Offline AI', '22.40');
   await page.route('**/api/gemini/analyze', (route) => route.abort('failed'));

@@ -29,13 +29,14 @@ export interface InstallationRegistration {
 }
 
 export interface InstallationRegistry {
-  register(publicKeySpkiBase64: string, now?: number): InstallationRegistration;
-  get(id: string): InstallationRecord | null;
-  touch(id: string, now?: number): void;
-  revoke(id: string, reason?: string, now?: number): boolean;
+  register(publicKeySpkiBase64: string, now?: number): InstallationRegistration | Promise<InstallationRegistration>;
+  get(id: string): InstallationRecord | null | Promise<InstallationRecord | null>;
+  touch(id: string, now?: number): void | Promise<void>;
+  revoke(id: string, reason?: string, now?: number): boolean | Promise<boolean>;
+  ready(): void | Promise<void>;
 }
 
-function publicKeyFingerprint(publicKeySpkiBase64: string): string {
+export function publicKeyFingerprint(publicKeySpkiBase64: string): string {
   return createHash('sha256')
     .update(Buffer.from(publicKeySpkiBase64, 'base64'))
     .digest('base64url');
@@ -113,6 +114,10 @@ export class FileInstallationRegistry implements InstallationRegistry {
 
   constructor(private readonly filePath: string | null) {
     this.load();
+  }
+
+  ready(): void {
+    if (this.loadFailed) throw new AuthServiceError('AUTH_STORE_UNAVAILABLE', 503);
   }
 
   private load() {
@@ -262,11 +267,11 @@ export class InstallationAuthService {
     } = {}
   ) {}
 
-  private getActiveInstallation(id: string): InstallationRecord {
+  private async getActiveInstallation(id: string): Promise<InstallationRecord> {
     if (this.options.deniedInstallationIds?.has(id)) {
       throw new AuthServiceError('INSTALLATION_REVOKED', 403);
     }
-    const record = this.registry.get(id);
+    const record = await this.registry.get(id);
     if (!record) throw new AuthServiceError('UNKNOWN_INSTALLATION', 404);
     if (record.revokedAt != null) {
       throw new AuthServiceError('INSTALLATION_REVOKED', 403);
@@ -274,23 +279,23 @@ export class InstallationAuthService {
     return record;
   }
 
-  register(
+  async register(
     publicKeySpkiBase64: string,
     algorithm: string,
     now = Date.now()
-  ): InstallationRegistration {
+  ): Promise<InstallationRegistration> {
     if (algorithm !== INSTALLATION_AUTH_ALGORITHM) {
       throw new AuthServiceError('UNSUPPORTED_SIGNING_ALGORITHM', 400);
     }
-    const registration = this.registry.register(publicKeySpkiBase64, now);
-    if (registration.record.revokedAt != null) {
+    const registration = await this.registry.register(publicKeySpkiBase64, now);
+    if (registration.record.revokedAt != null || this.options.deniedInstallationIds?.has(registration.record.id)) {
       throw new AuthServiceError('INSTALLATION_REVOKED', 403);
     }
     return registration;
   }
 
-  issueChallenge(installationId: string, now = Date.now()) {
-    this.getActiveInstallation(installationId);
+  async issueChallenge(installationId: string, now = Date.now()) {
+    await this.getActiveInstallation(installationId);
     this.cleanup(now);
     const challenge: ChallengeRecord = {
       challengeId: randomUUID(),
@@ -307,7 +312,7 @@ export class InstallationAuthService {
     };
   }
 
-  verifyChallenge(
+  async verifyChallenge(
     installationId: string,
     challengeId: string,
     signatureBase64: string,
@@ -334,7 +339,7 @@ export class InstallationAuthService {
       throw new AuthServiceError('INVALID_SIGNATURE', 401);
     }
 
-    const installation = this.getActiveInstallation(installationId);
+    const installation = await this.getActiveInstallation(installationId);
     const publicKey = parseInstallationPublicKey(
       installation.publicKeySpkiBase64
     );
@@ -351,13 +356,13 @@ export class InstallationAuthService {
     const accessToken = randomBytes(32).toString('base64url');
     const expiresAt =
       now + (this.options.accessTokenTtlMs ?? ACCESS_TOKEN_TTL_MS);
+    await this.registry.touch(installationId, now);
     this.sessions.set(tokenHash(accessToken), { installationId, expiresAt });
-    this.registry.touch(installationId, now);
 
     return { accessToken, expiresAt, tokenType: 'Bearer' as const };
   }
 
-  validateAccessToken(accessToken: string, now = Date.now()): InstallationRecord {
+  async validateAccessToken(accessToken: string, now = Date.now()): Promise<InstallationRecord> {
     if (
       typeof accessToken !== 'string' ||
       accessToken.length < 32 ||
@@ -377,8 +382,8 @@ export class InstallationAuthService {
     return this.getActiveInstallation(session.installationId);
   }
 
-  revokeInstallation(id: string, reason = 'revoked', now = Date.now()): boolean {
-    const revoked = this.registry.revoke(id, reason, now);
+  async revokeInstallation(id: string, reason = 'revoked', now = Date.now()): Promise<boolean> {
+    const revoked = await this.registry.revoke(id, reason, now);
     if (!revoked) return false;
     for (const [hash, session] of this.sessions) {
       if (session.installationId === id) this.sessions.delete(hash);

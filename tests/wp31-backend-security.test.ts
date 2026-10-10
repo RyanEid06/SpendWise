@@ -49,44 +49,44 @@ function sign(
     .toString('base64');
 }
 
-function expectAuthError(
-  fn: () => unknown,
+async function expectAuthError(
+  fn: () => Promise<unknown>,
   expectedCode: string
 ) {
-  assert.throws(fn, (error: unknown) => {
+  await assert.rejects(fn, (error: unknown) => {
     assert.ok(error instanceof AuthServiceError);
     assert.equal(error.code, expectedCode);
     return true;
   });
 }
 
-test('WP31 constants match the approved short-lived authentication contract', () => {
+test('WP31 constants match the approved short-lived authentication contract', async () => {
   assert.equal(CHALLENGE_TTL_MS, 120_000);
   assert.equal(ACCESS_TOKEN_TTL_MS, 10 * 60_000);
   assert.equal(INSTALLATION_AUTH_ALGORITHM, 'ECDSA_P256_SHA256');
 });
 
-test('unknown installation cannot obtain a challenge', () => {
+test('unknown installation cannot obtain a challenge', async () => {
   const service = new InstallationAuthService(
     new FileInstallationRegistry(null)
   );
-  expectAuthError(
-    () => service.issueChallenge('unknown-installation', 1_000),
+  await expectAuthError(
+    async () => await service.issueChallenge('unknown-installation', 1_000),
     'UNKNOWN_INSTALLATION'
   );
 });
 
-test('valid registration is bounded to P-256 and is idempotent by public key', () => {
+test('valid registration is bounded to P-256 and is idempotent by public key', async () => {
   const service = new InstallationAuthService(
     new FileInstallationRegistry(null)
   );
   const firstIdentity = identity();
-  const first = service.register(
+  const first = await service.register(
     firstIdentity.publicKeyBase64,
     INSTALLATION_AUTH_ALGORITHM,
     1_000
   );
-  const second = service.register(
+  const second = await service.register(
     firstIdentity.publicKeyBase64,
     INSTALLATION_AUTH_ALGORITHM,
     2_000
@@ -100,9 +100,8 @@ test('valid registration is bounded to P-256 and is idempotent by public key', (
   const wrongKey = wrongCurve.publicKey
     .export({ type: 'spki', format: 'der' })
     .toString('base64');
-  expectAuthError(
-    () =>
-      service.register(
+  await expectAuthError(
+    async () => await service.register(
         wrongKey,
         INSTALLATION_AUTH_ALGORITHM,
         3_000
@@ -111,21 +110,21 @@ test('valid registration is bounded to P-256 and is idempotent by public key', (
   );
 });
 
-test('valid signed challenge issues an installation-scoped short-lived token', () => {
+test('valid signed challenge issues an installation-scoped short-lived token', async () => {
   const service = new InstallationAuthService(
     new FileInstallationRegistry(null)
   );
   const key = identity();
-  const registration = service.register(
+  const registration = await service.register(
     key.publicKeyBase64,
     INSTALLATION_AUTH_ALGORITHM,
     1_000
   );
-  const challenge = service.issueChallenge(
+  const challenge = await service.issueChallenge(
     registration.record.id,
     1_100
   );
-  const session = service.verifyChallenge(
+  const session = await service.verifyChallenge(
     registration.record.id,
     challenge.challengeId,
     sign(key.privateKey, challenge.payload),
@@ -135,36 +134,35 @@ test('valid signed challenge issues an installation-scoped short-lived token', (
   assert.equal(session.tokenType, 'Bearer');
   assert.ok(session.accessToken.length >= 32);
   assert.equal(
-    service.validateAccessToken(session.accessToken, 1_300).id,
+    (await service.validateAccessToken(session.accessToken, 1_300)).id,
     registration.record.id
   );
 });
 
-test('challenge proof is one-time and replay is rejected', () => {
+test('challenge proof is one-time and replay is rejected', async () => {
   const service = new InstallationAuthService(
     new FileInstallationRegistry(null)
   );
   const key = identity();
-  const registration = service.register(
+  const registration = await service.register(
     key.publicKeyBase64,
     INSTALLATION_AUTH_ALGORITHM,
     1_000
   );
-  const challenge = service.issueChallenge(
+  const challenge = await service.issueChallenge(
     registration.record.id,
     1_100
   );
   const signature = sign(key.privateKey, challenge.payload);
 
-  service.verifyChallenge(
+  await service.verifyChallenge(
     registration.record.id,
     challenge.challengeId,
     signature,
     1_200
   );
-  expectAuthError(
-    () =>
-      service.verifyChallenge(
+  await expectAuthError(
+    async () => await service.verifyChallenge(
         registration.record.id,
         challenge.challengeId,
         signature,
@@ -174,25 +172,24 @@ test('challenge proof is one-time and replay is rejected', () => {
   );
 });
 
-test('expired challenge is rejected and consumed', () => {
+test('expired challenge is rejected and consumed', async () => {
   const service = new InstallationAuthService(
     new FileInstallationRegistry(null),
     { challengeTtlMs: 100 }
   );
   const key = identity();
-  const registration = service.register(
+  const registration = await service.register(
     key.publicKeyBase64,
     INSTALLATION_AUTH_ALGORITHM,
     1_000
   );
-  const challenge = service.issueChallenge(
+  const challenge = await service.issueChallenge(
     registration.record.id,
     1_000
   );
 
-  expectAuthError(
-    () =>
-      service.verifyChallenge(
+  await expectAuthError(
+    async () => await service.verifyChallenge(
         registration.record.id,
         challenge.challengeId,
         sign(key.privateKey, challenge.payload),
@@ -200,9 +197,8 @@ test('expired challenge is rejected and consumed', () => {
       ),
     'CHALLENGE_EXPIRED'
   );
-  expectAuthError(
-    () =>
-      service.verifyChallenge(
+  await expectAuthError(
+    async () => await service.verifyChallenge(
         registration.record.id,
         challenge.challengeId,
         sign(key.privateKey, challenge.payload),
@@ -212,27 +208,26 @@ test('expired challenge is rejected and consumed', () => {
   );
 });
 
-test('invalid signature and a signature from the wrong installation are rejected', () => {
+test('invalid signature and a signature from the wrong installation are rejected', async () => {
   const service = new InstallationAuthService(
     new FileInstallationRegistry(null)
   );
   const firstKey = identity();
   const secondKey = identity();
-  const first = service.register(
+  const first = await service.register(
     firstKey.publicKeyBase64,
     INSTALLATION_AUTH_ALGORITHM,
     1_000
   );
-  service.register(
+  await service.register(
     secondKey.publicKeyBase64,
     INSTALLATION_AUTH_ALGORITHM,
     1_000
   );
 
-  const invalid = service.issueChallenge(first.record.id, 1_100);
-  expectAuthError(
-    () =>
-      service.verifyChallenge(
+  const invalid = await service.issueChallenge(first.record.id, 1_100);
+  await expectAuthError(
+    async () => await service.verifyChallenge(
         first.record.id,
         invalid.challengeId,
         sign(firstKey.privateKey, invalid.payload + '-tampered'),
@@ -241,13 +236,12 @@ test('invalid signature and a signature from the wrong installation are rejected
     'INVALID_SIGNATURE'
   );
 
-  const wrongInstallation = service.issueChallenge(
+  const wrongInstallation = await service.issueChallenge(
     first.record.id,
     1_300
   );
-  expectAuthError(
-    () =>
-      service.verifyChallenge(
+  await expectAuthError(
+    async () => await service.verifyChallenge(
         first.record.id,
         wrongInstallation.challengeId,
         sign(secondKey.privateKey, wrongInstallation.payload),
@@ -257,84 +251,84 @@ test('invalid signature and a signature from the wrong installation are rejected
   );
 });
 
-test('browser P-256 raw signature encoding is normalized safely', () => {
+test('browser P-256 raw signature encoding is normalized safely', async () => {
   const service = new InstallationAuthService(
     new FileInstallationRegistry(null)
   );
   const key = identity();
-  const registration = service.register(
+  const registration = await service.register(
     key.publicKeyBase64,
     INSTALLATION_AUTH_ALGORITHM,
     1_000
   );
-  const challenge = service.issueChallenge(
+  const challenge = await service.issueChallenge(
     registration.record.id,
     1_100
   );
-  const session = service.verifyChallenge(
+  const session = await service.verifyChallenge(
     registration.record.id,
     challenge.challengeId,
     sign(key.privateKey, challenge.payload, 'ieee-p1363'),
     1_200
   );
   assert.equal(
-    service.validateAccessToken(session.accessToken, 1_300).id,
+    (await service.validateAccessToken(session.accessToken, 1_300)).id,
     registration.record.id
   );
 });
 
-test('expired access token and revoked installation are rejected', () => {
+test('expired access token and revoked installation are rejected', async () => {
   const registry = new FileInstallationRegistry(null);
   const service = new InstallationAuthService(registry, {
     accessTokenTtlMs: 100,
   });
   const key = identity();
-  const registration = service.register(
+  const registration = await service.register(
     key.publicKeyBase64,
     INSTALLATION_AUTH_ALGORITHM,
     1_000
   );
 
-  const firstChallenge = service.issueChallenge(
+  const firstChallenge = await service.issueChallenge(
     registration.record.id,
     1_000
   );
-  const firstSession = service.verifyChallenge(
+  const firstSession = await service.verifyChallenge(
     registration.record.id,
     firstChallenge.challengeId,
     sign(key.privateKey, firstChallenge.payload),
     1_001
   );
-  expectAuthError(
-    () => service.validateAccessToken(firstSession.accessToken, 1_101),
+  await expectAuthError(
+    async () => await service.validateAccessToken(firstSession.accessToken, 1_101),
     'ACCESS_TOKEN_EXPIRED'
   );
 
-  const secondChallenge = service.issueChallenge(
+  const secondChallenge = await service.issueChallenge(
     registration.record.id,
     1_200
   );
-  const secondSession = service.verifyChallenge(
+  const secondSession = await service.verifyChallenge(
     registration.record.id,
     secondChallenge.challengeId,
     sign(key.privateKey, secondChallenge.payload),
     1_201
   );
   assert.equal(
-    service.revokeInstallation(registration.record.id, 'test', 1_202),
+    await service.revokeInstallation(registration.record.id, 'test', 1_202),
     true
   );
-  expectAuthError(
-    () => service.validateAccessToken(secondSession.accessToken, 1_203),
+  await expectAuthError(
+    async () => await service.validateAccessToken(secondSession.accessToken, 1_203),
     'INVALID_ACCESS_TOKEN'
   );
-  expectAuthError(
-    () => service.issueChallenge(registration.record.id, 1_204),
+  await expectAuthError(
+    async () => await service.issueChallenge(registration.record.id, 1_204),
     'INSTALLATION_REVOKED'
   );
 });
 
-test('rate-limit primitive enforces per-install, IP, and registration-style quotas', () => {
+test('rate-limit primitive enforces per-install, IP, and registration-style quotas', async () => {
   const perInstall = new Map();
   assert.equal(
     consumeRateLimit(perInstall, 'install-a', 1_000, 60_000, 2).allowed,
@@ -381,7 +375,7 @@ test('rate-limit primitive enforces per-install, IP, and registration-style quot
   );
 });
 
-test('legacy compatibility is unusable without an explicit valid sunset', () => {
+test('legacy compatibility is unusable without an explicit valid sunset', async () => {
   const withoutSunset = parseServerConfig({
     SPENDWISE_API_TOKEN: 'legacy-token',
   });
@@ -396,7 +390,7 @@ test('legacy compatibility is unusable without an explicit valid sunset', () => 
   assert.ok((withSunset.legacyCompatibilityUntilMs ?? 0) > 0);
 });
 
-test('production quota and request-size defaults are bounded', () => {
+test('production quota and request-size defaults are bounded', async () => {
   const config = parseServerConfig({});
   assert.equal(config.registrationHourlyLimit, 5);
   assert.equal(config.registrationDailyLimit, 20);
@@ -548,7 +542,7 @@ test('HTTP boundary rejects unauthenticated AI, malformed JSON, oversized JSON/i
   }
 });
 
-test('client no longer embeds or sends the legacy static APK credential', () => {
+test('client no longer embeds or sends the legacy static APK credential', async () => {
   const api = readFileSync('src/utils/api.ts', 'utf8');
   const viteEnv = readFileSync('src/vite-env.d.ts', 'utf8');
   const client = readFileSync(
@@ -566,7 +560,7 @@ test('client no longer embeds or sends the legacy static APK credential', () => 
   );
 });
 
-test('Android identity is Keystore-backed and production cleartext is disabled', () => {
+test('Android identity is Keystore-backed and production cleartext is disabled', async () => {
   const native = readFileSync(
     'android/app/src/main/java/com/spendwise/app/SpendWiseSecurityPlugin.java',
     'utf8'
@@ -593,7 +587,7 @@ test('Android identity is Keystore-backed and production cleartext is disabled',
   assert.match(network, /cleartextTrafficPermitted="false"/);
 });
 
-test('security logging and errors cannot accept financial bodies or authorization secrets', () => {
+test('security logging and errors cannot accept financial bodies or authorization secrets', async () => {
   const securityLogging = readFileSync(
     'server/logging/securityLogging.ts',
     'utf8'
@@ -618,7 +612,7 @@ test('security logging and errors cannot accept financial bodies or authorizatio
   assert.doesNotMatch(errors, /console\.(?:warn|error)\([^\n]*error\b/);
 });
 
-test('CI deployed smoke uses registration, challenge, proof and bearer access without static APK token', () => {
+test('CI deployed smoke uses registration, challenge, proof and bearer access without static APK token', async () => {
   const workflow = readFileSync(
     '.github/workflows/android-build.yml',
     'utf8'
@@ -638,7 +632,7 @@ test('CI deployed smoke uses registration, challenge, proof and bearer access wi
   assert.doesNotMatch(smoke, /console\.log\([^\n]*(?:accessToken|privateKey)/i);
 });
 
-test('WP31 stays in scope and preserves approved release metadata', () => {
+test('WP31 stays in scope and preserves approved release metadata', async () => {
   const packageJson = JSON.parse(
     readFileSync('package.json', 'utf8')
   ) as { version: string };

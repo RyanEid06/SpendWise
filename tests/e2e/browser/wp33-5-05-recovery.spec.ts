@@ -1,10 +1,8 @@
 import { expect, test } from '@playwright/test';
-import { addExpense, startFresh } from './helpers';
+import { addExpense, mockReadyAuthenticatedBackend, startFresh } from './helpers';
 
 test.beforeEach(async ({ page }) => {
-  await page.route('**/api/auth/register', route => route.fulfill({ json: { installationId: 'wp05-fixture' } }));
-  await page.route('**/api/auth/challenge', route => route.fulfill({ json: { challengeId: 'fixture-challenge', payload: 'wp05-public-challenge', expiresAt: Date.now() + 60000 } }));
-  await page.route('**/api/auth/verify', route => route.fulfill({ json: { accessToken: 'wp05-synthetic-token', expiresAt: Date.now() + 60000, tokenType: 'Bearer' } }));
+  await mockReadyAuthenticatedBackend(page);
 });
 
 test('unfinished Add restores all meaningful fields after restart and clears after Save', async ({ page }) => {

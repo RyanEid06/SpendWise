@@ -16,6 +16,9 @@ export interface ServerConfig {
   authChallengeTtlMs: number;
   accessTokenTtlMs: number;
   installationStorePath: string | null;
+  authStore: 'file' | 'postgres';
+  authDatabaseUrl: string | null;
+  backendHostProfile: 'render_free' | 'always_on';
   deniedInstallationIds: Set<string>;
   legacyApiToken: string | null;
   legacyCompatibilityUntil: string | null;
@@ -56,6 +59,13 @@ function csvSet(raw: string | undefined): Set<string> {
 
 export function parseServerConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
   const production = env.NODE_ENV === 'production';
+  const backendHostProfile = env.BACKEND_HOST_PROFILE || (env.RENDER === 'true' ? 'render_free' : 'always_on');
+  if (backendHostProfile !== 'render_free' && backendHostProfile !== 'always_on') throw new Error('Invalid backend host profile.');
+  const authStore = env.SPENDWISE_AUTH_STORE || (env.RENDER === 'true' || backendHostProfile === 'render_free' ? 'postgres' : 'file');
+  if (authStore !== 'file' && authStore !== 'postgres') throw new Error('Invalid auth store.');
+  if ((env.RENDER === 'true' || backendHostProfile === 'render_free') && authStore !== 'postgres') throw new Error('Render requires durable auth storage.');
+  const authDatabaseUrl = env.SPENDWISE_AUTH_DATABASE_URL?.trim() || null;
+  if (authStore === 'postgres' && !authDatabaseUrl) throw new Error('Missing auth database configuration.');
   const port = Number(env.PORT || 3000);
   const geminiModel = (env.GEMINI_MODEL || 'gemini-3.8-flash').trim();
   const geminiFallbackModels = (
@@ -130,6 +140,9 @@ export function parseServerConfig(env: NodeJS.ProcessEnv = process.env): ServerC
     authChallengeTtlMs: 120_000,
     accessTokenTtlMs: 10 * 60_000,
     installationStorePath,
+    authStore,
+    authDatabaseUrl,
+    backendHostProfile,
     deniedInstallationIds: csvSet(env.SPENDWISE_DENIED_INSTALLATION_IDS),
     legacyApiToken,
     legacyCompatibilityUntil:

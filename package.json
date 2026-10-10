@@ -30,6 +30,7 @@
     "test:wp29": "tsx --test tests/wp29-encrypted-at-rest.test.ts",
     "test:wp30": "tsx --test tests/wp30-secure-backup-v3.test.ts",
     "test:wp31": "tsx --test tests/wp31-backend-security.test.ts",
+    "test:wp35": "tsx --test tests/wp35-*.test.ts tests/wp31-backend-security.test.ts",
     "test:wp32:components": "playwright test --config=playwright.component.config.ts",
     "test:wp32:browser": "playwright test --config=playwright.config.ts tests/e2e/browser",
     "test:wp32:visual": "playwright test --config=playwright.config.ts tests/e2e/visual",
@@ -45,6 +46,7 @@
     "benchmark:wp33:native": "bash scripts/run-wp33-native-benchmark.sh"
   },
   "dependencies": {
+    "@capacitor-community/sqlite": "^8.1.1",
     "@capacitor/app": "^8.1.1",
     "@capacitor/camera": "^8.2.4",
     "@capacitor/filesystem": "^8.1.3",
@@ -52,29 +54,30 @@
     "@google/genai": "^2.24.0",
     "clsx": "^2.1.1",
     "express": "^4.22.3",
+    "hash-wasm": "^4.12.0",
+    "jszip": "^3.10.2",
     "lucide-react": "^0.577.0",
+    "pg": "^8.23.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "tailwind-merge": "^3.7.0",
-    "tsx": "^4.23.15",
-    "@capacitor-community/sqlite": "^8.1.1",
-    "jszip": "^3.10.2",
-    "hash-wasm": "^4.12.0"
+    "tsx": "^4.23.15"
   },
   "devDependencies": {
     "@capacitor/android": "^8.5.2",
     "@capacitor/cli": "^8.5.2",
     "@capacitor/core": "^8.5.2",
+    "@playwright/test": "1.63.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/express": "^5.0.6",
     "@types/node": "^22.20.4",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^4.7.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
-    "vite": "^6.4.3",
-    "@playwright/test": "1.63.0"
+    "vite": "^6.4.3"
   },
   "engines": {
     "node": ">=22 <23"

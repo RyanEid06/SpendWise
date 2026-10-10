@@ -34,7 +34,7 @@ export function isLegacyAuthenticated(req: Request): boolean {
   return (req as AuthenticatedRequest).spendwiseAuth?.legacy === true;
 }
 
-export function requireInstallationAccess(
+export async function requireInstallationAccess(
   req: Request,
   res: Response,
   next: NextFunction
@@ -42,7 +42,7 @@ export function requireInstallationAccess(
   const bearer = bearerToken(req);
   if (bearer) {
     try {
-      const installation = installationAuthService.validateAccessToken(bearer);
+      const installation = await installationAuthService.validateAccessToken(bearer);
       (req as AuthenticatedRequest).spendwiseAuth = {
         installationId: installation.id,
         legacy: false,
@@ -53,7 +53,7 @@ export function requireInstallationAccess(
         error instanceof AuthServiceError
           ? error.code
           : 'INVALID_ACCESS_TOKEN';
-      return res.status(401).json({
+      return res.status(error instanceof AuthServiceError ? error.httpStatus : 503).json({
         error: code,
         message: 'Authentication required.',
       });

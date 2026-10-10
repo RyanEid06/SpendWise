@@ -15,7 +15,7 @@ import {
 export const trendsRouter = Router();
 
 trendsRouter.post('/explain-trends', async (req, res) => {
-  const requestId = aiRequestId();
+  const requestId = aiRequestId(res.locals.requestId);
   try {
     const body = asObject(req.body);
     const stats = sanitizeStatistics(body?.stats);

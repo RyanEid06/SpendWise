@@ -1,0 +1,38 @@
+name: WP35 Auth Recovery
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  durable-auth:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: wp35_test
+          POSTGRES_PASSWORD: isolated_ci_only
+          POSTGRES_DB: wp35_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wp35_test -d wp35_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      WP35_TEST_DATABASE_URL: postgresql://wp35_test:isolated_ci_only@127.0.0.1:5432/wp35_test
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test:wp35

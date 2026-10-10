@@ -17,7 +17,7 @@ import {
 export const analysisRouter = Router();
 
 analysisRouter.post('/analyze', async (req, res) => {
-  const requestId = aiRequestId();
+  const requestId = aiRequestId(res.locals.requestId);
   try {
     const body = asObject(req.body);
     const summary = sanitizeHistoricalSummary(body?.summary);
