@@ -1,13 +1,13 @@
 # WP35.2 review checkpoint
 
-Branch: `wp35-02/gemini-runtime`. Implementation commit: recorded below after verification.
+Branch: `wp35-02/gemini-runtime`. Initial implementation commit: `a543cac3bf40c2ab940e98f3358c6972b2efbb43`; review-fix commit recorded below after verification.
 Base: live-verified main `7d00b2dafadf829f63d2b6074b08d08c00ca352d`; WP34 PR41 merged at `cfc9c954fe51242fbc22f62da9f5b3bfaae8ce49`.
 WP35.1 inspected read-only at `c19a960ff49a18ebfc2f2eab1ccba45c16476402`, open draft PR45. No WP35.1 merge/cherry-pick; no WP35.3 implementation.
-Authority: entire approved `docs/SpendWise_WP35_Implementation_Plan.md` plus the supplied WP35.2 objective.
+Authority: entire approved `docs/SpendWise_WP35_Implementation_Plan.md` at immutable WP35.1 ref `c19a960ff49a18ebfc2f2eab1ccba45c16476402`, plus the supplied WP35.2 objective. The plan is absent from the main-based checkout; it was read using `git show`, without importing WP35.1 changes.
 
 ## Decisions and runtime contract
 
-- Default backend AI operation: **90,000ms**, beginning at AI HTTP ingress, including upload/body parsing and validation. `performance.now()` provides one shared monotonic deadline; provider attempts inherit the remaining time. A watchdog aborts the provider, and expired/late output is rejected before acceptance.
+- Default backend AI operation: **90,000ms**, beginning at AI HTTP ingress, including upload/body parsing and validation. `performance.now()` provides one shared monotonic deadline; provider attempts inherit the remaining time. A watchdog aborts the provider, returns a stable 504 deadline error and closes incomplete uploads after flushing the response. Expired/late output is rejected before acceptance.
 - Default per-provider attempt: **50,000ms**, capped by remaining operation time. Default **two provider attempts globally**, including fallbacks, instead of two attempts per model. A timeout can consume only one further eligible attempt. With the unchanged three-model list and two-attempt default, only the first two models are reachable. Selecting a different verified fallback requires explicit backend configuration; nothing silently routes to Lite.
 - Client AI processing: **115,000ms** across both dispatches if an explicit stale-token rejection permits one refresh. The timer includes response-body download. Client overall bound: **270,000ms**, allowing WP35.1 readiness 90s + auth 30s + one refresh 30s + total dispatch 115s + 5s margin. These are bounded tuning values, not an SLA.
 - Retry only eligible 408/429/5xx, provider timeout and classified network faults. Exponential delay starts at 1s, adds up to 50% jitter, and is bounded. Honor the larger of backoff and HTTP `Retry-After` / Google structured `RetryInfo`; never shorten provider guidance to fit the deadline. Require at least 5s remaining after the delay. No retries for daily-quota evidence, invalid credentials/requests/schema, content blocks or cancellation.
@@ -67,7 +67,7 @@ Official sources checked live:
 ## Verification and integration
 
 - RED/GREEN evidence in local ignored `artifacts/wp35-*.log`: global attempt cap; shared/ingress deadline; hung provider; 503/429; provider guidance; network drop; invalid schema/auth/policy; cancellation and late results; duplicate gate; body-download timeout; explicit stale-token refresh; unsafe thinking combinations; privacy-safe diagnostics. Existing security logging assertions were retained unchanged. Existing tests were updated only where the approved runtime defaults/retry contract intentionally changed.
-- Local focused runtime/security/encryption/backup suite: **130/130 passed** (`npm run test:wp35:runtime`). TypeScript and production Vite build passed; Vite's existing large-chunk warning remains.
+- Local focused runtime/security/encryption/backup suite: **132/132 passed** (`npm run test:wp35:runtime`). TypeScript and production Vite build passed; Vite's existing large-chunk warning remains.
 - Browser/visual/accessibility: initially blocked by absent pinned Chromium, not product behavior. Dependency installation and remaining verification are in progress; final status will be recorded before checkpoint handoff.
 - CI: new `WP35 Gemini Runtime` workflow runs the focused suite, TypeScript/build and existing WP32 browser/visual/accessibility suites, without Gemini credentials/live generation. CI result will be recorded below.
 - No production backend smoke, deployment, real idle-to-wake Render test, signed APK, Maestro run or physical Android acceptance is claimed. Full Maestro/device/combined integration QA remains deferred until all WP35 branches are ready.
@@ -80,4 +80,8 @@ Reproduction of the bounded live probe (only with explicit fresh authorization; 
 
 Execution decisions: reuse the clean checkout and requested feature branch; preserve model defaults when evidence is insufficient; cap all attempts globally; add ingress accounting to prevent budget reset after parsing; keep token-usage counts in a dedicated numeric-only logger so existing failure-log security assertions remain intact. If these conservative routing choices are wrong, the cost is missed optimization/continued provider outages, not unverified financial output.
 
-Final independent review, CI receipts and changed-file manifest: pending checkpoint verification.
+Independent immutable-range review (`7d00b2d..a543cac`): no Critical findings; one Important ingress finding. The provider signal alone did not interrupt `express.json` receiving a stalled upload. A real partial-HTTP-upload regression failed against that behavior, then passed after the watchdog returned the stable deadline error and closed incomplete ingress; the API error handler rejects late writes. Minor daily-quota messaging was also repaired: the client retains `quota_exhausted` and advises waiting for quota reset without inventing a reset time. Synthetic reviewer verification made no live provider calls.
+
+An existing browser reset test was updated from waiting for a completed response to asserting the now-required transport abort, retaining its no-late-suggestion and manual-draft assertions. The hung-provider unit test received scheduling margin for concurrent suites while retaining its attempt cap and abort assertions. No security or financial assertions were removed.
+
+CI receipts, final review-fix commit and changed-file manifest: pending checkpoint verification.

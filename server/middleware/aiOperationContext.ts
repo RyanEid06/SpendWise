@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { boundedLog } from '../observability/safeLogging';
 import { serverConfig } from '../config';
 import { createAiFailure } from '../geminiReliability';
+import { sendAiFailure } from './errors';
 
 // Compatible with WP35.1: reuse its res.locals.requestId when present.
 export const aiOperationContext: RequestHandler = (req, res, next) => {
@@ -12,7 +13,21 @@ export const aiOperationContext: RequestHandler = (req, res, next) => {
   const controller = new AbortController(); res.locals.aiSignal = controller.signal;
   const started = performance.now();
   res.locals.aiDeadline = started + serverConfig.geminiOperationBudgetMs;
-  const timer = setTimeout(() => controller.abort(createAiFailure('AI_DEADLINE_EXCEEDED')), serverConfig.geminiOperationBudgetMs);
+  const timer = setTimeout(() => {
+    const failure = createAiFailure('AI_DEADLINE_EXCEEDED');
+    controller.abort(failure);
+    boundedLog('API', { route: req.originalUrl, requestId, phase: 'operation_deadline', outcome: 'aborted', code: failure.code, elapsedMs: performance.now() - started });
+    // express.json does not consume the provider's AbortSignal. Stop receiving
+    // a stalled upload and flush the stable error before closing its connection.
+    req.pause();
+    res.once('finish', () => { if (!req.complete) req.destroy(); });
+    if (!res.headersSent && !res.writableEnded && !res.destroyed) {
+      res.setHeader('Connection', 'close');
+      sendAiFailure(res, failure);
+    } else if (!res.writableEnded) {
+      res.destroy();
+    }
+  }, serverConfig.geminiOperationBudgetMs);
   const close = () => {
     if (!res.writableFinished) {
       controller.abort(createAiFailure('AI_CANCELLED'));

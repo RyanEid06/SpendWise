@@ -49,7 +49,7 @@ test('time spent receiving and validating the request reduces the provider opera
 
 test('hung provider is interrupted and can use one alternative within the deadline', async () => {
   let calls = 0; let signal: AbortSignal | undefined;
-  const result = await executeGeminiJsonWithModelFallback({ ...base, request: async (_m, _t, _a, s) => {
+  const result = await executeGeminiJsonWithModelFallback({ ...base, operationBudgetMs: 1000, request: async (_m, _t, _a, s) => {
     if (++calls === 1) { signal = s; return new Promise(() => {}); } return ok;
   } });
   assert.equal(result, true); assert.equal(calls, 2); assert.equal(signal?.aborted, true);

@@ -3,6 +3,14 @@ import assert from 'node:assert/strict';
 import { AuthenticatedApiClient } from '../src/security/AuthenticatedApiClient';
 import { AiRequestGate } from '../src/app/hooks/aiRequestGate';
 import { AI_PROCESSING_TIMEOUT_MS, AI_END_TO_END_TIMEOUT_MS, withOperationDeadline } from '../src/security/aiOperationBudget';
+import { classifyApiFailure, getAiErrorMessage, SpendWiseApiError } from '../src/utils/apiErrors';
+
+test('known daily quota exhaustion is distinct from a brief transient rate limit', () => {
+  assert.equal(classifyApiFailure(429, 'AI_QUOTA_EXHAUSTED'), 'quota_exhausted');
+  assert.equal(classifyApiFailure(429, 'AI_RATE_LIMITED'), 'rate_limited');
+  assert.match(getAiErrorMessage('en', new SpendWiseApiError('quota_exhausted')), /daily/i);
+  assert.doesNotMatch(getAiErrorMessage('en', new SpendWiseApiError('quota_exhausted')), /briefly/);
+});
 
 function fixture(t: any, provider: (init: RequestInit, attempt: number) => Promise<Response>) {
   Object.defineProperty(globalThis, 'window', { configurable: true, value: { setTimeout, clearTimeout } });

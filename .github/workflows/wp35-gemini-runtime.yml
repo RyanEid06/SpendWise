@@ -4,6 +4,14 @@ on:
   workflow_dispatch:
   push:
     branches: ['wp35-02/gemini-runtime']
+    paths:
+      - 'server/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'scripts/wp35*'
+      - 'package*.json'
+      - '.env.example'
+      - '.github/workflows/wp35-gemini-runtime.yml'
   pull_request:
     branches: [main]
     paths:

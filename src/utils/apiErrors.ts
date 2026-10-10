@@ -7,6 +7,7 @@ export type AiApiErrorKind =
   | 'timeout'
   | 'temporary_unavailable'
   | 'rate_limited'
+  | 'quota_exhausted'
   | 'not_configured'
   | 'invalid_response'
   | 'unauthorized'
@@ -42,6 +43,7 @@ export function classifyApiFailure(
   if (code === 'AI_TIMEOUT' || code === 'AI_DEADLINE_EXCEEDED') return 'timeout';
   if (code === 'AI_CANCELLED') return 'cancelled';
   if (code === 'AI_NETWORK_ERROR') return 'network';
+  if (code === 'AI_QUOTA_EXHAUSTED') return 'quota_exhausted';
   if (code === 'AI_RATE_LIMITED' || status === 429) return 'rate_limited';
   if (code === 'AI_NOT_CONFIGURED') return 'not_configured';
   if (code === 'AI_TEMPORARILY_UNAVAILABLE') return 'temporary_unavailable';
@@ -102,6 +104,7 @@ const ERROR_TRANSLATION_KEYS: Record<AiApiErrorKind, TranslationKey> = {
   timeout: 'aiErrorTimeout',
   temporary_unavailable: 'aiErrorUnavailable',
   rate_limited: 'aiErrorRateLimited',
+  quota_exhausted: 'aiErrorQuotaExhausted',
   not_configured: 'aiErrorNotConfigured',
   invalid_response: 'aiErrorInvalidResponse',
   unauthorized: 'aiErrorGeneric',

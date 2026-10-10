@@ -20,7 +20,7 @@ export function boundedLog(tag: 'API' | 'AI' | 'Security', details: { [key: stri
     if (typeof details.scopeHash === 'string' && /^[a-f0-9]{16}$/.test(details.scopeHash)) out.scopeHash = details.scopeHash;
     if (typeof details.requestId === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(details.requestId)) out.requestId = details.requestId;
     if (typeof details.model === 'string' && /^gemini-\d(?:\.\d)?-(?:flash|flash-lite|pro)(?:-[a-z0-9.-]{1,40})?$/.test(details.model)) out.model = details.model;
-    if (['readiness', 'register', 'challenge', 'verify', 'ai_dispatch', 'client_disconnect'].includes(String(details.phase))) out.phase = details.phase;
+    if (['readiness', 'register', 'challenge', 'verify', 'ai_dispatch', 'client_disconnect', 'operation_deadline'].includes(String(details.phase))) out.phase = details.phase;
     if (['start', 'success', 'failure', 'aborted'].includes(String(details.outcome))) out.outcome = details.outcome;
     for (const key of ['attemptMs', 'remainingMs', 'retryDelayMs']) {
       const value = details[key]; if (typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 600_000) out[key] = Math.round(value);

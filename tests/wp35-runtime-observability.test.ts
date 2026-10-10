@@ -7,6 +7,39 @@ import { OperationalAggregates } from '../server/observability/aggregates';
 import { aiOperationContext } from '../server/middleware/aiOperationContext';
 import { GeminiService } from '../server/services/GeminiService';
 import { GoogleGenAI } from '@google/genai';
+import express from 'express';
+import { request } from 'node:http';
+import type { AddressInfo } from 'node:net';
+import { serverConfig } from '../server/config';
+import { boundedAiJsonBody } from '../server/middleware/requestLimits';
+import { apiErrorHandler } from '../server/middleware/errors';
+
+test('ingress deadline returns a stable failure and closes a stalled partial upload before dispatch', async t => {
+  const oldBudget = serverConfig.geminiOperationBudgetMs;
+  serverConfig.geminiOperationBudgetMs = 25;
+  let dispatches = 0; let incoming: any;
+  const app = express();
+  app.use((req, _res, next) => { incoming = req; next(); });
+  app.use(aiOperationContext, boundedAiJsonBody);
+  app.post('/api/gemini/analyze', (_req, res) => { dispatches++; res.json({ ok: true }); });
+  app.use(apiErrorHandler);
+  const server = app.listen(0, '127.0.0.1');
+  t.after(() => { serverConfig.geminiOperationBudgetMs = oldBudget; server.closeAllConnections(); server.close(); });
+  await new Promise<void>(resolve => server.once('listening', resolve));
+  const result = await new Promise<{ status: number | undefined; body: any }>((resolve, reject) => {
+    const req = request({ host: '127.0.0.1', port: (server.address() as AddressInfo).port, path: '/api/gemini/analyze', method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': '1000000' } }, res => {
+      let body = ''; res.on('data', chunk => { body += chunk; });
+      res.on('end', () => resolve({ status: res.statusCode, body: JSON.parse(body) }));
+    });
+    t.after(() => req.destroy()); req.on('error', reject);
+    req.setTimeout(1000, () => req.destroy(new Error('Stalled ingress exceeded test bound')));
+    req.write('{"synthetic":'); // Deliberately leave the authenticated-route parser waiting for EOF.
+  });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(result.status, 504); assert.equal(result.body.error, 'AI_DEADLINE_EXCEEDED');
+  assert.equal(incoming.destroyed, true); assert.equal(dispatches, 0);
+});
 
 test('task routes require verified models and explicit quality approval for all four features', () => {
   const routes = Object.fromEntries(['smart-capture', 'scan-receipt', 'analyze', 'explain-trends'].map(t => [t, { models: ['gemini-3.8-flash'], thinkingLevel: 'low' }]));
