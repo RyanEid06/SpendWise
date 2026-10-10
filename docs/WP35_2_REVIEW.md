@@ -1,6 +1,6 @@
 # WP35.2 review checkpoint
 
-Branch: `wp35-02/gemini-runtime`. Initial implementation commit: `a543cac3bf40c2ab940e98f3358c6972b2efbb43`; review-fix commit recorded below after verification.
+Branch: `wp35-02/gemini-runtime`. Initial implementation commit: `a543cac3bf40c2ab940e98f3358c6972b2efbb43`; verified review-fix/code commit: `e339eae65d9e15aa00536186328e39d937becdd7`. Later documentation-only commits do not change the tested runtime.
 Base: live-verified main `7d00b2dafadf829f63d2b6074b08d08c00ca352d`; WP34 PR41 merged at `cfc9c954fe51242fbc22f62da9f5b3bfaae8ce49`.
 WP35.1 inspected read-only at `c19a960ff49a18ebfc2f2eab1ccba45c16476402`, open draft PR45. No WP35.1 merge/cherry-pick; no WP35.3 implementation.
 Authority: entire approved `docs/SpendWise_WP35_Implementation_Plan.md` at immutable WP35.1 ref `c19a960ff49a18ebfc2f2eab1ccba45c16476402`, plus the supplied WP35.2 objective. The plan is absent from the main-based checkout; it was read using `git show`, without importing WP35.1 changes.
@@ -68,8 +68,8 @@ Official sources checked live:
 
 - RED/GREEN evidence in local ignored `artifacts/wp35-*.log`: global attempt cap; shared/ingress deadline; hung provider; 503/429; provider guidance; network drop; invalid schema/auth/policy; cancellation and late results; duplicate gate; body-download timeout; explicit stale-token refresh; unsafe thinking combinations; privacy-safe diagnostics. Existing security logging assertions were retained unchanged. Existing tests were updated only where the approved runtime defaults/retry contract intentionally changed.
 - Local focused runtime/security/encryption/backup suite: **132/132 passed** (`npm run test:wp35:runtime`). TypeScript and production Vite build passed; Vite's existing large-chunk warning remains.
-- Browser/visual/accessibility: initially blocked by absent pinned Chromium, not product behavior. Dependency installation and remaining verification are in progress; final status will be recorded before checkpoint handoff.
-- CI: new `WP35 Gemini Runtime` workflow runs the focused suite, TypeScript/build and existing WP32 browser/visual/accessibility suites, without Gemini credentials/live generation. CI result will be recorded below.
+- Browser/visual/accessibility: pinned Chromium installed; **39 component, 37 browser, 3 accessibility and 8 visual tests passed locally**. Existing native-runner unit/failure-injection checks also passed; they do not run Android. The initial missing-browser dependency and outdated response-wait assumption were resolved as documented below.
+- CI: [WP35 Gemini Runtime run 38058998151](https://github.com/RyanEid06/SpendWise/actions/runs/38058998151), exact code commit `e339eae65d9e15aa00536186328e39d937becdd7`, was in progress at this update. It runs the focused suite, TypeScript/build and existing WP32 browser/visual/accessibility suites, without Gemini credentials/live generation. Final receipt pending.
 - No production backend smoke, deployment, real idle-to-wake Render test, signed APK, Maestro run or physical Android acceptance is claimed. Full Maestro/device/combined integration QA remains deferred until all WP35 branches are ready.
 
 WP35.1 integration must retain its single-flight readiness/authentication, exact unknown-installation recovery and durable revocation handling. Resolve `server/config.ts` by combining this runtime configuration with WP35.1 auth-store enforcement, retaining one host-profile field. Resolve `AuthenticatedApiClient.ts` by preserving WP35.1 cancellation-aware transport and entire auth transaction: apply this branch's shared processing budget across both sends and body read; reuse the operation's incoming correlation ID instead of generating another ID. Its existing provider-correlation service changes are subsumed by this branch's attempt telemetry. The new AI context reuses `res.locals.requestId`, so do not add another correlation generator. Combined integration tests must confirm one correlation ID across readiness/auth/dispatch/provider/disconnect.
@@ -84,4 +84,51 @@ Independent immutable-range review (`7d00b2d..a543cac`): no Critical findings; o
 
 An existing browser reset test was updated from waiting for a completed response to asserting the now-required transport abort, retaining its no-late-suggestion and manual-draft assertions. The hung-provider unit test received scheduling margin for concurrent suites while retaining its attempt cap and abort assertions. No security or financial assertions were removed.
 
-CI receipts, final review-fix commit and changed-file manifest: pending checkpoint verification.
+The only remaining checkpoint gate is the CI receipt. The feature branch is pushed; no PR was opened because its existing native workflows would exceed this bounded checkpoint. The dedicated branch workflow covers the requested runtime changes. Documentation-only receipt updates do not retrigger it.
+
+## Changed-file manifest
+
+The complete manifest below is relative to base `7d00b2d`:
+
+```text
+.env.example
+.github/workflows/wp35-gemini-runtime.yml
+docs/WP35_2_LIVE_RESULTS.json
+docs/WP35_2_REVIEW.md
+package.json
+scripts/wp35-gemini-live.ts
+scripts/wp35-synthetic-images.ps1
+server/app.ts
+server/config.ts
+server/geminiReliability.ts
+server/logging/aiLogging.ts
+server/logging/providerUsage.ts
+server/middleware/aiOperationContext.ts
+server/middleware/errors.ts
+server/observability/aggregates.ts
+server/observability/safeLogging.ts
+server/routes/analysis.ts
+server/routes/receiptScan.ts
+server/routes/smartCapture.ts
+server/routes/trends.ts
+server/services/GeminiService.ts
+server/taskRouting.ts
+server/validation/geminiSchema.ts
+src/app/hooks/useAiAnalysis.ts
+src/components/ReceiptScanCard.tsx
+src/components/SmartCaptureCard.tsx
+src/screens/StatisticsScreen.tsx
+src/security/AuthenticatedApiClient.ts
+src/security/aiOperationBudget.ts
+src/services/diagnostics/contract.ts
+src/utils/api.ts
+src/utils/apiErrors.ts
+src/utils/translations.ts
+tests/e2e/browser/wp33-5-04-continuity.spec.ts
+tests/reliability.test.ts
+tests/wp27-service-boundaries.test.ts
+tests/wp33-backend-integration.test.ts
+tests/wp35-client-runtime.test.ts
+tests/wp35-gemini-runtime.test.ts
+tests/wp35-runtime-observability.test.ts
+```
