@@ -56,7 +56,8 @@ export class AuthenticatedApiClient {
         if (this.options.onPhase) this.options.onPhase(event);
         else {
           if (this.now() - this.logWindow >= 60_000) { this.logWindow = this.now(); this.logCount = 0; }
-          if (this.logCount++ < 40) console.info('[AI connection]', event);
+          // Capacitor renders object arguments as [object Object] in logcat.
+          if (this.logCount++ < 40) console.info('[AI connection]', JSON.stringify(event));
         }
       } catch { /* Diagnostics cannot change authentication. */ }
     };

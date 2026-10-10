@@ -14,6 +14,9 @@ acceptance remains separately pending in MANUAL_ACCEPTANCE.md.
   An explicit device offline signal fails promptly into the existing local fallback;
   unknown connectivity retains bounded wake recovery. A later online user request
   can retry normally. This does not treat an online signal as proof of reachability.
+  Android emulator airplane mode can retain WebView `onLine=true`; the two Maestro
+  fallback waits allow the existing 90s readiness deadline plus 5s rendering slack.
+  They prove bounded eventual fallback and continuity, not fallback within 35s.
 - Authentication has a separate 30s whole-transaction bound, including key lookup,
   signing, HTTP bodies, backoff and recovery. Subrequests remain bounded to 15s.
   At most three challenge/proof transactions; idempotent registration at most three
@@ -47,6 +50,8 @@ acceptance remains separately pending in MANUAL_ACCEPTANCE.md.
   Shared-phase logs use the flight initiator's correlation ID; each dispatch has
   its caller's ID. AI dispatch means HTTP request handling, not provider success.
   Existing bounded server logging may suppress events during high traffic.
+  Client console metadata is serialized as JSON so Android logcat retains the
+  phase fields instead of replacing them with `[object Object]`.
 
 ## Provider evaluation (checked 2026-10-10)
 

@@ -41,6 +41,21 @@ function fixture(options: Record<string, unknown> = {}) {
 const flush = async () => { for (let i = 0; i < 200; i++) await Promise.resolve(); };
 const ai = '/api/gemini/analyze';
 
+test('default phase logs retain allowlisted structured fields in native console text', async (t) => {
+  const logs: unknown[][] = [];
+  t.mock.method(console, 'info', (...args: unknown[]) => { logs.push(args); });
+  const f = fixture({ onPhase: undefined });
+  await f.client.fetch(ai);
+  assert.ok(logs.length > 0);
+  for (const [label, payload] of logs) {
+    assert.equal(label, '[AI connection]');
+    assert.equal(typeof payload, 'string');
+    const event = JSON.parse(payload as string);
+    assert.deepEqual(Object.keys(event).sort(), ['attempt', 'elapsedMs', 'outcome', 'phase', 'requestId']);
+    assert.match(event.requestId, /^[\da-f-]{36}$/i);
+  }
+});
+
 test('explicit device offline status fails promptly without auth or AI and permits a later online retry', async () => {
   const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
   const connectivity = { onLine: false };

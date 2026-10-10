@@ -7,6 +7,8 @@ appId: com.spendwise.app
 - tapOn: "Analyze My Spending"
 - extendedWaitUntil:
     visible: "Local Statistical"
-    timeout: 35000
+    # WebView may retain onLine=true in emulator airplane mode. Unknown
+    # connectivity uses WP35.1's 90s readiness bound, plus 5s to render fallback.
+    timeout: 95000
 - assertVisible: ".*AI is unavailable right now.*"
 - setAirplaneMode: disabled
