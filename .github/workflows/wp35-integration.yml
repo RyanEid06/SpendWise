@@ -24,6 +24,11 @@ on:
 permissions:
   contents: read
 
+# Lint/unit/release compilation exhausted Gradle's default512MiB heap in WP36.
+# Bound build parallelism; this changes build-tool memory, never app deadlines.
+env:
+  GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx2g -Dorg.gradle.workers.max=2
+
 jobs:
   web-regressions:
     if: ${{ !inputs.acceptance_only && !inputs.signed_test_apk }}
@@ -193,7 +198,7 @@ jobs:
           npm run verify
           npm run android:sync
           chmod +x android/gradlew
-          (cd android && ./gradlew assembleDebug)
+          (cd android && ./gradlew assembleDebug --stacktrace)
           mkdir -p artifacts/android-e2e/apks artifacts/android-e2e/fixtures
           cp android/app/build/outputs/apk/debug/app-debug.apk             artifacts/android-e2e/apks/current-debug.apk
           npx tsx scripts/wp32-generate-portable-fixtures.ts             artifacts/android-e2e/fixtures
@@ -211,7 +216,7 @@ jobs:
           npm run build
           npm run android:sync
           chmod +x android/gradlew
-          (cd android && ./gradlew assembleDebug)
+          (cd android && ./gradlew assembleDebug --stacktrace)
           popd
           cp "$fixture/android/app/build/outputs/apk/debug/app-debug.apk"             artifacts/android-e2e/apks/v14-debug.apk
           git worktree remove "$fixture" --force

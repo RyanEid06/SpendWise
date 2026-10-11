@@ -68,18 +68,21 @@ test(`isolated ${target} rejects unsafe devices before any mutation`, () => {
     { serial: 'physical-phone', qemu: '0', avd: 'wp33-synthetic-api34' },
     { serial: 'emulator-5554', qemu: '0', avd: 'wp33-synthetic-api34' },
     { serial: 'emulator-5554', qemu: '1', avd: 'personal-emulator' },
+    { serial: 'emulator-5554', qemu: '1', avd: 'personal-emulator', noisy: true },
   ]) {
     const result = spawnSync(bash, ['-c', `
 adb() {
   printf 'ADB_CALL:%s\\n' "$*" >&2
   if [[ "$*" == *ro.kernel.qemu ]]; then printf '%s\\n' "$WP32_TEST_QEMU";
-  elif [[ "$*" == *'emu avd name' ]]; then printf '%s\\nOK\\n' "$WP32_TEST_AVD";
+  elif [[ "$*" == *'emu avd name' ]]; then
+    printf '%s\\nOK\\n' "$WP32_TEST_AVD"
+    if [[ "$WP32_TEST_NOISY_AVD" = 1 ]]; then for ((i=0;i<10000;i++)); do printf 'extra-output\\n'; done; fi
   else return 91; fi
 }
 export -f adb
 bash scripts/run-wp32-isolated-gate.sh
 `], { encoding: 'utf8', env: { ...process.env, WP32_TARGET: target,
-      ANDROID_SERIAL: input.serial, WP32_TEST_QEMU: input.qemu, WP32_TEST_AVD: input.avd } });
+      ANDROID_SERIAL: input.serial, WP32_TEST_QEMU: input.qemu, WP32_TEST_AVD: input.avd, WP32_TEST_NOISY_AVD: input.noisy ? '1' : '0' } });
     assert.equal(result.status, 2, result.stderr);
     assert.doesNotMatch(result.stderr, /uninstall|install|pm clear|settings|locksettings|screencap|uiautomator|logcat|connectivity|KEYCODE/);
     if (input.serial === 'physical-phone') assert.doesNotMatch(result.stderr, /ADB_CALL/);

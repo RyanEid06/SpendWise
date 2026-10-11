@@ -116,3 +116,9 @@ Minor deferred: Flash-default probe does not qualify exact LOW fallback. Documen
 | Receipt Scanner | `scan-receipt`; schema + final-total/currency/date guards → editable draft | Same shared watchdog/budget |
 
 These are AI-stage limits after readiness/authentication. Invalid input/auth, offline transport or cancellation may terminate any feature earlier.
+
+## CI investigation, initial candidate185662b
+
+Android Build38159049525 passed dependency audits, supported web/security tests and debug APK construction; signed release correctly skipped by its unchanged gate. Combined38159049119 failed: web547passed/1failure (the real PostgreSQL case ran; the failure was the unrelated runner guard's Linux SIGPIPE141), expanded native validation exhausted Gradle's default512MiB heap, historical v1.4 fixture packaging failed with IncrementalSplitterRunnable, and recovery's read-only CDP socket failed when Android replaced an Activity/WebView. Recovery artifacts show background lock redaction and restored-field assertions passed before that connection failure; no app-specific crash was established.
+
+The shell failure was reproduced with a large AVD response, then fixed by consuming the full producer output while retaining the exact synthetic-device checks and refusal-before-mutation assertions. A sandbox Bash failure was discarded as invalid RED evidence; the normal context reproduced the actual pipeline failure and both strengthened guard cases then passed. Full Node22 remains547passed/1localDBskip. Gradle build-tool heap is now2GiB with two workers in this combined workflow; no application/provider deadline changes. Existing fixture packaging gets stacktrace diagnostics. The next candidate reruns the affected gate; recovery and historical packaging receive one bounded retry before any product-code diagnosis. No active successful run was cancelled, no test suppressed, and no security assertion weakened. GateA stays RED until the final checks pass.
