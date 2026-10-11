@@ -1,6 +1,6 @@
 # WP35.3 review checkpoint
 
-Branch: `wp35-03/ai-progress-safe-area`. Base: live-verified main `7d00b2dafadf829f63d2b6074b08d08c00ca352d`, including WP34 PR41 at `cfc9c954fe51242fbc22f62da9f5b3bfaae8ce49`. Initial implementation `425887b0677fc6bb2d6d50cfe9ab438f1837c012`; independent-review fixes `fb9f7758b7406b26b2b59a2216aaaa684189d546`. Dedicated CI is in progress; final receipt will be recorded at the checkpoint.
+Branch: `wp35-03/ai-progress-safe-area`. Base: live-verified main `7d00b2dafadf829f63d2b6074b08d08c00ca352d`, including WP34 PR41 at `cfc9c954fe51242fbc22f62da9f5b3bfaae8ce49`. Tested code: `59e4a805d0a5b92271530d2afa567bf8a350747c`. Dedicated CI [38121734881](https://github.com/RyanEid06/SpendWise/actions/runs/38121734881) passed both jobs, completed 2026-10-11 07:44 UTC. Initial implementation `425887b`; independent-review fixes `fb9f775`. Subsequent receipt-only commits do not change tested runtime or flows.
 
 Read-only references: WP35.1 `c19a960ff49a18ebfc2f2eab1ccba45c16476402` (draft PR45), WP35.2 `97055ed8a219d598c16eb7c731f09324029fb80d`, its complete review/integration notes, and the entire approved WP35 plan from the immutable WP35.1 ref. Neither branch was merged or cherry-picked. This main-based branch deliberately does not deploy the auth/runtime work from those lanes.
 
@@ -51,11 +51,13 @@ Keep WP35.2's 90s server shared budget, bounded attempts, 115s processing and 27
 
 Then perform real Render idle-to-request verification, accounting for health probes that may keep it warm; validate all four features, system bars, gesture/three-button navigation, keyboard, retained data and drafts on the real phone; complete combined security/browser/diagnostics/Android/Maestro QA; prepare backend deployment and permanent-keystore signed candidate for review. Merge/deploy/settings/resources/version/tag/APK publication/device update remain separately authorized actions. CI/emulator success cannot certify the combined release or physical acceptance.
 
-## Remaining checkpoint work
+## Completed checkpoint and remaining acceptance
 
-Obtain dedicated CI/debug Android/isolated Maestro receipts, record final commits and complete changed-file manifest. Independent immutable-range review found two P2 issues, both reproduced and repaired with red/green regressions: analysis titles now accept the server's existing 240-character limit; the native geometry gate requires propagated insets exactly once plus 14px, including consumed-zero values. Reviewed cancellation/draft/local/quota/inset selection paths had no further actionable findings. Combined lane behavior, live backend/provider behavior and physical acceptance were explicitly outside that review and remain separate evidence requirements.
+The exact tested commit passed **441 Node22, 39 component, 71 browser, 3 accessibility and 8 visual checks**, plus runner suites 19/19 and 11/11, TypeScript/build and SDK36 debug build. Isolated API36 Maestro Add/Edit/AI continuity passed in both gesture and three-button modes. All four real-IME geometry receipts show native-consumed insets zero and padding 14px on every side, with header/footer/focused field contained. The exact-run three-button Edit screenshot was inspected: header, close, focused Description, Cancel and Update remain visible above the actual keyboard. Evidence is under `artifacts/wp35-3-ci-passed-native/` and exact web/native logs under `artifacts/wp35-3-ci-passed-{web,native}.log`. These are synthetic emulator checks, not physical acceptance.
 
-Initial run [38120164414](https://github.com/RyanEid06/SpendWise/actions/runs/38120164414) had an existing eight-photo recovery test exceed its 30s total budget. Saved trace proves JPEG-to-JSON number-array transfer took 17s; recovery and Save succeeded before the final reload assertion timed out. The fixture now transfers the identical JPEG using compact base64, retaining the timeout, eight-photo recovery and encrypted-payload-over-5MiB assertions. No product deadline was changed. Review-fix run [38120652509](https://github.com/RyanEid06/SpendWise/actions/runs/38120652509) is being observed without cancelling existing builds.
+Independent immutable-range review found two P2 issues, both reproduced and repaired with red/green regressions: analysis titles now accept the server's existing 240-character limit; the native geometry gate requires propagated insets exactly once plus 14px, including consumed-zero values. Reviewed cancellation/draft/local/quota/inset selection paths had no further actionable findings. Combined lane behavior, live backend/provider behavior and physical acceptance were explicitly outside that review and remain separate evidence requirements. WP35.3 checkpoint is complete; the user-authorized combined integration is next.
+
+Initial run [38120164414](https://github.com/RyanEid06/SpendWise/actions/runs/38120164414) had an existing eight-photo recovery test exceed its 30s total budget. Saved trace proves JPEG-to-JSON number-array transfer took 17s; recovery and Save succeeded before the final reload assertion timed out. The fixture now transfers the identical JPEG using compact base64, retaining the timeout, eight-photo recovery and encrypted-payload-over-5MiB assertions. No product deadline was changed. The final exact-code run above passed this assertion.
 
 The original native run passed Add/Edit Save, real IME and its then-current geometry gate in gesture and three-button modes. Its three-button continuity tail failed when the ambiguous `Home` tap selected Android's `com.google.android.apps.nexuslauncher:id/home`; the screenshot shows the launcher and logs confirm the exact system target. The English-only flow now requires Home left of History, excluding system navigation without coordinates or weaker assertions. [Maestro relational selector documentation](https://docs.maestro.dev/reference/selectors/relational-selectors) supports this compound selector. Fresh CI is required for the repair and the stricter post-review geometry gate; the original receipt alone does not establish a passing checkpoint.
 
@@ -64,3 +66,44 @@ The original native run passed Add/Edit Save, real IME and its then-current geom
 ## Subsequent user authorization
 
 On 2026-10-11 the user explicitly extended delivery: after WP35.3 passes, combine all three WP35 branches; if combined checks remain green, merge into main and make the APK. This supersedes the earlier stop-at-checkpoint boundary for subsequent work. WP35.3 must pass first. Integration will preserve the contracts above and verify combined security/browser/diagnostics/Android/Maestro behavior before the conditional main merge. The request authorizes the merge and APK build, not production deployment/settings changes, fresh live Gemini calls, publication, tags or installation on the user's device. Physical-phone and real Render acceptance must remain honestly labeled pending.
+
+The user subsequently supplied a Render screenshot showing `main` at `7d00b2d` live and previous deployments triggered by Auto-Deploy, then explicitly said “so continue normally” after the backend deployment consequence was explained. This supplies informed authorization for the conditional main merge's automatic deployment. Preserve the existing Gemini key. WP35.1's durable-store configuration and preservation of the complete identity/revocation history remain deployment prerequisites; the authorization does not prove that those prerequisites have been completed. No external resource creation or authentication-history migration has been performed.
+
+## Complete changed-file manifest
+
+Relative to `7d00b2d`, through tested-code candidate `59e4a805` (32 files):
+
+```text
+.github/workflows/wp35-progress-safe-area.yml
+.maestro/current/wp33-5-04-save-and-ai.yaml
+.maestro/current/wp33-5-04-save-and-edit.yaml
+docs/WP35_3_IMPLEMENTATION.md
+docs/WP35_3_REVIEW.md
+docs/superpowers/plans/2026-10-11-wp35-integration.md
+package.json
+scripts/wp33-5-04-native-continuity.sh
+scripts/wp35/editorLayout.ts
+src/app/AppShell.tsx
+src/app/hooks/aiOperation.ts
+src/app/hooks/useAiAnalysis.ts
+src/app/hooks/useAiOperation.ts
+src/components/AddEditExpenseModal.tsx
+src/components/AiProgressPanel.tsx
+src/components/ReceiptScanCard.tsx
+src/components/SmartCaptureCard.tsx
+src/index.css
+src/screens/AiInsightsScreen.tsx
+src/screens/StatisticsScreen.tsx
+src/security/AuthenticatedApiClient.ts
+src/services/diagnostics/contract.ts
+src/utils/aiResultValidation.ts
+src/utils/api.ts
+src/utils/apiErrors.ts
+tests/e2e/browser/wp33-5-04-continuity.spec.ts
+tests/e2e/browser/wp33-5-05-recovery.spec.ts
+tests/e2e/browser/wp35-progress.spec.ts
+tests/wp35-editor-layout.test.ts
+tests/wp35-progress-transport.test.ts
+tests/wp35-progress.test.ts
+tests/wp35-result-validation.test.ts
+```
