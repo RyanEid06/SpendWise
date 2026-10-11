@@ -173,7 +173,14 @@ test('accepted photo capacity uses encrypted IndexedDB and can recover and Save 
     for (let offset = 3; offset < image.data.length; offset += 4) image.data[offset] = 255;
     context.putImageData(image, 0, 0);
     const blob = await new Promise<Blob>(resolve => canvas.toBlob(value => resolve(value!), 'image/jpeg', 0.95));
-    return Array.from(new Uint8Array(await blob.arrayBuffer()));
+    // Return compact base64 rather than millions of JSON number entries across
+    // the browser/test boundary; keep the same high-entropy JPEG and byte size.
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(',')[1]);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
   });
   await page.getByRole('button', { name: 'Add Expense', exact: true }).click();
   const editor = page.getByRole('dialog', { name: 'Add Expense' });
@@ -182,7 +189,7 @@ test('accepted photo capacity uses encrypted IndexedDB and can recover and Save 
   await editor.getByTestId('tool-photos-button').click();
   const chooser = page.waitForEvent('filechooser');
   await editor.getByRole('button', { name: 'Choose Photo', exact: true }).click();
-  await (await chooser).setFiles(Array.from({ length: 8 }, (_, i) => ({ name: `capacity-${i}.jpg`, mimeType: 'image/jpeg', buffer: Buffer.from(bytes) })));
+  await (await chooser).setFiles(Array.from({ length: 8 }, (_, i) => ({ name: `capacity-${i}.jpg`, mimeType: 'image/jpeg', buffer: Buffer.from(bytes, 'base64') })));
   await expect(editor.getByRole('button', { name: 'Remove photo', exact: true })).toHaveCount(8);
   await expect(editor.getByTestId('draft-status')).toHaveText('Unfinished expense protected');
   const encryptedBytes = await page.evaluate(async () => {
