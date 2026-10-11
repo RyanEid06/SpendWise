@@ -24,11 +24,6 @@ on:
 permissions:
   contents: read
 
-# Lint/unit/release compilation exhausted Gradle's default512MiB heap in WP36.
-# Bound build parallelism; this changes build-tool memory, never app deadlines.
-env:
-  GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx2g -Dorg.gradle.workers.max=2
-
 jobs:
   web-regressions:
     if: ${{ !inputs.acceptance_only && !inputs.signed_test_apk }}
@@ -109,7 +104,9 @@ jobs:
           npm run verify
           npm run android:sync
           chmod +x android/gradlew
-          (cd android && ./gradlew testDebugUnitTest lintDebug compileReleaseSources assembleDebug)
+          # This repository's minimal gradlew does not consume GRADLE_OPTS.
+          # Pass build-tool limits directly; application deadlines are unchanged.
+          (cd android && ./gradlew '-Dorg.gradle.jvmargs=-Xmx2g' --max-workers=2 testDebugUnitTest lintDebug compileReleaseSources assembleDebug --stacktrace)
           mkdir -p artifacts/android-e2e/apks artifacts/wp35
           cp android/app/build/outputs/apk/debug/app-debug.apk artifacts/android-e2e/apks/current-debug.apk
           ./node_modules/.bin/esbuild scripts/wp35/editorLayout.ts --bundle --platform=node --format=esm --outfile=artifacts/wp35/editor-layout.mjs
