@@ -1,5 +1,14 @@
 # WP35 combined integration execution and review
 
+Subsequent user-authorized packaging: a private phone-test APK on Desktop before
+any main merge/public release, version2.1.1/code11. See
+`docs/superpowers/plans/2026-10-11-wp35-test-apk.md`. Only version metadata,
+current-version assertions, build-only CI and runbook change; application/backend
+implementation remains the green checkpoint below. The signed APK does not deploy
+WP35's backend: current Render still follows main, and durable database/history
+cutover remains pending. No production mutation is authorized by asking for
+deployment instructions.
+
 **Integration checkpoint GREEN — stop here.** All three lanes are combined on `codex/wp35-integration`; tested checkpoint `8f4b087864676478d743bd05520dfca76fa06c80`. Main remains `7d00b2dafadf829f63d2b6074b08d08c00ca352d`. Final documentation commit changes only this report. Main merge, deployment, signed APK and further features are deferred by the latest user instruction.
 
 Plan: `docs/superpowers/plans/2026-10-11-wp35-integration.md`. Specification: `docs/SpendWise_WP35_Implementation_Plan.md`, read in full. Latest user instruction supersedes the earlier main/APK request: combine all three lanes on `codex/wp35-integration`, debug until combined verification and independent review are green, then stop and report for a possible additional WP. Main merge, deployment and signed APK are deferred until fresh authorization. Gemini key unchanged; no live generation, production changes, version bump or device installation has occurred.

@@ -645,9 +645,9 @@ test('WP31 stays in scope and preserves approved release metadata', async () => 
     readFileSync('src/security/InstallationIdentityService.ts', 'utf8'),
   ].join('\n');
 
-  assert.equal(packageJson.version, '2.1.0');
-  assert.equal(versionJson.versionName, '2.1.0');
-  assert.equal(versionJson.versionCode, 10);
+  assert.equal(packageJson.version, '2.1.1');
+  assert.equal(versionJson.versionName, '2.1.1');
+  assert.equal(versionJson.versionCode, 11);
   assert.doesNotMatch(
     changedSecurity,
     /SQLCipher|Backup v3|passphrase|Play Integrity|certificate pin/i

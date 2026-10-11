@@ -1,11 +1,14 @@
 # Signing and release runbook
 
-Current metadata: **2.1.0 / Android versionCode10**, package `com.spendwise.app`.
+Current candidate metadata: **2.1.1 / Android versionCode11**, package `com.spendwise.app`.
+This is the user-requested private WP35 phone-test candidate on
+`codex/wp35-integration`; public main remains2.1.0/code10. No2.1.1 tag or
+public release is authorized yet.
 `version.json` is authoritative; package and lockfile root versions must match.
 The current authoritative values are:
 
 ```json
-{"versionName": "2.1.0", "versionCode": 10}
+{"versionName": "2.1.1", "versionCode": 11}
 ```
 
 Every future APK update must increase the Android version code and retain the
@@ -25,7 +28,8 @@ key for this application. Repository signing secrets are `SPENDWISE_KEYSTORE_BAS
 Never put them in Git, frontend variables, public receipts or test archives.
 
 PR/main verification builds a debug APK and runs regression/dependency gates.
-Main/tag pushes also check the deployed installation-authenticated Gemini backend.
+Live installation-authenticated Gemini smoke is manual opt-in, defaultfalse;
+main/tag pushes do not automatically issue live generation calls.
 Debug artifacts do not update an installed official release signed with another key.
 
 The manually dispatched `wp33-5-06-candidate.yml` builds the permanent-signed APK
@@ -36,6 +40,14 @@ exact checked-out SHA, expected name/code and actual owner baseline code. Review
 pairs are 2.0.2/code9 and 2.1.0/code10; strict baseline/source/hash/signature checks
 must be updated deliberately for later releases. Code8 is never launched in its
 historical upgrade path because that artifact has the known Android16 startup bug.
+
+For the private2.1.1/code11 phone trial, dispatch `wp35-test-apk.yml` on the
+integration branch with its exact expected source. This build-only workflow uses
+the permanent key and checks actual package/version/signature/hash; it does not
+repeat signed upgrade emulator certification, deploy the backend or publish.
+WP35's combined full native/recovery/API36 gates have separate green receipts.
+Current Render still runs main, so this APK alone cannot validate the new durable
+auth/provider runtime backend end-to-end. Do not uninstall the owner's app.
 
 ## Certification and publication
 
