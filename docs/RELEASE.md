@@ -41,8 +41,9 @@ pairs are 2.0.2/code9 and 2.1.0/code10; strict baseline/source/hash/signature ch
 must be updated deliberately for later releases. Code8 is never launched in its
 historical upgrade path because that artifact has the known Android16 startup bug.
 
-For the private2.1.1/code11 phone trial, dispatch `wp35-test-apk.yml` on the
-integration branch with its exact expected source. This build-only workflow uses
+For the private2.1.1/code11 phone trial, dispatch `wp35-integration.yml` on the
+integration branch with `signed_test_apk=true` and its exact expected source.
+It calls the reusable `wp35-test-apk.yml`; this build-only workflow uses
 the permanent key and checks actual package/version/signature/hash; it does not
 repeat signed upgrade emulator certification, deploy the backend or publish.
 WP35's combined full native/recovery/API36 gates have separate green receipts.

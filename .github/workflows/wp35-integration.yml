@@ -3,6 +3,14 @@ name: WP35 Combined Integration
 on:
   workflow_dispatch:
     inputs:
+      signed_test_apk:
+        description: 'Build only the private signed 2.1.1 test APK; no deployment'
+        type: boolean
+        default: false
+      expected_source:
+        description: 'Exact source required for signed_test_apk'
+        type: string
+        default: ''
       acceptance_only:
         description: 'Retry only full Android acceptance; retain completed web/API36/recovery receipts'
         type: boolean
@@ -16,7 +24,7 @@ permissions:
 
 jobs:
   web-regressions:
-    if: ${{ !inputs.acceptance_only }}
+    if: ${{ !inputs.acceptance_only && !inputs.signed_test_apk }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -62,7 +70,7 @@ jobs:
           retention-days: 14
 
   android-isolated:
-    if: ${{ !inputs.acceptance_only }}
+    if: ${{ !inputs.acceptance_only && !inputs.signed_test_apk }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
@@ -138,6 +146,7 @@ jobs:
           retention-days: 14
 
   android-acceptance:
+    if: ${{ !inputs.signed_test_apk }}
     # Full existing synthetic black-box acceptance; API36 insets run separately.
     runs-on: ubuntu-latest
     # The full fixture/backup/upgrade sequence reached its final assertions at
@@ -305,7 +314,7 @@ jobs:
           retention-days: 7
 
   android-recovery:
-    if: ${{ !inputs.acceptance_only }}
+    if: ${{ !inputs.acceptance_only && !inputs.signed_test_apk }}
     name: encrypted-draft-recovery
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -466,3 +475,10 @@ jobs:
           path: artifacts/android-isolated/${{ matrix.target }}/
           if-no-files-found: ignore
           retention-days: 7
+
+  signed-test-apk:
+    if: github.event_name == 'workflow_dispatch' && inputs.signed_test_apk && github.ref == 'refs/heads/codex/wp35-integration'
+    uses: ./.github/workflows/wp35-test-apk.yml
+    with:
+      expected_source: ${{ inputs.expected_source }}
+    secrets: inherit

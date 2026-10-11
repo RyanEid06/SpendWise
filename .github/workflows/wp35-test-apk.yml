@@ -1,6 +1,11 @@
 name: WP35 Private Signed Test APK
 
 on:
+  workflow_call:
+    inputs:
+      expected_source:
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       expected_source:
