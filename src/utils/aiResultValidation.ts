@@ -4,7 +4,7 @@ const object = (value: unknown): value is Record<string, unknown> => !!value && 
 const text = (value: unknown, max: number): value is string => typeof value === 'string' && value.length <= max;
 const strings = (value: unknown): value is string[] => Array.isArray(value) && value.length <= 10 && value.every(item => text(item, 1000));
 const insights = (value: unknown): value is InsightCardItem[] => Array.isArray(value) && value.length <= 10 && value.every(item =>
-  object(item) && text(item.title, 200) && text(item.explanation, 2000) && text(item.numbers, 1000) &&
+  object(item) && text(item.title, 240) && text(item.explanation, 2000) && text(item.numbers, 1000) &&
   ['INFO', 'NOTABLE', 'REVIEW', 'POSITIVE'].includes(String(item.severity)) &&
   (item.category == null || text(item.category, 200)));
 

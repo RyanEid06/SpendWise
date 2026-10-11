@@ -17,3 +17,11 @@ test('Trend ready rejects malformed responses while accepting existing JSON cont
     assert.equal(parseTrendResult(data), null);
   }
 });
+
+test('Analysis preserves the existing server insight title boundary', () => {
+  const result = (length: number) => ({ timestamp: 1, analyzedMonthKey: '2026-10', isAiGenerated: true,
+    spendingOverview: 'Synthetic', historyContext: '', biggestChanges: [{ title: 'x'.repeat(length),
+      explanation: 'Review', numbers: '$12.50', severity: 'INFO' }], unusualExpenses: [], recurringSpending: [], areasToReview: [] });
+  for (const length of [200, 201, 240]) assert.notEqual(parseAnalysisResult(result(length), '2026-10'), null);
+  assert.equal(parseAnalysisResult(result(241), '2026-10'), null);
+});

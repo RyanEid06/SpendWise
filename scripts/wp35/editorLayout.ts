@@ -8,17 +8,23 @@ interface Rect { top: number; bottom: number; left: number; right: number }
 interface Layout {
   viewport: { top: number; height: number; width: number };
   padding: Rect;
+  nativeInsets: Rect;
   card: Rect; header: Rect; footer: Rect; scroll: Rect; field: Rect;
 }
 export function assertEditorLayout(layout: Layout) {
-  const { viewport, padding, card } = layout;
+  const { viewport, padding, nativeInsets, card } = layout;
   const contains = (outer: Rect, inner: Rect) => {
     for (const n of Object.values(inner)) assert.ok(Number.isFinite(n), 'Invalid geometry');
     assert.ok(inner.bottom > inner.top && inner.right > inner.left, 'Empty control');
     assert.ok(inner.top >= outer.top - 1 && inner.bottom <= outer.bottom + 1 &&
       inner.left >= outer.left - 1 && inner.right <= outer.right + 1, 'Control covered or outside safe bounds');
   };
-  for (const n of Object.values(padding)) assert.ok(Number.isFinite(n) && n >= 12, 'Missing breathing room');
+  for (const side of ['top', 'bottom', 'left', 'right'] as const) {
+    const inset = nativeInsets?.[side];
+    assert.ok(Number.isFinite(inset) && inset >= 0, 'Missing native inset propagation');
+    assert.ok(Number.isFinite(padding[side]) && Math.abs(padding[side] - inset - 14) <= 1,
+      'Native inset must be applied exactly once plus 14px breathing room');
+  }
   contains({ top: viewport.top + padding.top, bottom: viewport.top + viewport.height - padding.bottom,
     left: padding.left, right: viewport.width - padding.right }, card);
   contains(card, layout.header); contains(card, layout.footer); contains(layout.scroll, layout.field);
@@ -57,7 +63,8 @@ async function capture(output: string) {
         padding: { top: parseFloat(style.paddingTop), bottom: parseFloat(style.paddingBottom), left: parseFloat(style.paddingLeft), right: parseFloat(style.paddingRight) },
         card: rect(card), header: rect(card.firstElementChild), footer: rect(card.lastElementChild),
         field: rect(focused), scroll: rect(card.querySelector('[data-expense-scroll-body]')),
-        nativeInsets: ['top','bottom','left','right'].map(side => getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-' + side)) };
+        nativeInsets: Object.fromEntries(['top','bottom','left','right'].map(side =>
+          [side, parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-' + side))])) };
     })()`;
     const result = await new Promise<any>((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('CDP_LAYOUT_TIMEOUT')), 15000);
