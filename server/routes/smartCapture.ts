@@ -90,6 +90,8 @@ smartCaptureRouter.post('/smart-capture', async (req, res) => {
     const sanitized = await geminiService.generateJson({
       endpoint: '/api/gemini/smart-capture',
       requestId: aiRequestId(res.locals.requestId),
+      signal: res.locals.aiSignal,
+      deadline: res.locals.aiDeadline,
       contents: {
         parts: [
           { text: smartCapturePrompt },

@@ -34,6 +34,8 @@ analysisRouter.post('/analyze', async (req, res) => {
     const parsed = await geminiService.generateJson({
       endpoint: '/api/gemini/analyze',
       requestId,
+      signal: res.locals.aiSignal,
+      deadline: res.locals.aiDeadline,
       contents: buildSpendingPrompt(summary, currencyCode, language),
       responseJsonSchema: spendingResponseSchema,
       systemInstruction:

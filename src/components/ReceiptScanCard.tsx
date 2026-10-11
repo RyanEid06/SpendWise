@@ -1,3 +1,4 @@
+import { AI_PROCESSING_TIMEOUT_MS } from '../security/aiOperationBudget';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AlertCircle, Camera, CheckCircle2, ImagePlus, Loader2, X } from 'lucide-react';
 import { Language, ReceiptScanResult } from '../types';
@@ -150,6 +151,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
   const mountedRef = useRef(true);
   const preparationRequestIdRef = useRef(0);
   const requestIdRef = useRef(0);
+  const operationAbortRef = useRef<AbortController | null>(null);
   const acquisitionInFlightRef = useRef(false);
   const analysisInFlightRef = useRef(false);
   const preparedPreviewUrlRef = useRef<string | null>(null);
@@ -171,6 +173,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
     if (previousContext.current.currencyCode === currencyCode && previousContext.current.language === language) return;
     previousContext.current = { currencyCode, language };
     requestIdRef.current += 1;
+    operationAbortRef.current?.abort();
     analysisInFlightRef.current = false;
     setResult(null);
     setError(null);
@@ -195,6 +198,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
       mountedRef.current = false;
       preparationRequestIdRef.current += 1;
       requestIdRef.current += 1;
+      operationAbortRef.current?.abort();
       acquisitionInFlightRef.current = false;
       analysisInFlightRef.current = false;
       if (preparedPreviewUrlRef.current) URL.revokeObjectURL(preparedPreviewUrlRef.current);
@@ -213,6 +217,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
     setInterrupted(false);
     preparationRequestIdRef.current += 1;
     requestIdRef.current += 1;
+    operationAbortRef.current?.abort();
     analysisInFlightRef.current = false;
     clearPreparedPreview();
     setPreviewUrl(null);
@@ -233,6 +238,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
       const acquired = source === 'camera' ? await takePhoto() : (await choosePhotos(1))[0] || null;
       if (!acquired) return [];
       requestIdRef.current += 1;
+      operationAbortRef.current?.abort();
       analysisInFlightRef.current = false;
       clearPreparedPreview();
       setPreviewUrl(null);
@@ -275,6 +281,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
     analysisInFlightRef.current = true;
     setInterrupted(false);
     const requestId = ++requestIdRef.current;
+    const controller = new AbortController(); operationAbortRef.current = controller;
     setIsScanning(true);
     setResult(null);
     setError(null);
@@ -287,6 +294,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
         '/api/gemini/scan-receipt',
         {
           method: 'POST',
+          signal: controller.signal,
           body: JSON.stringify({
             imageBase64,
             mimeType: preparedDraft.mimeType,
@@ -294,7 +302,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
             currencyCode,
           }),
         },
-        45000
+        AI_PROCESSING_TIMEOUT_MS
       );
 
       const parsed = parseReceiptScanResult(responseData, currencyCode);

@@ -10,6 +10,7 @@ import {
 import { boundedLog } from '../observability/safeLogging';
 
 export function sendAiFailure(res: Response, error: unknown) {
+  if (res.destroyed || res.writableEnded) return res;
   const failure =
     error instanceof AiReliabilityError
       ? error
@@ -27,6 +28,7 @@ export function apiErrorHandler(
   res: Response,
   _next: NextFunction
 ) {
+  if (res.destroyed || res.writableEnded) return res;
   if (error?.type === 'entity.too.large') {
     return res.status(413).json({
       error: 'REQUEST_TOO_LARGE',

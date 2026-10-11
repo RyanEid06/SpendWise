@@ -1,4 +1,5 @@
 import path from 'path';
+import { parseTaskRoutes, type GeminiTaskRoutes } from './taskRouting';
 
 export interface ServerConfig {
   port: number;
@@ -10,6 +11,11 @@ export interface ServerConfig {
   rateLimit: number;
   geminiTimeoutMs: number;
   geminiRetryDelayMs: number;
+  geminiOperationBudgetMs: number;
+  geminiMaxAttempts: number;
+  geminiRuntimeProfile: 'free' | 'standard';
+  backendHostProfile: 'render_free' | 'always_on';
+  geminiTaskRoutes: GeminiTaskRoutes;
   rateBucketMaxEntries: number;
   allowedOrigins: Set<string>;
   production: boolean;
@@ -18,7 +24,6 @@ export interface ServerConfig {
   installationStorePath: string | null;
   authStore: 'file' | 'postgres';
   authDatabaseUrl: string | null;
-  backendHostProfile: 'render_free' | 'always_on';
   deniedInstallationIds: Set<string>;
   legacyApiToken: string | null;
   legacyCompatibilityUntil: string | null;
@@ -66,6 +71,8 @@ export function parseServerConfig(env: NodeJS.ProcessEnv = process.env): ServerC
   if ((env.RENDER === 'true' || backendHostProfile === 'render_free') && authStore !== 'postgres') throw new Error('Render requires durable auth storage.');
   const authDatabaseUrl = env.SPENDWISE_AUTH_DATABASE_URL?.trim() || null;
   if (authStore === 'postgres' && !authDatabaseUrl) throw new Error('Missing auth database configuration.');
+  const geminiRuntimeProfile = env.GEMINI_RUNTIME_PROFILE || 'free';
+  if (geminiRuntimeProfile !== 'free' && geminiRuntimeProfile !== 'standard') throw new Error('Invalid Gemini runtime profile.');
   const port = Number(env.PORT || 3000);
   const geminiModel = (env.GEMINI_MODEL || 'gemini-3.8-flash').trim();
   const geminiFallbackModels = (
@@ -79,10 +86,8 @@ export function parseServerConfig(env: NodeJS.ProcessEnv = process.env): ServerC
   const geminiModels = [
     ...new Set([geminiModel, ...geminiFallbackModels].filter(Boolean)),
   ];
-  const configuredGeminiTimeoutMs = Number(env.GEMINI_TIMEOUT_MS || 22_000);
-  const geminiTimeoutMs = Number.isFinite(configuredGeminiTimeoutMs)
-    ? Math.max(5_000, Math.min(configuredGeminiTimeoutMs, 40_000))
-    : 22_000;
+  const geminiOperationBudgetMs = boundedInteger(env.GEMINI_OPERATION_BUDGET_MS, 90_000, 15_000, 100_000);
+  const geminiTimeoutMs = Math.min(geminiOperationBudgetMs, boundedInteger(env.GEMINI_TIMEOUT_MS, 50_000, 5_000, 60_000));
 
   const defaultOrigins = production
     ? ['https://localhost']
@@ -133,7 +138,12 @@ export function parseServerConfig(env: NodeJS.ProcessEnv = process.env): ServerC
     rateWindowMs: 60_000,
     rateLimit: 30,
     geminiTimeoutMs,
-    geminiRetryDelayMs: 350,
+    geminiOperationBudgetMs,
+    geminiMaxAttempts: boundedInteger(env.GEMINI_MAX_ATTEMPTS, 2, 1, 3),
+    geminiRuntimeProfile,
+    backendHostProfile,
+    geminiTaskRoutes: parseTaskRoutes(env),
+    geminiRetryDelayMs: boundedInteger(env.GEMINI_RETRY_DELAY_MS, 1_000, 250, 4_000),
     rateBucketMaxEntries: 2_000,
     allowedOrigins,
     production,
@@ -142,7 +152,6 @@ export function parseServerConfig(env: NodeJS.ProcessEnv = process.env): ServerC
     installationStorePath,
     authStore,
     authDatabaseUrl,
-    backendHostProfile,
     deniedInstallationIds: csvSet(env.SPENDWISE_DENIED_INSTALLATION_IDS),
     legacyApiToken,
     legacyCompatibilityUntil:

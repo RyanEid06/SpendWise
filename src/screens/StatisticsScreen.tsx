@@ -1,3 +1,4 @@
+import { AI_PROCESSING_TIMEOUT_MS } from '../security/aiOperationBudget';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { apiFetchJson } from '../utils/api';
 import { getAiErrorMessage } from '../utils/apiErrors';
@@ -52,6 +53,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
   const [aiError, setAiError] = useState<string | null>(null);
   const aiRequestIdRef = useRef(0);
   const aiInFlightRef = useRef(false);
+  const operationAbortRef = useRef<AbortController | null>(null);
 
   // Compute calculated statistics (backed by cache)
   const stats = useMemo(() => {
@@ -65,6 +67,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
 
   useEffect(() => {
     aiRequestIdRef.current += 1;
+    operationAbortRef.current?.abort();
     aiInFlightRef.current = false;
     setIsLoadingAi(false);
     setAiExplanation(null);
@@ -74,6 +77,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
   useEffect(() => {
     return () => {
       aiRequestIdRef.current += 1;
+      operationAbortRef.current?.abort();
       aiInFlightRef.current = false;
     };
   }, []);
@@ -96,6 +100,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
 
     aiInFlightRef.current = true;
     const requestId = ++aiRequestIdRef.current;
+    const controller = new AbortController(); operationAbortRef.current = controller;
     setIsLoadingAi(true);
     setAiError(null);
 
@@ -106,13 +111,14 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
         '/api/gemini/explain-trends',
         {
           method: 'POST',
+          signal: controller.signal,
           body: JSON.stringify({
             stats,
             currencyCode,
             language,
           }),
         },
-        30000
+        AI_PROCESSING_TIMEOUT_MS
       );
 
       if (requestId !== aiRequestIdRef.current) return;
