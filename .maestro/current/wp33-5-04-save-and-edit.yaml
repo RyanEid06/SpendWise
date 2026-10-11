@@ -8,7 +8,9 @@ appId: com.spendwise.app
 - tapOn: "Statistics"
 # After switching, the selected period is still All Time (not the 3-month default).
 - assertVisible: "Across 1 month"
-- tapOn: "Home"
+- tapOn:
+    text: "Home"
+    leftOf: "History"
 - tapOn: "WP04 Native Dining.*"
 - assertVisible: "Edit Expense"
 # The broad Amount label also matches a non-clickable uppercase text node.
