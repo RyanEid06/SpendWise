@@ -13,7 +13,9 @@ appId: com.spendwise.app
 - tapOn: "AI Insights"
 - extendedWaitUntil:
     visible: "Local Statistical"
-    timeout: 35000
+    # Allow the bounded 90s readiness stage when WebView cannot confirm offline.
+    # Keep the fallback and continuity assertions; 5s is only rendering slack.
+    timeout: 95000
 - assertVisible: ".*AI is unavailable right now.*"
 - setAirplaneMode: disabled
 - tapOn: "Home"

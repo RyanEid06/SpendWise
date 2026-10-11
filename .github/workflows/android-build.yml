@@ -111,6 +111,9 @@ jobs:
       - name: Run WP31 backend authentication and network hardening tests
         run: npm run test:wp31
 
+      - name: Run WP35 readiness and authentication fault regressions
+        run: npm run test:wp35
+
       - name: Run WP32 Android harness regression tests
         run: npm run test:wp32:runner
 

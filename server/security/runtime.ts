@@ -3,10 +3,11 @@ import {
   FileInstallationRegistry,
   InstallationAuthService,
 } from './installationAuth';
+import { createPostgresRegistry } from './postgresInstallationRegistry';
 
-export const installationRegistry = new FileInstallationRegistry(
-  serverConfig.installationStorePath
-);
+export const installationRegistry = serverConfig.authStore === 'postgres'
+  ? createPostgresRegistry(serverConfig.authDatabaseUrl!)
+  : new FileInstallationRegistry(serverConfig.installationStorePath);
 
 export const installationAuthService = new InstallationAuthService(
   installationRegistry,

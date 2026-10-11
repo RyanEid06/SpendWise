@@ -28,7 +28,7 @@ function sendAuthError(res: any, error: unknown) {
 
 export const authRouter = Router();
 
-authRouter.post('/register', rateLimitRegistration, (req, res) => {
+authRouter.post('/register', rateLimitRegistration, async (req, res) => {
   try {
     const publicKey = safeString(req.body?.publicKey, 1024);
     const algorithm = safeString(req.body?.algorithm, 64);
@@ -39,7 +39,7 @@ authRouter.post('/register', rateLimitRegistration, (req, res) => {
       });
     }
 
-    const registration = installationAuthService.register(
+    const registration = await installationAuthService.register(
       publicKey,
       algorithm
     );
@@ -53,7 +53,7 @@ authRouter.post('/register', rateLimitRegistration, (req, res) => {
   }
 });
 
-authRouter.post('/challenge', rateLimitChallenge, (req, res) => {
+authRouter.post('/challenge', rateLimitChallenge, async (req, res) => {
   try {
     const installationId = safeString(req.body?.installationId, 80);
     if (!installationId) {
@@ -64,14 +64,14 @@ authRouter.post('/challenge', rateLimitChallenge, (req, res) => {
     }
 
     return res.json(
-      installationAuthService.issueChallenge(installationId)
+      await installationAuthService.issueChallenge(installationId)
     );
   } catch (error) {
     return sendAuthError(res, error);
   }
 });
 
-authRouter.post('/verify', rateLimitChallenge, (req, res) => {
+authRouter.post('/verify', rateLimitChallenge, async (req, res) => {
   try {
     const installationId = safeString(req.body?.installationId, 80);
     const challengeId = safeString(req.body?.challengeId, 80);
@@ -84,7 +84,7 @@ authRouter.post('/verify', rateLimitChallenge, (req, res) => {
     }
 
     return res.json(
-      installationAuthService.verifyChallenge(
+      await installationAuthService.verifyChallenge(
         installationId,
         challengeId,
         signature
