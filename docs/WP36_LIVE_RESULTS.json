@@ -1,0 +1,174 @@
+{
+  "kind": "actual-google-api-synthetic-only",
+  "tierEvidence": "WP35 owner-attested Free tier; current billing tier not independently observable",
+  "startedAt": "2026-10-11T16:50:40.277Z",
+  "requestCap": 8,
+  "perRequestTimeoutMs": 50000,
+  "metadata": [
+    {
+      "name": "gemini-3.5-flash-lite",
+      "supportedActions": [
+        "generateContent",
+        "countTokens",
+        "createCachedContent",
+        "batchGenerateContent"
+      ],
+      "inputTokenLimit": 1048576,
+      "outputTokenLimit": 65536
+    },
+    {
+      "name": "gemini-3.7-flash",
+      "supportedActions": [
+        "generateContent",
+        "countTokens",
+        "createCachedContent",
+        "batchGenerateContent"
+      ],
+      "inputTokenLimit": 1048576,
+      "outputTokenLimit": 65536
+    },
+    {
+      "name": "gemini-3.8-flash",
+      "supportedActions": [
+        "generateContent",
+        "countTokens",
+        "createCachedContent",
+        "batchGenerateContent"
+      ],
+      "inputTokenLimit": 1048576,
+      "outputTokenLimit": 65536
+    }
+  ],
+  "results": [
+    {
+      "task": "analyze",
+      "model": "gemini-3.8-flash",
+      "variant": "wp36-default",
+      "attempts": 1,
+      "failure": "AI_TEMPORARILY_UNAVAILABLE",
+      "upstreamStatus": 503,
+      "clientAbort": false,
+      "latencyMs": 3641
+    },
+    {
+      "task": "explain-trends",
+      "model": "gemini-3.8-flash",
+      "variant": "wp36-default",
+      "attempts": 1,
+      "jsonValid": true,
+      "schemaValid": true,
+      "sanitizerValid": true,
+      "financialGate": true,
+      "usage": {
+        "promptTokens": 332,
+        "outputTokens": 27,
+        "thinkingTokens": 417,
+        "totalTokens": 776
+      },
+      "qualityPass": true,
+      "latencyMs": 7197
+    },
+    {
+      "task": "smart-capture",
+      "model": "gemini-3.8-flash",
+      "variant": "wp36-default",
+      "attempts": 1,
+      "failure": "AI_TIMEOUT",
+      "clientAbort": true,
+      "latencyMs": 50020
+    },
+    {
+      "task": "scan-receipt",
+      "model": "gemini-3.8-flash",
+      "variant": "wp36-default",
+      "attempts": 1,
+      "jsonValid": true,
+      "schemaValid": true,
+      "sanitizerValid": true,
+      "financialGate": true,
+      "ocrGate": true,
+      "usage": {
+        "promptTokens": 1783,
+        "outputTokens": 83,
+        "thinkingTokens": 156,
+        "totalTokens": 2022
+      },
+      "qualityPass": true,
+      "latencyMs": 36538
+    },
+    {
+      "task": "analyze",
+      "model": "gemini-3.5-flash-lite",
+      "thinking": "low",
+      "variant": "wp36-lite-candidate",
+      "attempts": 1,
+      "jsonValid": true,
+      "schemaValid": true,
+      "sanitizerValid": true,
+      "financialGate": true,
+      "usage": {
+        "promptTokens": 738,
+        "outputTokens": 82,
+        "totalTokens": 820
+      },
+      "qualityPass": true,
+      "latencyMs": 1267
+    },
+    {
+      "task": "explain-trends",
+      "model": "gemini-3.5-flash-lite",
+      "thinking": "low",
+      "variant": "wp36-lite-candidate",
+      "attempts": 1,
+      "jsonValid": true,
+      "schemaValid": true,
+      "sanitizerValid": true,
+      "financialGate": true,
+      "usage": {
+        "promptTokens": 332,
+        "outputTokens": 27,
+        "totalTokens": 359
+      },
+      "qualityPass": true,
+      "latencyMs": 841
+    },
+    {
+      "task": "smart-capture",
+      "model": "gemini-3.5-flash-lite",
+      "thinking": "low",
+      "variant": "wp36-lite-candidate",
+      "attempts": 1,
+      "jsonValid": true,
+      "schemaValid": true,
+      "sanitizerValid": true,
+      "financialGate": true,
+      "usage": {
+        "promptTokens": 1646,
+        "outputTokens": 85,
+        "totalTokens": 1731
+      },
+      "qualityPass": true,
+      "latencyMs": 1549
+    },
+    {
+      "task": "scan-receipt",
+      "model": "gemini-3.5-flash-lite",
+      "thinking": "low",
+      "variant": "wp36-lite-candidate",
+      "attempts": 1,
+      "jsonValid": true,
+      "schemaValid": true,
+      "sanitizerValid": true,
+      "financialGate": true,
+      "ocrGate": true,
+      "usage": {
+        "promptTokens": 1783,
+        "outputTokens": 119,
+        "totalTokens": 1902
+      },
+      "qualityPass": true,
+      "latencyMs": 1840
+    }
+  ],
+  "completedAt": "2026-10-11T16:52:23.891Z"
+}

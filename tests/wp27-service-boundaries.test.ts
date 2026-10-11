@@ -167,7 +167,7 @@ test('backend config preserves production limits and model fallback defaults', (
   assert.equal(config.rateLimit, 30);
   assert.equal(config.rateBucketMaxEntries, 2_000);
   assert.equal(config.geminiTimeoutMs, 50_000);
-  assert.deepEqual(config.geminiFallbackModels, ['gemini-3.7-flash', 'gemini-3.5-flash-lite']);
+  assert.deepEqual(config.geminiFallbackModels, []);
 });
 
 test('backend authentication and rate limiting are independently testable', () => {

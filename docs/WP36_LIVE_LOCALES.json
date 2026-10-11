@@ -1,0 +1,199 @@
+{
+  "kind": "actual-google-api-synthetic-only",
+  "tierEvidence": "WP35 owner-attested Free tier; current billing tier not independently observable",
+  "startedAt": "2026-10-11T16:54:38.598Z",
+  "requestCap": 8,
+  "perRequestTimeoutMs": 50000,
+  "metadata": [
+    {
+      "name": "gemini-3.5-flash-lite",
+      "supportedActions": [
+        "generateContent",
+        "countTokens",
+        "createCachedContent",
+        "batchGenerateContent"
+      ],
+      "inputTokenLimit": 1048576,
+      "outputTokenLimit": 65536
+    },
+    {
+      "name": "gemini-3.7-flash",
+      "supportedActions": [
+        "generateContent",
+        "countTokens",
+        "createCachedContent",
+        "batchGenerateContent"
+      ],
+      "inputTokenLimit": 1048576,
+      "outputTokenLimit": 65536
+    },
+    {
+      "name": "gemini-3.8-flash",
+      "supportedActions": [
+        "generateContent",
+        "countTokens",
+        "createCachedContent",
+        "batchGenerateContent"
+      ],
+      "inputTokenLimit": 1048576,
+      "outputTokenLimit": 65536
+    }
+  ],
+  "results": [
+    {
+      "task": "analyze",
+      "language": "fr",
+      "model": "gemini-3.5-flash-lite",
+      "thinking": "low",
+      "variant": "wp36-lite-locale",
+      "attempts": 1,
+      "jsonValid": true,
+      "schemaValid": true,
+      "sanitizerValid": true,
+      "financialGate": true,
+      "usage": {
+        "promptTokens": 718,
+        "outputTokens": 142,
+        "totalTokens": 860
+      },
+      "qualityPass": true,
+      "latencyMs": 1313
+    },
+    {
+      "task": "explain-trends",
+      "language": "fr",
+      "model": "gemini-3.5-flash-lite",
+      "thinking": "low",
+      "variant": "wp36-lite-locale",
+      "attempts": 1,
+      "jsonValid": true,
+      "schemaValid": true,
+      "sanitizerValid": true,
+      "financialGate": true,
+      "usage": {
+        "promptTokens": 343,
+        "outputTokens": 58,
+        "totalTokens": 401
+      },
+      "qualityPass": true,
+      "latencyMs": 1329
+    },
+    {
+      "task": "smart-capture",
+      "language": "fr",
+      "model": "gemini-3.5-flash-lite",
+      "thinking": "low",
+      "variant": "wp36-lite-locale",
+      "attempts": 1,
+      "jsonValid": true,
+      "schemaValid": true,
+      "sanitizerValid": true,
+      "financialGate": true,
+      "usage": {
+        "promptTokens": 1626,
+        "outputTokens": 89,
+        "totalTokens": 1715
+      },
+      "qualityPass": true,
+      "latencyMs": 1501
+    },
+    {
+      "task": "scan-receipt",
+      "language": "fr",
+      "model": "gemini-3.5-flash-lite",
+      "thinking": "low",
+      "variant": "wp36-lite-locale",
+      "attempts": 1,
+      "jsonValid": true,
+      "schemaValid": true,
+      "sanitizerValid": true,
+      "financialGate": true,
+      "ocrGate": true,
+      "usage": {
+        "promptTokens": 1763,
+        "outputTokens": 120,
+        "totalTokens": 1883
+      },
+      "qualityPass": true,
+      "latencyMs": 1805
+    },
+    {
+      "task": "analyze",
+      "language": "ar",
+      "model": "gemini-3.5-flash-lite",
+      "thinking": "low",
+      "variant": "wp36-lite-locale",
+      "attempts": 1,
+      "jsonValid": true,
+      "schemaValid": true,
+      "sanitizerValid": true,
+      "financialGate": true,
+      "usage": {
+        "promptTokens": 741,
+        "outputTokens": 114,
+        "totalTokens": 855
+      },
+      "qualityPass": true,
+      "latencyMs": 981
+    },
+    {
+      "task": "explain-trends",
+      "language": "ar",
+      "model": "gemini-3.5-flash-lite",
+      "thinking": "low",
+      "variant": "wp36-lite-locale",
+      "attempts": 1,
+      "jsonValid": true,
+      "schemaValid": true,
+      "sanitizerValid": true,
+      "financialGate": true,
+      "usage": {
+        "promptTokens": 375,
+        "outputTokens": 58,
+        "totalTokens": 433
+      },
+      "qualityPass": true,
+      "latencyMs": 932
+    },
+    {
+      "task": "smart-capture",
+      "language": "ar",
+      "model": "gemini-3.5-flash-lite",
+      "thinking": "low",
+      "variant": "wp36-lite-locale",
+      "attempts": 1,
+      "jsonValid": true,
+      "schemaValid": true,
+      "sanitizerValid": true,
+      "financialGate": true,
+      "usage": {
+        "promptTokens": 1649,
+        "outputTokens": 89,
+        "totalTokens": 1738
+      },
+      "qualityPass": true,
+      "latencyMs": 1387
+    },
+    {
+      "task": "scan-receipt",
+      "language": "ar",
+      "model": "gemini-3.5-flash-lite",
+      "thinking": "low",
+      "variant": "wp36-lite-locale",
+      "attempts": 1,
+      "jsonValid": true,
+      "schemaValid": true,
+      "sanitizerValid": true,
+      "financialGate": true,
+      "ocrGate": true,
+      "usage": {
+        "promptTokens": 1786,
+        "outputTokens": 119,
+        "totalTokens": 1905
+      },
+      "qualityPass": true,
+      "latencyMs": 1697
+    }
+  ],
+  "completedAt": "2026-10-11T16:54:50.035Z"
+}

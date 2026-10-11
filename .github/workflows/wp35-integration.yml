@@ -18,6 +18,8 @@ on:
   push:
     branches: ['codex/wp35-integration']
     paths-ignore: ['docs/**']
+  pull_request:
+    branches: ['codex/wp35-integration']
 
 permissions:
   contents: read
@@ -42,6 +44,8 @@ jobs:
       WP35_TEST_DATABASE_URL: postgresql://wp35_test:isolated_ci_only@127.0.0.1:5432/wp35_test
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -85,6 +89,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -99,11 +104,23 @@ jobs:
           npm run verify
           npm run android:sync
           chmod +x android/gradlew
-          (cd android && ./gradlew assembleDebug)
+          # This repository's minimal gradlew does not consume GRADLE_OPTS.
+          # Pass build-tool limits directly; application deadlines are unchanged.
+          (cd android && ./gradlew '-Dorg.gradle.jvmargs=-Xmx2g' --max-workers=2 testDebugUnitTest lintDebug compileReleaseSources assembleDebug --stacktrace)
           mkdir -p artifacts/android-e2e/apks artifacts/wp35
           cp android/app/build/outputs/apk/debug/app-debug.apk artifacts/android-e2e/apks/current-debug.apk
           ./node_modules/.bin/esbuild scripts/wp35/editorLayout.ts --bundle --platform=node --format=esm --outfile=artifacts/wp35/editor-layout.mjs
           bash -n scripts/run-wp32-isolated-gate.sh
+      - name: Upload native validation reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: wp36-native-validation-reports
+          path: |
+            android/app/build/reports/
+            android/app/build/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Install pinned Maestro
         run: |
           archive="$RUNNER_TEMP/maestro-2.11.0.zip"
@@ -188,7 +205,7 @@ jobs:
           npm run verify
           npm run android:sync
           chmod +x android/gradlew
-          (cd android && ./gradlew assembleDebug)
+          (cd android && ./gradlew assembleDebug --stacktrace)
           mkdir -p artifacts/android-e2e/apks artifacts/android-e2e/fixtures
           cp android/app/build/outputs/apk/debug/app-debug.apk             artifacts/android-e2e/apks/current-debug.apk
           npx tsx scripts/wp32-generate-portable-fixtures.ts             artifacts/android-e2e/fixtures
@@ -206,7 +223,7 @@ jobs:
           npm run build
           npm run android:sync
           chmod +x android/gradlew
-          (cd android && ./gradlew assembleDebug)
+          (cd android && ./gradlew assembleDebug --stacktrace)
           popd
           cp "$fixture/android/app/build/outputs/apk/debug/app-debug.apk"             artifacts/android-e2e/apks/v14-debug.apk
           git worktree remove "$fixture" --force

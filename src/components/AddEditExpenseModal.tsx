@@ -100,7 +100,6 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
   const [activeTool, setActiveTool] = useState<OptionalTool>(recoveryDraft?.activeTool ?? null);
 
   const [amountError, setAmountError] = useState<string | null>(null);
-  const [descriptionError, setDescriptionError] = useState<string | null>(null);
 
   const [attachmentDrafts, setAttachmentDrafts] = useState<AttachmentDraft[]>(recoveryDraft?.attachments ?? []);
   const [removedAttachmentIds, setRemovedAttachmentIds] = useState<string[]>(recoveryDraft?.removedAttachmentIds ?? []);
@@ -204,7 +203,6 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
     }
     if (extracted.merchant) {
       setDescriptionText(extracted.merchant);
-      setDescriptionError(null);
     }
     if (extracted.category && DEFAULT_CATEGORIES.some((c) => c.name === extracted.category)) {
       setSelectedCategory(extracted.category);
@@ -242,7 +240,6 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
 
     if (suggestedDescription) {
       setDescriptionText(suggestedDescription);
-      setDescriptionError(null);
     }
 
     if (DEFAULT_CATEGORIES.some((category) => category.name === result.category)) {
@@ -276,11 +273,6 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
       hasError = true;
     }
 
-    if (!descriptionText.trim()) {
-      setDescriptionError(t(language, 'descriptionError'));
-      hasError = true;
-    }
-
     if (hasError || isNaN(amount) || isSaving || isPhotoPreparing || terminal.current) return;
 
     setIsSaving(true);
@@ -290,7 +282,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
     try {
       const save = async () => { await onSave(
         amount,
-        descriptionText.trim(),
+        descriptionText.trim() || getLocalizedCategoryName(selectedCategory, language),
         selectedCategory,
         selectedDateMillis,
         noteText.trim() || null,
@@ -414,23 +406,17 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
                 type="text"
                 ref={descriptionRef}
                 aria-label={t(language, 'descriptionLabel')}
+                aria-describedby="expense-description-help"
                 placeholder={t(language, 'descriptionPlaceholder')}
                 value={descriptionText}
                 onChange={(e) => {
                   setDescriptionText(e.target.value);
-                  setDescriptionError(null);
                 }}
-                className={`w-full px-4 py-3 rounded-2xl border text-sm font-medium bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-white focus:outline-none focus:ring-2 transition-all ${
-                  descriptionError
-                    ? 'border-rose-500 focus:ring-rose-500'
-                    : 'border-slate-200 dark:border-slate-800 focus:ring-emerald-500'
-                }`}
+                className="w-full px-4 py-3 rounded-2xl border text-sm font-medium bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-white focus:outline-none focus:ring-2 transition-all border-slate-200 dark:border-slate-800 focus:ring-emerald-500"
               />
-              {descriptionError && (
-                <p className="text-xs text-rose-500 dark:text-rose-400 mt-1 font-medium">
-                  {descriptionError}
-                </p>
-              )}
+              <p id="expense-description-help" className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                {t(language, 'descriptionHelper')}
+              </p>
             </div>
 
             <div>

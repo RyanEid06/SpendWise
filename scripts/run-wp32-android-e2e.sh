@@ -24,7 +24,7 @@ export ANDROID_SERIAL="${ANDROID_SERIAL:-emulator-5554}"
   echo "Refusing WP32 data-reset suite: target is not a verified emulator." >&2
   exit 2
 }
-wp32_avd="$(adb -s "$ANDROID_SERIAL" emu avd name | head -n 1 | tr -d '\r')"
+wp32_avd="$(adb -s "$ANDROID_SERIAL" emu avd name | sed -n '1p' | tr -d '\r')"
 [[ "$wp32_avd" =~ ^wp33-synthetic(-[A-Za-z0-9_-]+)?$ ]] || {
   echo "Refusing WP32 data-reset suite on unexpected AVD: $wp32_avd" >&2
   exit 2

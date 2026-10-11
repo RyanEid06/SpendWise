@@ -1,9 +1,9 @@
 export const MAX_DIAGNOSTIC_RECORDS = 128;
 export const MAX_DIAGNOSTIC_BYTES = 64 * 1024;
 export const DIAGNOSTIC_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
-export const DIAGNOSTIC_OPERATIONS = ['storage.init', 'storage.open', 'storage.read', 'storage.schema', 'storage.migration', 'media.init', 'media.integrity', 'backup.create', 'backup.preview', 'backup.restore', 'security.init', 'security.post_auth_key', 'security.secret_prime', 'startup.secure_init', 'startup.home_frame', 'api.request', 'ai.fallback', 'delete.commit', 'other'] as const;
+export const DIAGNOSTIC_OPERATIONS = ['storage.init', 'storage.open', 'storage.read', 'storage.schema', 'storage.migration', 'media.init', 'media.integrity', 'backup.create', 'backup.preview', 'backup.restore', 'security.init', 'security.post_auth_key', 'security.secret_prime', 'startup.secure_init', 'startup.home_frame', 'api.request', 'api.phase', 'ai.fallback', 'delete.commit', 'other'] as const;
 export type DiagnosticOperation = typeof DIAGNOSTIC_OPERATIONS[number];
-export const DIAGNOSTIC_CODES = ['STORAGE_INIT_FAILED', 'STORAGE_OPEN_FAILED', 'STORAGE_READ_FAILED', 'STORAGE_SCHEMA_FAILED', 'STORAGE_MIGRATION_FAILED', 'MEDIA_INIT_FAILED', 'MEDIA_INTEGRITY_FAILED', 'BACKUP_CREATE_FAILED', 'BACKUP_PREVIEW_FAILED', 'BACKUP_RESTORE_FAILED', 'SECURITY_INIT_FAILED', 'SECURITY_POST_AUTH_KEY_FAILED', 'SECURITY_SECRET_PRIME_FAILED', 'STARTUP_SECURE_INIT_FAILED', 'STARTUP_HOME_FRAME_FAILED', 'API_REQUEST_FAILED', 'AI_LOCAL_FALLBACK', 'DELETE_COMMIT_FAILED', 'UNKNOWN_TECHNICAL_ERROR', 'network', 'timeout', 'temporary_unavailable', 'cancelled', 'quota_exhausted', 'rate_limited', 'not_configured', 'invalid_response', 'unauthorized', 'generic'] as const;
+export const DIAGNOSTIC_CODES = ['STORAGE_INIT_FAILED', 'STORAGE_OPEN_FAILED', 'STORAGE_READ_FAILED', 'STORAGE_SCHEMA_FAILED', 'STORAGE_MIGRATION_FAILED', 'MEDIA_INIT_FAILED', 'MEDIA_INTEGRITY_FAILED', 'BACKUP_CREATE_FAILED', 'BACKUP_PREVIEW_FAILED', 'BACKUP_RESTORE_FAILED', 'SECURITY_INIT_FAILED', 'SECURITY_POST_AUTH_KEY_FAILED', 'SECURITY_SECRET_PRIME_FAILED', 'STARTUP_SECURE_INIT_FAILED', 'STARTUP_HOME_FRAME_FAILED', 'API_REQUEST_FAILED', 'AI_LOCAL_FALLBACK', 'DELETE_COMMIT_FAILED', 'UNKNOWN_TECHNICAL_ERROR', 'network', 'timeout', 'temporary_unavailable', 'backend_unavailable', 'cancelled', 'quota_exhausted', 'rate_limited', 'not_configured', 'invalid_response', 'unauthorized', 'generic'] as const;
 export type DiagnosticCode = typeof DIAGNOSTIC_CODES[number];
 export interface DiagnosticRecord {
   operation: DiagnosticOperation;
@@ -13,6 +13,10 @@ export interface DiagnosticRecord {
   durationMs?: number;
   httpClass?: '2xx' | '3xx' | '4xx' | '5xx';
   retry?: boolean;
+  requestId?: string;
+  backendVersion?: string;
+  feature?: 'analyze' | 'explain-trends' | 'smart-capture' | 'scan-receipt';
+  stage?: 'readiness' | 'register' | 'challenge' | 'verify' | 'ai_dispatch';
 }
 export interface DiagnosticState {
   platform: 'android' | 'web' | 'unknown';
@@ -55,6 +59,10 @@ export function sanitizeDiagnosticRecord(input: unknown, timestamp: number): Dia
   if (duration !== undefined) out.durationMs = Math.round(duration * 100) / 100;
   if (['2xx', '3xx', '4xx', '5xx'].includes(value.httpClass as string)) out.httpClass = value.httpClass as DiagnosticRecord['httpClass'];
   if (typeof value.retry === 'boolean') out.retry = value.retry;
+  if (typeof value.requestId === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(value.requestId)) out.requestId = value.requestId;
+  if (typeof value.backendVersion === 'string' && /^(?:[a-f0-9]{12}|local|unknown)$/.test(value.backendVersion)) out.backendVersion = value.backendVersion;
+  if (['analyze', 'explain-trends', 'smart-capture', 'scan-receipt'].includes(String(value.feature))) out.feature = value.feature as DiagnosticRecord['feature'];
+  if (['readiness', 'register', 'challenge', 'verify', 'ai_dispatch'].includes(String(value.stage))) out.stage = value.stage as DiagnosticRecord['stage'];
   return out;
 }
 export function sanitizeDiagnosticState(input: unknown): DiagnosticState {

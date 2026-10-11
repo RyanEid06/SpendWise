@@ -2,6 +2,19 @@ export const GEMINI_TASKS = ['smart-capture', 'scan-receipt', 'analyze', 'explai
 export type GeminiTask = typeof GEMINI_TASKS[number];
 export interface TaskRoute { models: string[]; thinkingLevel?: 'low' | 'high' }
 export type GeminiTaskRoutes = Partial<Record<GeminiTask, TaskRoute>>;
+// Google deprecated 3.7 on 2026-10-09 and routes it to 3.8. It is not model diversity.
+export function canonicalModel(model: string): string {
+  return model === 'gemini-3.7-flash' ? 'gemini-3.8-flash' : model;
+}
+/** WP36 EN/FR/AR synthetic qualification, 2026-10-11; see WP36_REVIEW.md.
+ * Statistics is a verified-fact selector, never free-form numerical reasoning.
+ * Explicit operator model/route overrides still take precedence in config.ts.
+ */
+export function qualifiedDefaultTaskRoutes(maxAttempts: number): GeminiTaskRoutes {
+  return Object.fromEntries(GEMINI_TASKS.map(task => [task, {
+    models: ['gemini-3.5-flash-lite', 'gemini-3.8-flash'].slice(0, maxAttempts), thinkingLevel: 'low',
+  }]));
+}
 // Documented low/high support checked 2026-10-10. Availability is separately
 // attested per project; prefix matching alone cannot establish parameter support.
 const LOW_HIGH_MODELS = new Set(['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-pro-preview', 'gemini-3-flash-preview', 'gemini-3-pro-preview']);
@@ -22,7 +35,10 @@ export function parseTaskRoutes(env: NodeJS.ProcessEnv): GeminiTaskRoutes {
         r.models.some((m: unknown) => typeof m !== 'string' || !/^gemini-[a-z0-9.-]{1,80}$/.test(m) || !verified.has(m)) ||
         Object.keys(r).some(k => k !== 'models' && k !== 'thinkingLevel') ||
         r.thinkingLevel != null && (!['low', 'high'].includes(r.thinkingLevel) || r.models.some((m: string) => !LOW_HIGH_MODELS.has(m)))) throw new Error('Unverified or unsupported Gemini task route.');
-    out[task as GeminiTask] = { models: [...new Set<string>(r.models)], ...(r.thinkingLevel ? { thinkingLevel: r.thinkingLevel } : {}) };
+    const models = r.models.map(canonicalModel);
+    if (new Set(models).size !== models.length) throw new Error('Task models must be distinct, not aliases.');
+    if (r.models.some((m: string) => m !== canonicalModel(m))) throw new Error('Task route uses a deprecated model alias; qualify its canonical model.');
+    out[task as GeminiTask] = { models, ...(r.thinkingLevel ? { thinkingLevel: r.thinkingLevel } : {}) };
   }
   return out;
 }

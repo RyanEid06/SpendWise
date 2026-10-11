@@ -2,6 +2,8 @@ import { InstallationIdentitySigner, installationIdentitySigner } from './Instal
 import { abortable, delay, SharedTransaction } from './RecoveryTransaction';
 import { AI_END_TO_END_TIMEOUT_MS, withOperationDeadline } from './aiOperationBudget';
 import type { AiRequestInit } from '../app/hooks/aiOperation';
+import { diagnostics } from '../services/diagnostics/diagnostics';
+import { SpendWiseApiError } from '../utils/apiErrors';
 
 export interface RecoveryPhase {
   requestId: string;
@@ -10,6 +12,7 @@ export interface RecoveryPhase {
   elapsedMs: number;
   attempt: number;
   code?: 'HTTP_4XX' | 'HTTP_5XX' | 'NETWORK' | 'CANCELLED_OR_DEADLINE' | 'REJECTED';
+  backendVersion?: string;
 }
 interface RecoveryOptions {
   fetch?: (url: string, init: RequestInit) => Promise<Response>;
@@ -22,8 +25,10 @@ const AUTH_PATHS = { register: '/api/auth/register', challenge: '/api/auth/chall
 function safeLocalStorage(): Storage | null {
   try { return typeof window !== 'undefined' ? window.localStorage : null; } catch { return null; }
 }
-class AuthHttpError extends Error {
-  constructor(readonly status: number, readonly code: string) { super('Authentication request rejected.'); }
+class AuthHttpError extends SpendWiseApiError {
+  constructor(readonly status: number, readonly code: string) {
+    super(status >= 500 ? 'backend_unavailable' : status === 401 || status === 403 ? 'unauthorized' : 'generic', { status, code });
+  }
 }
 class DeviceOfflineError extends TypeError {
   constructor() { super('Device is offline.'); }
@@ -40,6 +45,7 @@ export class AuthenticatedApiClient {
   private readonly random: () => number;
   private logWindow = 0;
   private logCount = 0;
+  private backendVersion = 'unknown';
 
   constructor(private readonly baseUrl: string, private readonly signer: InstallationIdentitySigner = installationIdentitySigner,
     private readonly storage: Storage | null = safeLocalStorage(), private readonly options: RecoveryOptions = {}) {
@@ -53,7 +59,10 @@ export class AuthenticatedApiClient {
     const emit = (outcome: RecoveryPhase['outcome'], error?: unknown) => {
       const code: RecoveryPhase['code'] = error instanceof AuthHttpError ? (error.status >= 500 ? 'HTTP_5XX' : 'HTTP_4XX')
         : error instanceof TypeError ? 'NETWORK' : error instanceof Error && ['AbortError', 'TimeoutError'].includes(error.name) ? 'CANCELLED_OR_DEADLINE' : 'REJECTED';
-      const event: RecoveryPhase = { requestId, phase, outcome, elapsedMs: Math.max(0, Math.round(this.now() - start)), attempt, ...(error ? { code } : {}) };
+      const event: RecoveryPhase = { requestId, phase, outcome, backendVersion: this.backendVersion, elapsedMs: Math.max(0, Math.round(this.now() - start)), attempt, ...(error ? { code } : {}) };
+      if (outcome !== 'start') diagnostics.record({ operation: 'api.phase', outcome,
+        code: error instanceof AuthHttpError ? (error.status === 401 || error.status === 403 ? 'unauthorized' : 'temporary_unavailable') : error instanceof TypeError ? 'network' : error instanceof Error && error.name === 'TimeoutError' ? 'timeout' : error instanceof Error && error.name === 'AbortError' ? 'cancelled' : 'generic',
+        requestId, backendVersion: this.backendVersion, stage: phase, durationMs: event.elapsedMs });
       try { observe?.(event); } catch { /* A UI observer cannot change authentication. */ }
       try {
         if (this.options.onPhase) this.options.onPhase(event);
@@ -80,6 +89,8 @@ export class AuthenticatedApiClient {
       // Headers alone are not completion: retain the deadline through body receipt.
       return await abortable((async () => {
         const response = await this.transport(target, { ...init, signal: requestSignal });
+        const version = response.headers.get('X-Backend-Version');
+        if (version && /^(?:[a-f0-9]{12}|local|unknown)$/.test(version)) this.backendVersion = version;
         const body = await response.arrayBuffer();
         requestSignal.throwIfAborted();
         return new Response([204, 205, 304].includes(response.status) ? null : body, { status: response.status, statusText: response.statusText, headers: response.headers });

@@ -1,5 +1,5 @@
 import path from 'path';
-import { parseTaskRoutes, type GeminiTaskRoutes } from './taskRouting';
+import { canonicalModel, parseTaskRoutes, qualifiedDefaultTaskRoutes, type GeminiTaskRoutes } from './taskRouting';
 
 export interface ServerConfig {
   port: number;
@@ -74,18 +74,30 @@ export function parseServerConfig(env: NodeJS.ProcessEnv = process.env): ServerC
   const geminiRuntimeProfile = env.GEMINI_RUNTIME_PROFILE || 'free';
   if (geminiRuntimeProfile !== 'free' && geminiRuntimeProfile !== 'standard') throw new Error('Invalid Gemini runtime profile.');
   const port = Number(env.PORT || 3000);
-  const geminiModel = (env.GEMINI_MODEL || 'gemini-3.8-flash').trim();
+  const geminiModel = canonicalModel((env.GEMINI_MODEL || 'gemini-3.8-flash').trim());
   const geminiFallbackModels = (
-    env.GEMINI_FALLBACK_MODELS ||
-    env.GEMINI_FALLBACK_MODEL ||
-    'gemini-3.7-flash,gemini-3.5-flash-lite'
+    env.GEMINI_FALLBACK_MODELS ??
+    env.GEMINI_FALLBACK_MODEL ??
+    ''
   )
     .split(',')
-    .map((model) => model.trim())
+    .map((model) => canonicalModel(model.trim()))
     .filter(Boolean);
   const geminiModels = [
     ...new Set([geminiModel, ...geminiFallbackModels].filter(Boolean)),
   ];
+  const geminiMaxAttempts = boundedInteger(env.GEMINI_MAX_ATTEMPTS, 2, 1, 3);
+  const hasModelOverride = Boolean(env.GEMINI_MODEL?.trim() || env.GEMINI_FALLBACK_MODELS?.trim() || env.GEMINI_FALLBACK_MODEL?.trim() || env.GEMINI_TASK_ROUTES?.trim());
+  const geminiTaskRoutes = hasModelOverride ? parseTaskRoutes(env) : qualifiedDefaultTaskRoutes(geminiMaxAttempts);
+  if (geminiModels.length > 1) {
+    const verified = new Set((env.GEMINI_VERIFIED_MODELS || '').split(',').map(model => model.trim()));
+    if (env.GEMINI_ROUTING_QUALITY_APPROVED !== 'true' || geminiModels.some(model => !verified.has(model))) {
+      throw new Error('Distinct fallback models require verified quality gates.');
+    }
+  }
+  if (geminiModels.length > geminiMaxAttempts || Object.values(geminiTaskRoutes).some(route => route.models.length > geminiMaxAttempts)) {
+    throw new Error('Configured models are unreachable within the global attempt cap.');
+  }
   const geminiOperationBudgetMs = boundedInteger(env.GEMINI_OPERATION_BUDGET_MS, 90_000, 15_000, 100_000);
   const geminiTimeoutMs = Math.min(geminiOperationBudgetMs, boundedInteger(env.GEMINI_TIMEOUT_MS, 50_000, 5_000, 60_000));
 
@@ -139,10 +151,10 @@ export function parseServerConfig(env: NodeJS.ProcessEnv = process.env): ServerC
     rateLimit: 30,
     geminiTimeoutMs,
     geminiOperationBudgetMs,
-    geminiMaxAttempts: boundedInteger(env.GEMINI_MAX_ATTEMPTS, 2, 1, 3),
+    geminiMaxAttempts,
     geminiRuntimeProfile,
     backendHostProfile,
-    geminiTaskRoutes: parseTaskRoutes(env),
+    geminiTaskRoutes,
     geminiRetryDelayMs: boundedInteger(env.GEMINI_RETRY_DELAY_MS, 1_000, 250, 4_000),
     rateBucketMaxEntries: 2_000,
     allowedOrigins,

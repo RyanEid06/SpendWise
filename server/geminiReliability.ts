@@ -59,6 +59,7 @@ export interface AttemptEvent {
   elapsedMs: number; attemptMs: number; remainingMs: number; willRetry: boolean;
   retryDelayMs?: number; upstreamStatus?: number; networkClass?: string;
   promptTokens?: number; outputTokens?: number; thinkingTokens?: number;
+  fallbackUsed?: boolean;
 }
 interface ProviderResponse {
   text?: string | null;
@@ -121,7 +122,7 @@ export async function executeGeminiJsonWithModelFallback<T>(o: GeminiJsonModelFa
         let parsed: unknown; try { parsed = JSON.parse(response.text?.trim() || ''); } catch { throw createAiFailure('AI_INVALID_RESPONSE'); }
         const result = o.validate(parsed); if (result == null) throw createAiFailure('AI_INVALID_RESPONSE');
         if (remaining() <= 0) throw createAiFailure('AI_DEADLINE_EXCEEDED');
-        o.logAttempt?.({ endpoint: o.endpoint, requestId: o.requestId, model, attempt, code: 'PROVIDER_SUCCESS', elapsedMs: now() - started, attemptMs: now() - attemptStart, remainingMs: remaining(), willRetry: false, promptTokens: response.usageMetadata?.promptTokenCount, outputTokens: response.usageMetadata?.candidatesTokenCount, thinkingTokens: response.usageMetadata?.thoughtsTokenCount });
+        o.logAttempt?.({ endpoint: o.endpoint, requestId: o.requestId, model, attempt, fallbackUsed: model !== models[0], code: 'PROVIDER_SUCCESS', elapsedMs: now() - started, attemptMs: now() - attemptStart, remainingMs: remaining(), willRetry: false, promptTokens: response.usageMetadata?.promptTokenCount, outputTokens: response.usageMetadata?.candidatesTokenCount, thinkingTokens: response.usageMetadata?.thoughtsTokenCount });
         return result;
       } catch (caught) { error = operation.signal.aborted ? operation.signal.reason : caught; }
       finally { clearTimeout(timer); operation.signal.removeEventListener('abort', abort); }
@@ -129,7 +130,7 @@ export async function executeGeminiJsonWithModelFallback<T>(o: GeminiJsonModelFa
       const backoff = Math.min(8000, Math.max(0, o.retryDelayMs) * 2 ** (attempt - 1)) * (1 + Math.max(0, Math.min(1, (o.random ?? Math.random)())) * 0.5);
       const wait = Math.max(backoff, normalized.retryAfterMs ?? 0);
       const willRetry = !operation.signal.aborted && normalized.retryable && attempt < maxAttempts && remaining() >= wait + minAttempt;
-      const event = { endpoint: o.endpoint, requestId: o.requestId, model, attempt, code: normalized.code, elapsedMs: now() - started, attemptMs: now() - attemptStart, remainingMs: remaining(), willRetry, retryDelayMs: wait, upstreamStatus: normalized.upstreamStatus, networkClass: normalized.networkClass };
+      const event = { endpoint: o.endpoint, requestId: o.requestId, model, attempt, fallbackUsed: model !== models[0], code: normalized.code, elapsedMs: now() - started, attemptMs: now() - attemptStart, remainingMs: remaining(), willRetry, retryDelayMs: wait, upstreamStatus: normalized.upstreamStatus, networkClass: normalized.networkClass };
       o.logFailure?.(event); o.logAttempt?.(event);
       if (!willRetry) {
         if (!operation.signal.aborted && remaining() <= 0) throw createAiFailure('AI_DEADLINE_EXCEEDED');

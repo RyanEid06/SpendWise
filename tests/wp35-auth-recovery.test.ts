@@ -51,7 +51,8 @@ test('default phase logs retain allowlisted structured fields in native console 
     assert.equal(label, '[AI connection]');
     assert.equal(typeof payload, 'string');
     const event = JSON.parse(payload as string);
-    assert.deepEqual(Object.keys(event).sort(), ['attempt', 'elapsedMs', 'outcome', 'phase', 'requestId']);
+    assert.deepEqual(Object.keys(event).sort(), ['attempt', 'backendVersion', 'elapsedMs', 'outcome', 'phase', 'requestId']);
+    assert.equal(event.backendVersion, 'unknown');
     assert.match(event.requestId, /^[\da-f-]{36}$/i);
   }
 });
