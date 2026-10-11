@@ -1,14 +1,14 @@
 # Signing and release runbook
 
-Current candidate metadata: **2.1.1 / Android versionCode11**, package `com.spendwise.app`.
-This is the user-requested private WP35 phone-test candidate on
-`codex/wp35-integration`; public main remains2.1.0/code10. No2.1.1 tag or
+Current candidate metadata: **2.1.2 / Android versionCode12**, package `com.spendwise.app`.
+This is the user-requested private WP36 phone-test candidate on
+`codex/wp35-integration`; public main remains2.1.0/code10. No2.1.2 tag or
 public release is authorized yet.
 `version.json` is authoritative; package and lockfile root versions must match.
 The current authoritative values are:
 
 ```json
-{"versionName": "2.1.1", "versionCode": 11}
+{"versionName": "2.1.2", "versionCode": 12}
 ```
 
 Every future APK update must increase the Android version code and retain the
@@ -41,7 +41,7 @@ pairs are 2.0.2/code9 and 2.1.0/code10; strict baseline/source/hash/signature ch
 must be updated deliberately for later releases. Code8 is never launched in its
 historical upgrade path because that artifact has the known Android16 startup bug.
 
-For the private2.1.1/code11 phone trial, dispatch `wp35-integration.yml` on the
+For the private2.1.2/code12 phone trial, dispatch `wp35-integration.yml` on the
 integration branch with `signed_test_apk=true` and its exact expected source.
 It calls the reusable `wp35-test-apk.yml`; this build-only workflow uses
 the permanent key and checks actual package/version/signature/hash; it does not

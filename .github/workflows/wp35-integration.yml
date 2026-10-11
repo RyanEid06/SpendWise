@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       signed_test_apk:
-        description: 'Build only the private signed 2.1.1 test APK; no deployment'
+        description: 'Build only the private signed 2.1.2 test APK; no deployment'
         type: boolean
         default: false
       expected_source:
