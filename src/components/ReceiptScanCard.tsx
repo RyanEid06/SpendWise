@@ -1,7 +1,10 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { AlertCircle, Camera, CheckCircle2, ImagePlus, Loader2, X } from 'lucide-react';
+import { AlertCircle, Camera, CheckCircle2, ImagePlus, X } from 'lucide-react';
 import { Language, ReceiptScanResult } from '../types';
 import type { DraftToolState } from '../data/ExpenseDraft';
+import { useAiOperation } from '../app/hooks/useAiOperation';
+import { AiProgressPanel } from './AiProgressPanel';
+import { normalizeApiException } from '../utils/apiErrors';
 import { apiFetchJson } from '../utils/api';
 import { getAiErrorMessage, SpendWiseApiError } from '../utils/apiErrors';
 import { AttachmentDraft, AttachmentStorage } from '../utils/attachmentStorage';
@@ -146,6 +149,8 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
   protectAcquisition,
   onDraftStateChange,
 }) => {
+  const { operation, progress } = useAiOperation();
+  const [retryAllowed, setRetryAllowed] = useState(true);
   const selectionGenerationRef = useRef(0);
   const mountedRef = useRef(true);
   const preparationRequestIdRef = useRef(0);
@@ -171,6 +176,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
     if (previousContext.current.currencyCode === currencyCode && previousContext.current.language === language) return;
     previousContext.current = { currencyCode, language };
     requestIdRef.current += 1;
+    operation.reset();
     analysisInFlightRef.current = false;
     setResult(null);
     setError(null);
@@ -195,6 +201,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
       mountedRef.current = false;
       preparationRequestIdRef.current += 1;
       requestIdRef.current += 1;
+      operation.reset();
       acquisitionInFlightRef.current = false;
       analysisInFlightRef.current = false;
       if (preparedPreviewUrlRef.current) URL.revokeObjectURL(preparedPreviewUrlRef.current);
@@ -213,6 +220,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
     setInterrupted(false);
     preparationRequestIdRef.current += 1;
     requestIdRef.current += 1;
+    operation.reset();
     analysisInFlightRef.current = false;
     clearPreparedPreview();
     setPreviewUrl(null);
@@ -233,6 +241,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
       const acquired = source === 'camera' ? await takePhoto() : (await choosePhotos(1))[0] || null;
       if (!acquired) return [];
       requestIdRef.current += 1;
+      operation.reset();
       analysisInFlightRef.current = false;
       clearPreparedPreview();
       setPreviewUrl(null);
@@ -272,7 +281,10 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
       return;
     }
 
+    const run = operation.begin('preparing');
+    if (!run) return;
     analysisInFlightRef.current = true;
+    setRetryAllowed(true);
     setInterrupted(false);
     const requestId = ++requestIdRef.current;
     setIsScanning(true);
@@ -281,12 +293,14 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
 
     try {
       const imageBase64 = await blobToDataUrl(preparedDraft.blob);
-      if (requestId !== requestIdRef.current) return;
+      if (requestId !== requestIdRef.current || !run.isCurrent()) return;
 
       const responseData = await apiFetchJson<unknown>(
         '/api/gemini/scan-receipt',
         {
           method: 'POST',
+          signal: run.signal,
+          onPhase: run.onPhase,
           body: JSON.stringify({
             imageBase64,
             mimeType: preparedDraft.mimeType,
@@ -299,17 +313,28 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
 
       const parsed = parseReceiptScanResult(responseData, currencyCode);
       if (!parsed) throw new SpendWiseApiError('invalid_response');
-      if (requestId !== requestIdRef.current) return;
+      if (requestId !== requestIdRef.current || !run.isCurrent()) return;
       setResult(parsed);
+      run.finish('ready');
     } catch (error) {
-      if (requestId !== requestIdRef.current) return;
+      if (requestId !== requestIdRef.current || !run.isCurrent()) return;
       setError(getAiErrorMessage(language, error));
+      setRetryAllowed(normalizeApiException(error).kind !== 'quota_exhausted');
+      run.finish('error');
     } finally {
       if (requestId === requestIdRef.current) {
         analysisInFlightRef.current = false;
         setIsScanning(false);
       }
     }
+  };
+
+  const cancelAnalysis = () => {
+    requestIdRef.current += 1;
+    analysisInFlightRef.current = false;
+    operation.cancel();
+    setIsScanning(false);
+    setError(null);
   };
 
   return (
@@ -358,10 +383,14 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
           onClick={() => void beginPhotoSelection('gallery')}
           className="min-h-[44px] rounded-xl border border-emerald-400 dark:border-emerald-700 bg-white dark:bg-[#111928] text-emerald-800 dark:text-emerald-200 text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50"
         >
-          {isAcquiring ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
+          <ImagePlus className="w-4 h-4" />
           <span>{ta(language, 'choosePhoto')}</span>
         </button>
       </div>
+
+      <AiProgressPanel progress={isPreparing ? { stage: 'preparing', active: true } : progress}
+        language={language} onCancel={isPreparing ? resetSelection : cancelAnalysis}
+        onRetry={retryAllowed && !disabled ? () => void analyze() : undefined} />
 
       {previewUrl && (
         <>
@@ -371,12 +400,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
               alt={t(language, 'receiptPreviewAlt')}
               className="w-full max-h-48 object-contain"
             />
-            {isPreparing && (
-              <div className="absolute inset-x-0 bottom-0 bg-slate-950/75 text-white px-3 py-2 text-xs font-semibold flex items-center justify-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>{ta(language, 'processingPhoto')}</span>
-              </div>
-            )}
+
           </div>
           <button
             type="button"
@@ -384,18 +408,13 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
             onClick={() => void analyze()}
             className="w-full min-h-[44px] bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xs flex items-center justify-center gap-1.5 active:scale-95"
           >
-            {isScanning && <Loader2 className="w-4 h-4 animate-spin" />}
-            <span>{isScanning ? t(language, 'scanningStatus') : t(language, 'receiptAnalyzePhoto')}</span>
+            <Camera className="w-4 h-4" />
+            <span>{t(language, 'receiptAnalyzePhoto')}</span>
           </button>
         </>
       )}
 
-      {isScanning && (
-        <div className="flex items-center gap-2 text-xs text-purple-800 dark:text-purple-300 font-medium">
-          <Loader2 className="w-4 h-4 animate-spin text-purple-600 dark:text-purple-400 shrink-0" />
-          <span>{t(language, 'analyzingReceiptMsg')}</span>
-        </div>
-      )}
+
 
       {error && (
         <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-900 dark:text-rose-200 text-xs flex items-start gap-2.5 border border-rose-200 dark:border-rose-800">

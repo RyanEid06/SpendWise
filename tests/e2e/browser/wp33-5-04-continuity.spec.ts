@@ -124,10 +124,10 @@ test('resetting a photo rejects its late suggestion and keeps the existing draft
   await editor.getByRole('textbox', { name: /Description/ }).fill('Manual draft');
   await editor.getByRole('button', { name: 'Analyze with Gemini', exact: true }).click();
   await expect.poll(() => started).toBe(true);
+  const cancelled = page.waitForEvent('requestfailed', request => request.url().endsWith('/api/gemini/smart-capture'));
   await editor.getByRole('button', { name: t('en', 'smartCaptureRemovePhoto'), exact: true }).click();
-  const completed = page.waitForResponse('**/api/gemini/smart-capture');
+  expect((await cancelled).failure()?.errorText).toMatch(/ABORTED|cancelled/i);
   gate.finish();
-  await completed;
   await expect(editor.getByRole('button', { name: 'Apply to Expense Draft', exact: true })).toHaveCount(0);
   await expect(editor.getByRole('textbox', { name: /Description/ })).toHaveValue('Manual draft');
 });
@@ -179,9 +179,10 @@ for (const screen of ['AI Insights', 'Statistics'] as const) {
       await expect.poll(() => requests).toBe(1);
       for (let index = 0; index < 3; index++) {
         await page.getByRole('button', { name: 'Home', exact: true }).click();
-        await expect(page.getByRole('button', { name: /Explaining|Evaluating personal/ })).toHaveCount(0);
+        await expect(page.locator('.ai-progress:visible')).toHaveCount(0);
         await page.getByRole('button', { name: screen, exact: true }).click();
-        await expect(page.getByRole('button', { name: /Explaining|Evaluating personal/ })).toBeDisabled();
+        await expect(page.getByRole('button', { name: screen === 'Statistics' ? 'Explain' : 'Analyze My Spending', exact: true })).toBeDisabled();
+        await expect(page.locator('.ai-progress:visible')).toHaveAttribute('data-ai-stage', 'sending');
       }
       await page.getByRole('button', { name: 'Home', exact: true }).click();
       gate.finish();

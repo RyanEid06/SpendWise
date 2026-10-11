@@ -2,6 +2,7 @@ import {
   InstallationIdentitySigner,
   installationIdentitySigner,
 } from './InstallationIdentityService';
+import type { AiRequestInit } from '../app/hooks/aiOperation';
 
 interface RegistrationResponse {
   installationId: string;
@@ -55,18 +56,38 @@ export class AuthenticatedApiClient {
   ): Promise<Response> {
     const target = this.url(path);
     if (
-      import.meta.env.PROD &&
+      import.meta.env?.PROD &&
       /^http:\/\//i.test(target)
     ) {
       throw new Error('Production SpendWise API requires HTTPS.');
     }
 
     const controller = new AbortController();
-    const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+    init.signal?.throwIfAborted();
+    const cancel = () => controller.abort(init.signal?.reason);
+    init.signal?.addEventListener('abort', cancel, { once: true });
+    const timer = window.setTimeout(() => controller.abort(new DOMException('Request deadline expired', 'TimeoutError')), timeoutMs);
+    let rejectOnAbort: (() => void) | undefined;
     try {
-      return await fetch(target, { ...init, signal: controller.signal });
+      // Keep this existing request deadline and caller cancellation through the
+      // response body. WP35.2 owns the later shared processing/overall budgets.
+      const aborted = new Promise<never>((_, reject) => {
+        rejectOnAbort = () => reject(controller.signal.reason);
+        controller.signal.addEventListener('abort', rejectOnAbort, { once: true });
+      });
+      const response = (async () => {
+        const headers = await fetch(target, { ...init, signal: controller.signal });
+        const body = await headers.arrayBuffer();
+        controller.signal.throwIfAborted();
+        return new Response([204, 205, 304].includes(headers.status) ? null : body, {
+          status: headers.status, statusText: headers.statusText, headers: headers.headers,
+        });
+      })();
+      return await Promise.race([response, aborted]);
     } finally {
       window.clearTimeout(timer);
+      init.signal?.removeEventListener('abort', cancel);
+      if (rejectOnAbort) controller.signal.removeEventListener('abort', rejectOnAbort);
     }
   }
 
@@ -191,16 +212,22 @@ export class AuthenticatedApiClient {
 
   async fetch(
     path: string,
-    init: RequestInit = {},
+    init: AiRequestInit = {},
     timeoutMs = 15_000
   ): Promise<Response> {
     const send = async () => {
+      init.signal?.throwIfAborted();
+      if (!this.accessToken || Date.now() + 5_000 >= this.accessTokenExpiresAt) {
+        init.onPhase?.({ phase: 'authentication', outcome: 'start' });
+      }
       const token = await this.getAccessToken();
+      init.signal?.throwIfAborted();
       const headers = new Headers(init.headers);
       if (init.body != null && !headers.has('Content-Type')) {
         headers.set('Content-Type', 'application/json');
       }
       headers.set('Authorization', 'Bearer ' + token);
+      init.onPhase?.({ phase: 'ai_dispatch', outcome: 'start' });
       return this.rawFetch(path, { ...init, headers }, timeoutMs);
     };
 

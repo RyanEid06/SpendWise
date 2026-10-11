@@ -4,8 +4,10 @@ import { t, TranslationKey } from './translations';
 export type AiApiErrorKind =
   | 'network'
   | 'timeout'
+  | 'cancelled'
   | 'temporary_unavailable'
   | 'rate_limited'
+  | 'quota_exhausted'
   | 'not_configured'
   | 'invalid_response'
   | 'unauthorized'
@@ -39,6 +41,8 @@ export function classifyApiFailure(
   code: string | null
 ): AiApiErrorKind {
   if (code === 'AI_TIMEOUT') return 'timeout';
+  if (code === 'AI_QUOTA_EXHAUSTED') return 'quota_exhausted';
+  if (code === 'AI_NETWORK_ERROR') return 'network';
   if (code === 'AI_RATE_LIMITED' || status === 429) return 'rate_limited';
   if (code === 'AI_NOT_CONFIGURED') return 'not_configured';
   if (code === 'AI_TEMPORARILY_UNAVAILABLE') return 'temporary_unavailable';
@@ -81,6 +85,9 @@ export function normalizeApiException(error: unknown): SpendWiseApiError {
     (typeof DOMException !== 'undefined' && error instanceof DOMException && error.name === 'AbortError') ||
     (error instanceof Error && error.name === 'AbortError')
   ) {
+    return new SpendWiseApiError('cancelled');
+  }
+  if (error instanceof Error && error.name === 'TimeoutError') {
     return new SpendWiseApiError('timeout');
   }
 
@@ -94,8 +101,10 @@ export function normalizeApiException(error: unknown): SpendWiseApiError {
 const ERROR_TRANSLATION_KEYS: Record<AiApiErrorKind, TranslationKey> = {
   network: 'aiErrorNetwork',
   timeout: 'aiErrorTimeout',
+  cancelled: 'aiErrorGeneric',
   temporary_unavailable: 'aiErrorUnavailable',
   rate_limited: 'aiErrorRateLimited',
+  quota_exhausted: 'aiErrorRateLimited',
   not_configured: 'aiErrorNotConfigured',
   invalid_response: 'aiErrorInvalidResponse',
   unauthorized: 'aiErrorGeneric',
@@ -103,5 +112,13 @@ const ERROR_TRANSLATION_KEYS: Record<AiApiErrorKind, TranslationKey> = {
 };
 
 export function getAiErrorMessage(language: Language, error: unknown): string {
+  if (normalizeApiException(error).kind === 'cancelled') return {
+    en: 'AI request cancelled.', fr: 'Requête IA annulée.', ar: 'تم إلغاء طلب الذكاء الاصطناعي.',
+  }[language];
+  if (normalizeApiException(error).kind === 'quota_exhausted') return {
+    en: 'The AI service’s daily quota is exhausted. Wait for the provider to reset the quota before requesting AI again.',
+    fr: 'Le quota quotidien du service IA est épuisé. Attendez sa réinitialisation par le fournisseur avant de relancer une requête IA.',
+    ar: 'نفدت الحصة اليومية لخدمة الذكاء الاصطناعي. انتظر حتى يعيد المزود تعيين الحصة قبل إرسال طلب جديد.',
+  }[language];
   return t(language, ERROR_TRANSLATION_KEYS[normalizeApiException(error).kind]);
 }

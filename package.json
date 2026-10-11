@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "lint": "tsc --noEmit",
     "android:sync": "cap sync android",
+    "test:wp35:progress": "tsx --test tests/wp35-progress.test.ts tests/wp35-progress-transport.test.ts tests/wp35-result-validation.test.ts tests/wp35-editor-layout.test.ts",
     "test:reliability": "tsx --test tests/reliability.test.ts",
     "test:currency": "tsx --test tests/currency.test.ts",
     "test:persistence": "tsx --test tests/persistence.test.ts",

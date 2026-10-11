@@ -317,7 +317,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
   return (
     <ViewportPortal>
       <div
-        className="fixed inset-x-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs"
+        className="expense-editor-viewport fixed inset-x-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs"
         style={{ height: viewport.height, top: viewport.top }}
         ref={dialogRef}
         tabIndex={-1}

@@ -2,6 +2,20 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+.ai-progress-track { height: 3px; overflow: hidden; border-radius: 999px; background: #d1fae5; }
+.ai-progress-bar { height: 100%; width: 35%; background: #059669; animation: ai-progress 1.8s ease-in-out infinite alternate; }
+@keyframes ai-progress { from { transform: translateX(-100%); } to { transform: translateX(285%); } }
+@media (prefers-reduced-motion: reduce) { .ai-progress-bar { animation: none; transform: none; } }
+
+/* Capacitor SystemBars provides zero when native padding consumed the inset.
+   Choose the injected value OR env(), never add both. IME stays with visualViewport. */
+.expense-editor-viewport {
+  padding-top: calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 14px);
+  padding-bottom: calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) + 14px);
+  padding-left: calc(var(--safe-area-inset-left, env(safe-area-inset-left, 0px)) + 14px);
+  padding-right: calc(var(--safe-area-inset-right, env(safe-area-inset-right, 0px)) + 14px);
+}
+
 @layer base {
   html {
     color-scheme: light dark;
