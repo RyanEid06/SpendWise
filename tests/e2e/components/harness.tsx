@@ -231,7 +231,7 @@ async function render() {
        testCase === 'history' ? <HistoryHarness /> :
        testCase === 'amounts' ? <AmountHarness /> :
        testCase === 'expense' ? <AddEditExpenseModal protectDraft={params.has('protect')} isOpen={true} language={initialLanguage} currencyCode="USD"
-         initialExpense={params.get('edit') ? fixtures[0] : null} onSave={() => record('expense-save')} onClose={() => record('expense-close')} /> :
+         initialExpense={params.get('edit') ? fixtures[0] : null} onSave={(amount, description, category) => { record('expense-save'); record(`expense-save:${amount}:${description}:${category}`); }} onClose={() => record('expense-close')} /> :
        testCase.startsWith('lock-') ? <LockHarness /> :
        <DialogHarness />}
     </React.StrictMode>

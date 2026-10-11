@@ -6,6 +6,7 @@ export type AiApiErrorKind =
   | 'cancelled'
   | 'timeout'
   | 'temporary_unavailable'
+  | 'backend_unavailable'
   | 'rate_limited'
   | 'quota_exhausted'
   | 'not_configured'
@@ -40,6 +41,7 @@ export function classifyApiFailure(
   status: number | null,
   code: string | null
 ): AiApiErrorKind {
+  if (code === 'AUTH_STORE_UNAVAILABLE' || code === 'AUTH_SERVICE_ERROR') return 'backend_unavailable';
   if (code === 'AI_TIMEOUT' || code === 'AI_DEADLINE_EXCEEDED') return 'timeout';
   if (code === 'AI_CANCELLED') return 'cancelled';
   if (code === 'AI_NETWORK_ERROR') return 'network';
@@ -103,11 +105,12 @@ const ERROR_TRANSLATION_KEYS: Record<AiApiErrorKind, TranslationKey> = {
   network: 'aiErrorNetwork',
   timeout: 'aiErrorTimeout',
   temporary_unavailable: 'aiErrorUnavailable',
+  backend_unavailable: 'aiErrorBackendUnavailable',
   rate_limited: 'aiErrorRateLimited',
   quota_exhausted: 'aiErrorQuotaExhausted',
   not_configured: 'aiErrorNotConfigured',
   invalid_response: 'aiErrorInvalidResponse',
-  unauthorized: 'aiErrorGeneric',
+  unauthorized: 'aiErrorAuthentication',
   generic: 'aiErrorGeneric',
 };
 

@@ -17,8 +17,10 @@ if (!process.argv.includes('--run-synthetic-free-tier')) throw new Error('Explic
 const key = (existsSync('.env') ? parseEnv(readFileSync('.env', 'utf8')).GEMINI_API_KEY?.trim() : undefined) || process.env.GEMINI_API_KEY?.trim();
 if (!key || !/^[\x21-\x7e]+$/.test(key)) throw new Error('Missing or invalid local credential; never print it.');
 const ai = new GoogleGenAI({ apiKey: key, httpOptions: { timeout: 50_000, retryOptions: { attempts: 1 } } });
-const evidence: any = { kind: 'actual-google-api-synthetic-only', tierEvidence: 'User confirmed Google AI Studio Free tier, 2026-10-10', startedAt: new Date().toISOString(), requestCap: 10, perRequestTimeoutMs: 50_000, metadata: [], results: [] };
-const output = 'artifacts/wp35-live/results.json'; mkdirSync('artifacts/wp35-live', { recursive: true });
+const wp36 = process.argv.includes('--wp36-revalidate');
+const locales = wp36 && process.argv.includes('--qualify-locales');
+const evidence: any = { kind: 'actual-google-api-synthetic-only', tierEvidence: 'WP35 owner-attested Free tier; current billing tier not independently observable', startedAt: new Date().toISOString(), requestCap: wp36 ? 8 : 10, perRequestTimeoutMs: 50_000, metadata: [], results: [] };
+const output = wp36 ? locales ? 'artifacts/wp36/live-locales.json' : 'artifacts/wp36/live-results.json' : 'artifacts/wp35-live/results.json'; mkdirSync(wp36 ? 'artifacts/wp36' : 'artifacts/wp35-live', { recursive: true });
 const save = () => writeFileSync(output, JSON.stringify(evidence, null, 2));
 const names = ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.5-flash-lite'];
 const listed: string[] = [];
@@ -39,32 +41,38 @@ const expenses = [
 const summary = new SpendingAnalyzer().computeHistoricalSummary(expenses, { year: 2026, month: 10 });
 const stats = StatisticsEngine.calculateStatistics(expenses, [], 'LAST_3_MONTHS', { year: 2026, month: 10 });
 const parts = (file: string) => ({ imageBase64: readFileSync('artifacts/wp35-live/'+file+'.png').toString('base64'), mimeType: 'image/png', currencyCode: 'USD', language: 'en' });
-const fixtures = [
+const baseFixtures = [
   { task: 'analyze', router: analysisRouter, body: { summary, currencyCode: 'USD', language: 'en' } },
   { task: 'explain-trends', router: trendsRouter, body: { stats, currencyCode: 'USD', language: 'en' } },
   { task: 'smart-capture', router: smartCaptureRouter, body: parts('purchase') },
   { task: 'scan-receipt', router: receiptScanRouter, body: parts('receipt') },
 ];
+const fixtures = locales ? ['fr', 'ar'].flatMap(language => baseFixtures.map(fixture => ({ ...fixture, body: { ...fixture.body, language } }))) : baseFixtures;
 const requests = new Map<string, GeminiJsonRequest<any>>();
 // Capture actual route prompts/schema with synthetic bodies, never send to Render.
 const original = geminiService.generateJson;
+let capturing = '';
 try {
-  geminiService.generateJson = async (request: GeminiJsonRequest<any>) => { requests.set(request.endpoint.split('/').at(-1)!, request); throw new Error('CAPTURE_ONLY'); };
+  geminiService.generateJson = async (request: GeminiJsonRequest<any>) => { requests.set(capturing, request); throw new Error('CAPTURE_ONLY'); };
   for (const f of fixtures) {
+    capturing = `${f.task}:${f.body.language}`;
     const handler = (f.router as any).stack.find((s: any) => s.route)?.route.stack[0].handle;
     const res: any = { locals: {}, status() { return this; }, json() { return this; } };
     await handler({ body: f.body }, res);
   }
 } finally { geminiService.generateJson = original; }
-if (requests.size !== 4) throw new Error('Synthetic fixture failed route validation.');
-const cases = [
+if (requests.size !== fixtures.length) throw new Error('Synthetic fixture failed route validation.');
+const cases = locales ? fixtures.map(f => ({ task: f.task, language: f.body.language, model: names[2], thinking: 'low' as const, variant: 'wp36-lite-locale' })) : wp36 ? [
+  ...fixtures.map(f => ({ task: f.task, model: names[0], thinking: undefined as 'low' | undefined, variant: 'wp36-default' })),
+  ...fixtures.map(f => ({ task: f.task, model: names[2], thinking: 'low' as const, variant: 'wp36-lite-candidate' })),
+] : [
   ...fixtures.map(f => ({ task: f.task, model: names[0], thinking: undefined as 'low' | undefined, variant: 'default' })),
   ...['analyze', 'explain-trends'].map(task => ({ task, model: names[0], thinking: 'low' as const, variant: 'flash-low' })),
   ...fixtures.map(f => ({ task: f.task, model: names[2], thinking: 'low' as const, variant: 'lite-low' })),
 ];
-for (const probe of cases.slice(0, 10)) {
+for (const probe of cases.slice(0, evidence.requestCap)) {
   if (!listed.includes(probe.model)) { evidence.results.push({ ...probe, skipped: 'not-listed' }); continue; }
-  const req = requests.get(probe.task)!; const started = performance.now();
+  const req = requests.get(`${probe.task}:${'language' in probe ? probe.language : 'en'}`)!; const started = performance.now();
   const probeSignal = AbortSignal.timeout(50_000);
   const result: any = { ...probe, attempts: 1 };
   try {
@@ -81,7 +89,8 @@ for (const probe of cases.slice(0, 10)) {
       result.financialGate = value?.totalAmount === 6 && value?.totalKind === 'total' && value?.totalIsReliable === true && value?.detectedCurrencyCode === 'USD' && value?.multipleCurrencies === false;
       result.ocrGate = value?.merchant?.toUpperCase() === 'SYNTHETIC TEST STORE' && value?.date === '2026-10-01' && value?.items?.some((s: string) => /coffee/i.test(s)) && value?.items?.some((s: string) => /bread/i.test(s));
     }
-    if (probe.task === 'analyze' || probe.task === 'explain-trends') {
+    if (probe.task === 'explain-trends') result.financialGate = result.sanitizerValid; // Only validated IDs; all displayed financial prose is deterministic.
+    if (probe.task === 'analyze') {
       // All prose numbers must occur in the actual verified synthetic input;
       // exclude labels/titles to avoid treating a numbered bullet as money.
       const prose = JSON.stringify(value ?? {}); const numeric = prose.match(/\d+(?:\.\d+)?/g) ?? [];

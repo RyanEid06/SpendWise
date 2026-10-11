@@ -26,6 +26,9 @@ for (const profile of ['render_free', 'always_on']) {
     assert.ok(config.geminiOperationBudgetMs < 115_000, 'server must stop before the client processing bound');
     assert.equal(config.geminiOperationBudgetMs, 90_000);
     assert.equal(config.geminiMaxAttempts, 2);
-    assert.deepEqual(config.geminiTaskRoutes, {});
+    assert.deepEqual(Object.keys(config.geminiTaskRoutes).sort(), ['analyze', 'explain-trends', 'scan-receipt', 'smart-capture']);
+    for (const route of Object.values(config.geminiTaskRoutes)) {
+      assert.deepEqual(route, { models: ['gemini-3.5-flash-lite', 'gemini-3.8-flash'], thinkingLevel: 'low' });
+    }
   });
 }

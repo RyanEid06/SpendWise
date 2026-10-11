@@ -11,6 +11,8 @@ import { matchesGeminiSchema } from '../validation/geminiSchema';
 import { logAiFailure } from '../logging/aiLogging';
 import { logProviderUsage } from '../logging/providerUsage';
 import { operationalAggregates } from '../observability/aggregates';
+import { boundedLog } from '../observability/safeLogging';
+import { deploymentVersion } from '../deploymentVersion';
 
 export interface GeminiJsonRequest<T> {
   endpoint: string;
@@ -86,7 +88,12 @@ export class GeminiService implements GeminiServiceContract {
           throw error;
         }
       },
-      validate: value => matchesGeminiSchema(value, request.responseJsonSchema) ? request.validate(value) : null,
+      validate: value => {
+        const result = matchesGeminiSchema(value, request.responseJsonSchema) ? request.validate(value) : null;
+        if (result == null) boundedLog('AI', { endpoint: request.endpoint, requestId: request.requestId,
+          version: deploymentVersion(), phase: 'quality_validation', outcome: 'failure', code: 'AI_INVALID_RESPONSE' });
+        return result;
+      },
     });
   }
 

@@ -457,6 +457,7 @@ export function sanitizeStatistics(value: unknown) {
             startingBudget,
             remainingMoney,
             isBudgetSet: item.isBudgetSet === true,
+            isPartialMonth: item.isPartialMonth !== false,
             largestExpense: sanitizeExpense(item.largestExpense),
           },
         ];

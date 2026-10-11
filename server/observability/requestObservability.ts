@@ -1,5 +1,6 @@
 import type { RequestHandler } from 'express';
 import { randomUUID } from 'node:crypto';
+import { deploymentVersion } from '../deploymentVersion';
 import { boundedLog } from './safeLogging';
 import { normalizeRoute, operationalAggregates, type OperationalAggregates } from './aggregates';
 
@@ -9,11 +10,13 @@ export function observeApiRequests(metrics: OperationalAggregates = operationalA
     const supplied = req.header('X-Request-ID');
     const requestId = typeof supplied === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(supplied) ? supplied : randomUUID();
     res.setHeader('X-Request-ID', requestId);
+    const version = deploymentVersion();
+    res.setHeader('X-Backend-Version', version);
     res.locals.requestId = requestId;
     const phase = route === '/api/health' ? 'readiness' : route === '/api/auth/register' ? 'register'
       : route === '/api/auth/challenge' ? 'challenge' : route === '/api/auth/verify' ? 'verify' : route.startsWith('/api/gemini/') ? 'ai_dispatch' : undefined;
     let code: unknown;
-    if (phase) boundedLog('API', { route, requestId, phase, outcome: 'start' }, emit);
+    if (phase) boundedLog('API', { route, requestId, version, phase, outcome: 'start' }, emit);
     const json = res.json;
     res.json = function(body: unknown) {
       try {
@@ -31,7 +34,7 @@ export function observeApiRequests(metrics: OperationalAggregates = operationalA
       if (done) return; done = true;
       res.off('finish', finish); res.off('close', close);
       try { metrics.recordRequest(route, res.statusCode, performance.now() - start, aborted); } catch {}
-      if (phase) boundedLog('API', { route, requestId, phase: aborted ? 'client_disconnect' : phase,
+      if (phase) boundedLog('API', { route, requestId, version, phase: aborted ? 'client_disconnect' : phase,
         outcome: aborted ? 'aborted' : res.statusCode >= 400 ? 'failure' : 'success', code, elapsedMs: performance.now() - start }, emit);
     };
     res.once('finish', finish); res.once('close', close); next();

@@ -43,14 +43,27 @@ export async function apiFetch(
   const headers = new Headers(init.headers); headers.set('X-Request-ID', requestId);
   const start = performance.now();
   let outcome = 'failure'; let code: string | undefined;
+  let backendVersion = 'unknown';
+  let stage = 'readiness';
+  const feature = path.split('/').at(-1);
   try {
-    const response = await authenticatedApiClient.fetch(path, { ...init, headers }, timeoutMs ?? AI_PROCESSING_TIMEOUT_MS);
+    const response = await authenticatedApiClient.fetch(path, { ...init, headers, onPhase: event => {
+      if (['readiness', 'register', 'challenge', 'verify', 'ai_dispatch'].includes(event.phase)) stage = event.phase;
+      const version = (event as { backendVersion?: unknown }).backendVersion;
+      if (typeof version === 'string' && /^(?:[a-f0-9]{12}|local|unknown)$/.test(version)) backendVersion = version;
+      init.onPhase?.(event);
+    } }, timeoutMs ?? AI_PROCESSING_TIMEOUT_MS);
+    const version = response.headers.get('X-Backend-Version');
+    if (version && /^(?:[a-f0-9]{12}|local|unknown)$/.test(version)) backendVersion = version;
     outcome = response.ok ? 'success' : 'failure';
+    if (!response.ok) code = (await apiErrorFromResponse(response.clone())).kind;
     return response;
   } catch (error) {
     code = normalizeApiException(error).kind; outcome = code === 'cancelled' ? 'aborted' : 'failure'; throw error;
   } finally {
-    console.info('[AI operation]', JSON.stringify({ requestId, phase: 'operation', outcome, code, elapsedMs: Math.round(performance.now() - start) }));
+    const elapsedMs = Math.round(performance.now() - start);
+    diagnostics.record({ operation: 'api.request', requestId, backendVersion, feature, stage, outcome: outcome === 'aborted' ? 'failure' : outcome, code, durationMs: elapsedMs });
+    console.info('[AI operation]', JSON.stringify({ requestId, backendVersion, feature, phase: 'operation', stage, outcome, code, elapsedMs }));
   }
 }
 
@@ -71,7 +84,6 @@ export async function apiFetchJson<T>(
     try {
       const result = (await response.json()) as T;
       init.signal?.throwIfAborted();
-      diagnostics.record({ operation: 'api.request', outcome: 'success', durationMs: performance.now() - startedAt });
       return result;
     } catch {
       init.signal?.throwIfAborted();
@@ -82,7 +94,8 @@ export async function apiFetchJson<T>(
     }
   } catch (error) {
     const normalized = normalizeApiException(error);
-    diagnostics.record({ operation: 'api.request', outcome: 'failure', code: normalized.kind, httpClass: normalized.status == null ? undefined : `${Math.floor(normalized.status / 100)}xx`, durationMs: performance.now() - startedAt });
+    if (normalized.kind === 'invalid_response') diagnostics.record({ operation: 'api.request', outcome: 'failure', code: normalized.kind,
+      stage: 'ai_dispatch', httpClass: normalized.status == null ? undefined : `${Math.floor(normalized.status / 100)}xx` });
     throw normalized;
   }
 }
