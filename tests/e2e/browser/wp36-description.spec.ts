@@ -1,6 +1,32 @@
 import { expect, test } from '@playwright/test';
 import { BACKUP_PASSPHRASE, mockReadyAuthenticatedBackend, openSettings, startFresh } from './helpers';
 
+test('malformed HTTP200 keeps one correlated final failure instead of reporting operation success', async ({ page }) => {
+  await mockReadyAuthenticatedBackend(page);
+  await startFresh(page);
+  const operations: any[] = [];
+  page.on('console', message => {
+    if (message.text().startsWith('[AI operation] ')) operations.push(JSON.parse(message.text().slice('[AI operation] '.length)));
+  });
+  await page.route('**/api/gemini/smart-capture', route => route.fulfill({ status: 200,
+    headers: { 'X-Backend-Version': 'abc123def456', 'Content-Type': 'application/json' }, body: '{not valid JSON' }));
+  await page.getByRole('button', { name: 'Add Expense', exact: true }).click();
+  const editor = page.getByRole('dialog', { name: 'Add Expense' });
+  await editor.getByTestId('tool-smart-button').click();
+  const chooser = page.waitForEvent('filechooser');
+  await editor.getByRole('button', { name: 'Choose Photo', exact: true }).click();
+  await (await chooser).setFiles('tests/fixtures/media/wp32-photo-01.jpg');
+  await editor.getByRole('button', { name: 'Analyze with Gemini', exact: true }).click();
+  await expect(editor.getByRole('button', { name: 'Retry', exact: true })).toBeVisible();
+  const report = await page.evaluate(() => JSON.parse(localStorage.getItem('spendwise_technical_diagnostics_v1') || '{}'));
+  const failures = report.recentErrors.filter((item: any) => item.operation === 'api.request');
+  expect(failures).toHaveLength(1);
+  expect(failures[0]).toMatchObject({ code: 'invalid_response', backendVersion: 'abc123def456', feature: 'smart-capture',
+    stage: 'ai_dispatch', requestId: expect.stringMatching(/^[a-f0-9-]{36}$/), durationMs: expect.any(Number) });
+  expect(operations).toHaveLength(1);
+  expect(operations[0]).toMatchObject({ outcome: 'failure', code: 'invalid_response', requestId: failures[0].requestId });
+});
+
 test('blank-description draft survives AI failure/retry and restart, then History/search/statistics/backup retain one expense', async ({ page }) => {
   await mockReadyAuthenticatedBackend(page);
   await startFresh(page);
