@@ -7,9 +7,13 @@ appId: com.spendwise.app
 - tapOn: "AI Insights"
 - setAirplaneMode: enabled
 - tapOn: "Analyze My Spending"
-- tapOn: "Home"
+- tapOn:
+    text: "Home"
+    leftOf: "History"
 - tapOn: "Statistics"
-- tapOn: "Home"
+- tapOn:
+    text: "Home"
+    leftOf: "History"
 - tapOn: "AI Insights"
 - extendedWaitUntil:
     visible: "Local Statistical"
@@ -18,4 +22,6 @@ appId: com.spendwise.app
     timeout: 95000
 - assertVisible: ".*AI is unavailable right now.*"
 - setAirplaneMode: disabled
-- tapOn: "Home"
+- tapOn:
+    text: "Home"
+    leftOf: "History"

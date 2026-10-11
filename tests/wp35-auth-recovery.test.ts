@@ -153,7 +153,7 @@ test('90s readiness bound aborts a silent connection without auth or AI', async 
   t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
   const f = fixture();
   f.override(async (path, init) => path === '/api/health' ? new Promise((_resolve, reject) => init.signal!.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')), { once: true })) : undefined);
-  const pending = assert.rejects(f.client.fetch(ai), { name: 'AbortError' });
+  const pending = assert.rejects(f.client.fetch(ai), { name: 'TimeoutError' });
   await flush(); t.mock.timers.tick(65_000); await flush(); t.mock.timers.tick(250); await flush(); t.mock.timers.tick(24_750); await flush();
   await pending;
   assert.equal(f.calls.every(p => p === '/api/health'), true);
@@ -241,7 +241,7 @@ test('whole auth deadline includes a hung signer and prevents late dispatch', as
   const client = new AuthenticatedApiClient('https://example.test', { getPublicIdentity: () => new Promise(resolve => { late = resolve; }), sign: async () => 'unused' }, null, {
     fetch: async (url: string) => { calls.push(url); return Response.json({ ok: true }); }, now: Date.now, onPhase: () => {},
   });
-  const pending = assert.rejects(client.fetch(ai), { name: 'AbortError' });
+  const pending = assert.rejects(client.fetch(ai), { name: 'TimeoutError' });
   await flush(); t.mock.timers.tick(30_001); await flush(); await pending;
   late({ algorithm: 'ECDSA_P256_SHA256', publicKey }); await flush();
   assert.deepEqual(calls, ['https://example.test/api/health']);

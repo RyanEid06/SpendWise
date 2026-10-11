@@ -179,9 +179,10 @@ for (const screen of ['AI Insights', 'Statistics'] as const) {
       await expect.poll(() => requests).toBe(1);
       for (let index = 0; index < 3; index++) {
         await page.getByRole('button', { name: 'Home', exact: true }).click();
-        await expect(page.getByRole('button', { name: /Explaining|Evaluating personal/ })).toHaveCount(0);
+        await expect(page.locator('.ai-progress:visible')).toHaveCount(0);
         await page.getByRole('button', { name: screen, exact: true }).click();
-        await expect(page.getByRole('button', { name: /Explaining|Evaluating personal/ })).toBeDisabled();
+        await expect(page.getByRole('button', { name: screen === 'Statistics' ? 'Explain' : 'Analyze My Spending', exact: true })).toBeDisabled();
+        await expect(page.locator('.ai-progress:visible')).toHaveAttribute('data-ai-stage', 'sending');
       }
       await page.getByRole('button', { name: 'Home', exact: true }).click();
       gate.finish();

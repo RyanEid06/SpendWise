@@ -1,14 +1,16 @@
 import { AI_PROCESSING_TIMEOUT_MS } from '../security/aiOperationBudget';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { apiFetchJson } from '../utils/api';
-import { getAiErrorMessage } from '../utils/apiErrors';
+import { getAiErrorMessage, normalizeApiException, SpendWiseApiError } from '../utils/apiErrors';
+import { parseTrendResult } from '../utils/aiResultValidation';
+import { useAiOperation } from '../app/hooks/useAiOperation';
+import { AiProgressPanel } from '../components/AiProgressPanel';
 import {
   BarChart3,
   CalendarDays,
   Sparkles,
   ArrowUpRight,
   Receipt,
-  RotateCw,
   Clock,
 } from 'lucide-react';
 import {
@@ -48,12 +50,14 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
   const [showAllLargestExpenses, setShowAllLargestExpenses] = useState(false);
 
   // AI Trend Explanation state
+  const { operation, progress } = useAiOperation();
+  const [aiIsLocal, setAiIsLocal] = useState(false);
+  const [retryAllowed, setRetryAllowed] = useState(true);
   const [aiExplanation, setAiExplanation] = useState<AiTrendExplanationResult | null>(null);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const aiRequestIdRef = useRef(0);
   const aiInFlightRef = useRef(false);
-  const operationAbortRef = useRef<AbortController | null>(null);
 
   // Compute calculated statistics (backed by cache)
   const stats = useMemo(() => {
@@ -67,17 +71,17 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
 
   useEffect(() => {
     aiRequestIdRef.current += 1;
-    operationAbortRef.current?.abort();
+    operation.reset();
     aiInFlightRef.current = false;
     setIsLoadingAi(false);
     setAiExplanation(null);
     setAiError(null);
-  }, [expenses, budgets, currentMonthYear, selectedPeriod, currencyCode, language]);
+  }, [expenses, budgets, currentMonthYear, selectedPeriod, currencyCode, language, operation]);
 
   useEffect(() => {
     return () => {
       aiRequestIdRef.current += 1;
-      operationAbortRef.current?.abort();
+      operation.reset();
       aiInFlightRef.current = false;
     };
   }, []);
@@ -99,19 +103,22 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
     }
 
     aiInFlightRef.current = true;
+    const run = operation.begin();
+    if (!run) { aiInFlightRef.current = false; return; }
+    setRetryAllowed(true);
     const requestId = ++aiRequestIdRef.current;
-    const controller = new AbortController(); operationAbortRef.current = controller;
     setIsLoadingAi(true);
     setAiError(null);
 
     const localFallback = StatisticsEngine.generateLocalTrendExplanation(stats, currencyCode);
 
     try {
-      const data = await apiFetchJson<AiTrendExplanationResult>(
+      const response = await apiFetchJson<unknown>(
         '/api/gemini/explain-trends',
         {
           method: 'POST',
-          signal: controller.signal,
+          signal: run.signal,
+          onPhase: run.onPhase,
           body: JSON.stringify({
             stats,
             currencyCode,
@@ -121,18 +128,33 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
         AI_PROCESSING_TIMEOUT_MS
       );
 
-      if (requestId !== aiRequestIdRef.current) return;
+      if (requestId !== aiRequestIdRef.current || !run.isCurrent()) return;
+      const data = parseTrendResult(response);
+      if (!data) throw new SpendWiseApiError('invalid_response');
       setAiExplanation(data);
+      setAiIsLocal(false);
+      run.finish('ready');
     } catch (error) {
-      if (requestId !== aiRequestIdRef.current) return;
+      if (requestId !== aiRequestIdRef.current || !run.isCurrent()) return;
       setAiExplanation(localFallback);
+      setAiIsLocal(true);
       setAiError(getAiErrorMessage(language, error));
+      setRetryAllowed(normalizeApiException(error).kind !== 'quota_exhausted');
+      run.finish('local');
     } finally {
       if (requestId === aiRequestIdRef.current) {
         aiInFlightRef.current = false;
         setIsLoadingAi(false);
       }
     }
+  };
+
+  const cancelAi = () => {
+    aiRequestIdRef.current += 1;
+    aiInFlightRef.current = false;
+    operation.cancel();
+    setIsLoadingAi(false);
+    setAiError(null);
   };
 
   // Max spending among months for bar scaling
@@ -283,8 +305,8 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
           >
             {isLoadingAi ? (
               <>
-                <RotateCw className="w-3.5 h-3.5 animate-spin" />
-                <span>{t(language, 'explainingBtn')}</span>
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>{t(language, 'explainBtn')}</span>
               </>
             ) : (
               <>
@@ -295,6 +317,9 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
           </button>
         </div>
 
+        <AiProgressPanel progress={progress} language={language} onCancel={cancelAi}
+          onRetry={retryAllowed ? () => void handleExplainWithAi() : undefined} />
+
         {/* AI Explanation Result Card */}
         {aiExplanation && (
           <div className="p-3.5 rounded-2xl bg-white/90 dark:bg-[#0B0F19]/80 border border-indigo-200 dark:border-indigo-900/60 space-y-2.5 text-xs">
@@ -303,7 +328,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                 {t(language, 'aiTrendsTitle')}
               </span>
               <span className="bg-indigo-100 dark:bg-indigo-900/60 text-indigo-800 dark:text-indigo-300 px-2 py-0.5 rounded-md font-semibold text-[10px]">
-                {t(language, 'trendVerifiedTag')}
+                {t(language, aiIsLocal ? 'localBadge' : 'geminiBadge')}
               </span>
             </div>
 

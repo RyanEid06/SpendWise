@@ -1,5 +1,6 @@
 import { AuthenticatedApiClient } from '../security/AuthenticatedApiClient';
-import { AI_END_TO_END_TIMEOUT_MS, AI_PROCESSING_TIMEOUT_MS, withOperationDeadline } from '../security/aiOperationBudget';
+import { AI_PROCESSING_TIMEOUT_MS } from '../security/aiOperationBudget';
+import type { AiRequestInit } from '../app/hooks/aiOperation';
 import { diagnostics } from '../services/diagnostics/diagnostics';
 import {
   SpendWiseApiError,
@@ -34,7 +35,7 @@ export async function fetchWithTimeout(
 
 export async function apiFetch(
   path: string,
-  init: RequestInit = {},
+  init: AiRequestInit = {},
   timeoutMs?: number
 ): Promise<Response> {
   if (!path.startsWith('/api/gemini/')) return authenticatedApiClient.fetch(path, init, timeoutMs ?? 15000);
@@ -43,7 +44,7 @@ export async function apiFetch(
   const start = performance.now();
   let outcome = 'failure'; let code: string | undefined;
   try {
-    const response = await withOperationDeadline(signal => authenticatedApiClient.fetch(path, { ...init, headers, signal }, timeoutMs ?? AI_PROCESSING_TIMEOUT_MS), AI_END_TO_END_TIMEOUT_MS, init.signal);
+    const response = await authenticatedApiClient.fetch(path, { ...init, headers }, timeoutMs ?? AI_PROCESSING_TIMEOUT_MS);
     outcome = response.ok ? 'success' : 'failure';
     return response;
   } catch (error) {
@@ -55,7 +56,7 @@ export async function apiFetch(
 
 export async function apiFetchJson<T>(
   path: string,
-  init: RequestInit = {},
+  init: AiRequestInit = {},
   timeoutMs?: number
 ): Promise<T> {
   const startedAt = performance.now();
@@ -65,11 +66,15 @@ export async function apiFetchJson<T>(
       throw await apiErrorFromResponse(response);
     }
 
+    init.signal?.throwIfAborted();
+    init.onPhase?.({ phase: 'checking', outcome: 'start' });
     try {
       const result = (await response.json()) as T;
+      init.signal?.throwIfAborted();
       diagnostics.record({ operation: 'api.request', outcome: 'success', durationMs: performance.now() - startedAt });
       return result;
     } catch {
+      init.signal?.throwIfAborted();
       throw new SpendWiseApiError('invalid_response', {
         status: response.status,
         code: 'AI_INVALID_RESPONSE',

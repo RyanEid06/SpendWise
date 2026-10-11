@@ -1,0 +1,458 @@
+name: WP35 Combined Integration
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['codex/wp35-integration']
+    paths-ignore: ['docs/**']
+
+permissions:
+  contents: read
+
+jobs:
+  web-regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: wp35_test
+          POSTGRES_PASSWORD: isolated_ci_only
+          POSTGRES_DB: wp35_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U wp35_test -d wp35_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      WP35_TEST_DATABASE_URL: postgresql://wp35_test:isolated_ci_only@127.0.0.1:5432/wp35_test
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: TypeScript and production build
+        run: npm run verify
+      - name: Synthetic progress, security, reliability, encrypted storage and diagnostics regressions
+        run: node --import tsx --test tests/*.test.ts
+      - name: Existing WP32 components, browser, accessibility and visual suites
+        run: npm run test:wp32
+      - name: Existing WP33 browser and diagnostics gates
+        run: |
+          npm run test:wp33:browser
+          npm run test:wp33
+      - name: Upload synthetic UI evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: wp35-integration-web-evidence
+          path: |
+            artifacts/wp35-3/screenshots/
+            playwright-report/
+            test-results/
+          retention-days: 14
+
+  android-isolated:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      # Deliberately unreachable local endpoint: never dispatch Google/Render calls.
+      VITE_API_BASE_URL: https://127.0.0.1:1
+      MAESTRO_VERSION: '2.11.0'
+      WP32_INSPECT_WEBVIEW: '1'
+      WP32_TARGET: wp33-5-04-continuity
+      WP35_EDITOR_INSETS: '1'
+      ANDROID_SERIAL: emulator-5554
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: Build SDK36 debug app and geometry probe
+        run: |
+          npm run verify
+          npm run android:sync
+          chmod +x android/gradlew
+          (cd android && ./gradlew assembleDebug)
+          mkdir -p artifacts/android-e2e/apks artifacts/wp35
+          cp android/app/build/outputs/apk/debug/app-debug.apk artifacts/android-e2e/apks/current-debug.apk
+          ./node_modules/.bin/esbuild scripts/wp35/editorLayout.ts --bundle --platform=node --format=esm --outfile=artifacts/wp35/editor-layout.mjs
+          bash -n scripts/run-wp32-isolated-gate.sh
+      - name: Install pinned Maestro
+        run: |
+          archive="$RUNNER_TEMP/maestro-2.11.0.zip"
+          curl --fail --location --retry 3 https://github.com/mobile-dev-inc/Maestro/releases/download/cli-2.11.0/maestro.zip --output "$archive"
+          echo "5384593cb4e7a106489e75a821d157dd43f4e438df6bc308b72e82c685e1283a  $archive" | sha256sum --check
+          unzip -q "$archive" -d "$RUNNER_TEMP/maestro-2.11.0"
+          maestro_bin="$(find "$RUNNER_TEMP/maestro-2.11.0" -type f -path '*/bin/maestro' -print -quit)"
+          chmod +x "$maestro_bin"
+          echo "$(dirname "$maestro_bin")" >> "$GITHUB_PATH"
+      - name: Enable emulator KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: API36 Add/Edit with real keyboard, gesture and three-button navigation
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          avd-name: wp33-synthetic-wp35-api36
+          cores: 2
+          ram-size: 4096M
+          disk-size: 3G
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save -camera-back none
+          script: |
+            adb -s emulator-5554 shell cmd overlay enable-exclusive --category com.android.internal.systemui.navbar.gestural
+            RESULT_ROOT=artifacts/android-isolated/wp35-gesture bash scripts/run-wp32-isolated-gate.sh
+            adb -s emulator-5554 shell cmd overlay enable-exclusive --category com.android.internal.systemui.navbar.threebutton
+            RESULT_ROOT=artifacts/android-isolated/wp35-threebutton bash scripts/run-wp32-isolated-gate.sh
+      - name: Upload isolated emulator evidence (no APK publication)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: wp35-integration-api36-emulator-evidence
+          path: artifacts/android-isolated/wp35-*/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  android-acceptance:
+    # Full existing synthetic black-box acceptance; API36 insets run separately.
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      VITE_API_BASE_URL: https://127.0.0.1:1
+      MAESTRO_VERSION: "2.11.0"
+      WP32_INSPECT_WEBVIEW: "1"
+      WP33_NATIVE_BENCHMARK: "1"
+      WP32_NATIVE_PHASE: full
+
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build current debug APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run verify
+          npm run android:sync
+          chmod +x android/gradlew
+          (cd android && ./gradlew assembleDebug)
+          mkdir -p artifacts/android-e2e/apks artifacts/android-e2e/fixtures
+          cp android/app/build/outputs/apk/debug/app-debug.apk             artifacts/android-e2e/apks/current-debug.apk
+          npx tsx scripts/wp32-generate-portable-fixtures.ts             artifacts/android-e2e/fixtures
+          # Bundle the technical-only probe before the established disk cleanup.
+          ./node_modules/.bin/esbuild scripts/wp33/native.ts --bundle --platform=node --format=esm --outfile=artifacts/wp33/native-runner.mjs
+
+      - name: Build v1.4 migration fixture APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          fixture="$RUNNER_TEMP/spendwise-v14"
+          git worktree add --detach "$fixture" c0d7522192af7e07cbb1f46c3a00145e8b94a988
+          pushd "$fixture"
+          npm ci
+          npm run build
+          npm run android:sync
+          chmod +x android/gradlew
+          (cd android && ./gradlew assembleDebug)
+          popd
+          cp "$fixture/android/app/build/outputs/apk/debug/app-debug.apk"             artifacts/android-e2e/apks/v14-debug.apk
+          git worktree remove "$fixture" --force
+
+      - name: Install pinned Maestro CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/maestro-2.11.0.zip"
+          install_root="$RUNNER_TEMP/maestro-2.11.0"
+          curl --fail --location --retry 3             "https://github.com/mobile-dev-inc/Maestro/releases/download/cli-2.11.0/maestro.zip"             --output "$archive"
+          echo "5384593cb4e7a106489e75a821d157dd43f4e438df6bc308b72e82c685e1283a  $archive"             | sha256sum --check
+          mkdir -p "$install_root"
+          unzip -q "$archive" -d "$install_root"
+          maestro_bin="$(find "$install_root" -type f -path '*/bin/maestro' -print -quit)"
+          test -n "$maestro_bin"
+          chmod +x "$maestro_bin"
+          echo "$(dirname "$maestro_bin")" >> "$GITHUB_PATH"
+          "$maestro_bin" --version
+          rm -f "$archive"
+
+      - name: Enable KVM
+        shell: bash
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"'             | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Free disk for emulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Disk before cleanup:"
+          df -h /
+          rm -rf node_modules dist
+          rm -rf android/.gradle android/build android/app/build
+          rm -rf "$HOME/.gradle/caches" "$HOME/.gradle/wrapper/dists"
+          npm cache clean --force || true
+
+          # APK construction is complete. The hosted image carries several large
+          # NDK/CMake installations that the emulator/Maestro phase does not use.
+          sudo rm -rf "$ANDROID_SDK_ROOT/ndk" "$ANDROID_SDK_ROOT/cmake"
+
+          echo "Disk after cleanup:"
+          df -h /
+
+      - name: Preinstall Android emulator system image
+        shell: bash
+        run: |
+          set -euo pipefail
+          package="system-images;android-34;google_apis;x86_64"
+
+          for attempt in 1 2 3; do
+            echo "Installing $package (attempt $attempt/3)"
+            if "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --install "$package"; then
+              break
+            fi
+
+            if [ "$attempt" -eq 3 ]; then
+              echo "Failed to install $package after 3 attempts" >&2
+              exit 1
+            fi
+
+            rm -rf "$ANDROID_SDK_ROOT/.temp"
+            rm -rf "$ANDROID_SDK_ROOT/system-images/android-34/google_apis/x86_64"
+            sleep 5
+          done
+
+          test -f "$ANDROID_SDK_ROOT/system-images/android-34/google_apis/x86_64/package.xml"
+          df -h /
+
+      - name: Run Android black-box phases
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          avd-name: wp33-synthetic-api34
+          cores: 2
+          ram-size: 4096M
+          disk-size: 3G
+          disable-animations: true
+          emulator-options: >-
+            -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+            -no-snapshot-save -camera-back none
+          script: bash scripts/run-wp32-android-e2e.sh
+
+      - name: Upload WP33 native timing report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: wp33-native-performance
+          path: artifacts/android-e2e/results/wp33-native-benchmark.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload Android acceptance artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: wp32-android-failure
+          path: artifacts/android-e2e/results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  android-recovery:
+    name: encrypted-draft-recovery
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        target:
+          - wp33-5-05-recovery
+
+    env:
+      VITE_API_BASE_URL: https://127.0.0.1:1
+      MAESTRO_VERSION: "2.11.0"
+      WP32_INSPECT_WEBVIEW: "1"
+      WP32_TARGET: ${{ matrix.target }}
+
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check isolated harness syntax
+        shell: bash
+        run: |
+          bash -n scripts/wp32-android-helpers.sh
+          bash -n scripts/run-wp32-isolated-gate.sh
+
+      - name: Generate portable fixtures
+        shell: bash
+        run: |
+          mkdir -p artifacts/android-e2e/fixtures
+          npx tsx scripts/wp32-generate-portable-fixtures.ts artifacts/android-e2e/fixtures
+
+      - name: Build current debug APK
+        if: matrix.target != 'v14-seed'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run verify
+          npm run android:sync
+          chmod +x android/gradlew
+          (cd android && ./gradlew assembleDebug)
+          mkdir -p artifacts/android-e2e/apks
+          cp android/app/build/outputs/apk/debug/app-debug.apk artifacts/android-e2e/apks/current-debug.apk
+          ./node_modules/.bin/esbuild scripts/wp33/native.ts --bundle --platform=node --format=esm --outfile=artifacts/wp33/native-runner.mjs
+
+      - name: Build v1.4 migration fixture APK
+        if: matrix.target == 'v14-seed' || matrix.target == 'hardened-upgrade'
+        shell: bash
+        run: |
+          set -euo pipefail
+          fixture="$RUNNER_TEMP/spendwise-v14"
+          git worktree add --detach "$fixture" c0d7522192af7e07cbb1f46c3a00145e8b94a988
+          pushd "$fixture"
+          npm ci
+          npm run build
+          npm run android:sync
+          chmod +x android/gradlew
+          (cd android && ./gradlew assembleDebug)
+          popd
+          mkdir -p artifacts/android-e2e/apks
+          cp "$fixture/android/app/build/outputs/apk/debug/app-debug.apk" artifacts/android-e2e/apks/v14-debug.apk
+          git worktree remove "$fixture" --force
+
+      - name: Install pinned Maestro CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/maestro-2.11.0.zip"
+          install_root="$RUNNER_TEMP/maestro-2.11.0"
+          curl --fail --location --retry 3 \
+            "https://github.com/mobile-dev-inc/Maestro/releases/download/cli-2.11.0/maestro.zip" \
+            --output "$archive"
+          echo "5384593cb4e7a106489e75a821d157dd43f4e438df6bc308b72e82c685e1283a  $archive" | sha256sum --check
+          mkdir -p "$install_root"
+          unzip -q "$archive" -d "$install_root"
+          maestro_bin="$(find "$install_root" -type f -path '*/bin/maestro' -print -quit)"
+          test -n "$maestro_bin"
+          chmod +x "$maestro_bin"
+          echo "$(dirname "$maestro_bin")" >> "$GITHUB_PATH"
+          "$maestro_bin" --version
+          rm -f "$archive"
+
+      - name: Enable KVM
+        shell: bash
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Free disk for emulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf node_modules dist
+          rm -rf android/.gradle android/build android/app/build
+          rm -rf "$HOME/.gradle/caches" "$HOME/.gradle/wrapper/dists"
+          npm cache clean --force || true
+          sudo rm -rf "$ANDROID_SDK_ROOT/ndk" "$ANDROID_SDK_ROOT/cmake"
+          df -h /
+
+      - name: Preinstall Android emulator system image
+        shell: bash
+        run: |
+          set -euo pipefail
+          package="system-images;android-34;google_apis;x86_64"
+          for attempt in 1 2 3; do
+            if "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --install "$package"; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then exit 1; fi
+            rm -rf "$ANDROID_SDK_ROOT/.temp"
+            rm -rf "$ANDROID_SDK_ROOT/system-images/android-34/google_apis/x86_64"
+            sleep 5
+          done
+          test -f "$ANDROID_SDK_ROOT/system-images/android-34/google_apis/x86_64/package.xml"
+
+      - name: Run isolated Android gate
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          avd-name: wp33-synthetic-api34
+          cores: 2
+          ram-size: 4096M
+          disk-size: 3G
+          disable-animations: true
+          emulator-options: >-
+            -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+            -no-snapshot-save -camera-back none
+          script: bash scripts/run-wp32-isolated-gate.sh
+
+      - name: Upload isolated gate artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: wp35-integration-${{ matrix.target }}
+          path: artifacts/android-isolated/${{ matrix.target }}/
+          if-no-files-found: ignore
+          retention-days: 7

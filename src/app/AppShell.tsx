@@ -271,6 +271,9 @@ export const AppShell: React.FC<AppShellProps> = ({ startupHomeFrameTiming }) =>
             onPreviousMonth={() => setCurrentMY((previous) => previousMonth(previous))}
             onNextMonth={() => setCurrentMY((previous) => nextMonth(previous))}
             onAnalyzeClick={ai.analyze}
+            progress={ai.progress}
+            onCancel={ai.cancel}
+            retryAllowed={ai.retryAllowed}
           />
         </RetainedScreen>
 

@@ -17,9 +17,10 @@ function fixture(t: any, provider: (init: RequestInit, attempt: number) => Promi
   t.after(() => Reflect.deleteProperty(globalThis, 'window'));
   let calls = 0;
   t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+    if (url.endsWith('/api/health')) return Response.json({ ok: true });
     if (url.endsWith('/register')) return Response.json({ installationId: 'test-installation' });
     if (url.endsWith('/challenge')) return Response.json({ challengeId: 'test-challenge', payload: 'synthetic' });
-    if (url.endsWith('/verify')) return Response.json({ accessToken: 'synthetic-token-for-tests', expiresAt: Date.now() + 600000 });
+    if (url.endsWith('/verify')) return Response.json({ accessToken: 'synthetic-token-for-tests'.repeat(2), expiresAt: Date.now() + 600000, tokenType: 'Bearer' });
     return provider(init, ++calls);
   });
   const client = new AuthenticatedApiClient('https://example.test', {

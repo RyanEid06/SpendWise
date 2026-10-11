@@ -1,5 +1,7 @@
 import { InstallationIdentitySigner, installationIdentitySigner } from './InstallationIdentityService';
 import { abortable, delay, SharedTransaction } from './RecoveryTransaction';
+import { AI_END_TO_END_TIMEOUT_MS, withOperationDeadline } from './aiOperationBudget';
+import type { AiRequestInit } from '../app/hooks/aiOperation';
 
 export interface RecoveryPhase {
   requestId: string;
@@ -31,8 +33,8 @@ export class AuthenticatedApiClient {
   private accessToken: string | null = null;
   private accessTokenExpiresAt = 0;
   private memoryInstallationId: string | null = null;
-  private readonly readiness = new SharedTransaction<void>();
-  private readonly session = new SharedTransaction<string>();
+  private readonly readiness = new SharedTransaction<void, RecoveryPhase>();
+  private readonly session = new SharedTransaction<string, RecoveryPhase>();
   private readonly transport: (url: string, init: RequestInit) => Promise<Response>;
   private readonly now: () => number;
   private readonly random: () => number;
@@ -46,12 +48,13 @@ export class AuthenticatedApiClient {
     this.random = options.random ?? Math.random;
   }
 
-  private async phase<T>(requestId: string, phase: RecoveryPhase['phase'], attempt: number, work: () => Promise<T>): Promise<T> {
+  private async phase<T>(requestId: string, phase: RecoveryPhase['phase'], attempt: number, work: () => Promise<T>, observe?: (event: RecoveryPhase) => void): Promise<T> {
     const start = this.now();
     const emit = (outcome: RecoveryPhase['outcome'], error?: unknown) => {
       const code: RecoveryPhase['code'] = error instanceof AuthHttpError ? (error.status >= 500 ? 'HTTP_5XX' : 'HTTP_4XX')
-        : error instanceof TypeError ? 'NETWORK' : error instanceof Error && error.name === 'AbortError' ? 'CANCELLED_OR_DEADLINE' : 'REJECTED';
+        : error instanceof TypeError ? 'NETWORK' : error instanceof Error && ['AbortError', 'TimeoutError'].includes(error.name) ? 'CANCELLED_OR_DEADLINE' : 'REJECTED';
       const event: RecoveryPhase = { requestId, phase, outcome, elapsedMs: Math.max(0, Math.round(this.now() - start)), attempt, ...(error ? { code } : {}) };
+      try { observe?.(event); } catch { /* A UI observer cannot change authentication. */ }
       try {
         if (this.options.onPhase) this.options.onPhase(event);
         else {
@@ -73,28 +76,25 @@ export class AuthenticatedApiClient {
     // A confirmed offline device cannot wake Render. Keep cold-start retries for
     // unknown connectivity; allow the next explicit operation to try again online.
     if (typeof navigator !== 'undefined' && navigator.onLine === false) throw new DeviceOfflineError();
-    const controller = new AbortController();
-    const abort = () => controller.abort();
-    signal?.addEventListener('abort', abort, { once: true });
-    const timer = setTimeout(abort, timeoutMs);
-    try {
+    return withOperationDeadline(async requestSignal => {
       // Headers alone are not completion: retain the deadline through body receipt.
       return await abortable((async () => {
-        const response = await this.transport(target, { ...init, signal: controller.signal });
+        const response = await this.transport(target, { ...init, signal: requestSignal });
         const body = await response.arrayBuffer();
-        return new Response(response.status === 204 ? null : body, { status: response.status, statusText: response.statusText, headers: response.headers });
-      })(), controller.signal);
-    } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
+        requestSignal.throwIfAborted();
+        return new Response([204, 205, 304].includes(response.status) ? null : body, { status: response.status, statusText: response.statusText, headers: response.headers });
+      })(), requestSignal);
+    }, timeoutMs, signal);
   }
   private retryable(error: unknown): boolean {
     if (error instanceof DeviceOfflineError) return false;
-    return error instanceof TypeError || error instanceof Error && error.name === 'AbortError' || error instanceof AuthHttpError && error.status >= 500;
+    return error instanceof TypeError || error instanceof Error && ['AbortError', 'TimeoutError'].includes(error.name) || error instanceof AuthHttpError && error.status >= 500;
   }
   private backoff(attempt: number, signal: AbortSignal) {
     return delay(Math.min(4_000, 250 * 2 ** (attempt - 1)) * (1 + this.random() * 0.5), signal);
   }
-  private ensureReady(requestId: string, caller?: AbortSignal | null): Promise<void> {
-    return this.readiness.run(async signal => {
+  private ensureReady(requestId: string, caller?: AbortSignal | null, observe?: AiRequestInit['onPhase']): Promise<void> {
+    return this.readiness.run(async (signal, emit) => {
       for (let attempt = 1; attempt <= 24; attempt++) {
         try {
           await this.phase(requestId, 'readiness', attempt, async () => {
@@ -103,14 +103,14 @@ export class AuthenticatedApiClient {
             // Render can return a waking HTML page with status 200.
             let health: any; try { health = await response.json(); } catch { throw new TypeError('Backend is not ready.'); }
             if (health?.ok !== true) throw new TypeError('Backend is not ready.');
-          });
+          }, emit);
           return;
         } catch (error) {
           if (signal.aborted || !this.retryable(error) || attempt === 24) throw error;
           await this.backoff(attempt, signal);
         }
       }
-    }, 90_000, caller);
+    }, 90_000, caller, observe);
   }
   private readInstallationId(): string | null {
     if (this.memoryInstallationId) return this.memoryInstallationId;
@@ -124,7 +124,7 @@ export class AuthenticatedApiClient {
       try { this.storage?.setItem(INSTALLATION_ID_STORAGE_KEY, id); } catch {}
     }
   }
-  private async authRequest<T>(phase: 'register' | 'challenge' | 'verify', body: unknown, requestId: string, signal: AbortSignal, attempt = 1): Promise<T> {
+  private async authRequest<T>(phase: 'register' | 'challenge' | 'verify', body: unknown, requestId: string, signal: AbortSignal, attempt = 1, observe?: (event: RecoveryPhase) => void): Promise<T> {
     return this.phase(requestId, phase, attempt, async () => {
           const response = await this.rawFetch(AUTH_PATHS[phase], {
             method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Request-ID': requestId }, body: JSON.stringify(body),
@@ -134,14 +134,14 @@ export class AuthenticatedApiClient {
             throw new AuthHttpError(response.status, code);
           }
           return response.json() as Promise<T>;
-    });
+    }, observe);
   }
-  private async register(requestId: string, signal: AbortSignal): Promise<string> {
+  private async register(requestId: string, signal: AbortSignal, observe?: (event: RecoveryPhase) => void): Promise<string> {
     const identity = await abortable(this.signer.getPublicIdentity(), signal);
     signal.throwIfAborted();
     let result: { installationId: string } | undefined;
     for (let attempt = 1; attempt <= 3; attempt++) {
-      try { result = await this.authRequest<{ installationId: string }>('register', identity, requestId, signal, attempt); break; }
+      try { result = await this.authRequest<{ installationId: string }>('register', identity, requestId, signal, attempt, observe); break; }
       catch (error) {
         if (signal.aborted || !this.retryable(error) || attempt === 3) throw error;
         await this.backoff(attempt, signal);
@@ -152,46 +152,55 @@ export class AuthenticatedApiClient {
     signal.throwIfAborted(); this.saveInstallationId(result.installationId);
     return result.installationId;
   }
-  private getAccessToken(requestId: string, caller?: AbortSignal | null): Promise<string> {
+  private getAccessToken(requestId: string, caller?: AbortSignal | null, observe?: AiRequestInit['onPhase']): Promise<string> {
     if (this.accessToken && Date.now() + 5_000 < this.accessTokenExpiresAt) return Promise.resolve(this.accessToken);
-    return this.session.run(async signal => {
-      let installationId = this.readInstallationId() || await this.register(requestId, signal);
+    return this.session.run(async (signal, emit) => {
+      let installationId = this.readInstallationId() || await this.register(requestId, signal, emit);
       let recovered = false;
       for (let attempt = 1; attempt <= 3; attempt++) {
         try {
-          const challenge = await this.authRequest<{ challengeId: string; payload: string }>('challenge', { installationId }, requestId, signal, attempt);
+          const challenge = await this.authRequest<{ challengeId: string; payload: string }>('challenge', { installationId }, requestId, signal, attempt, emit);
           if (typeof challenge.payload !== 'string' || challenge.payload.length > 2048 || typeof challenge.challengeId !== 'string') throw new Error('Invalid authentication response.');
           const signature = await abortable(this.signer.sign(challenge.payload), signal);
           signal.throwIfAborted();
-          const session = await this.authRequest<{ accessToken: string; expiresAt: number }>('verify', { installationId, challengeId: challenge.challengeId, signature }, requestId, signal, attempt);
+          const session = await this.authRequest<{ accessToken: string; expiresAt: number }>('verify', { installationId, challengeId: challenge.challengeId, signature }, requestId, signal, attempt, emit);
           if (typeof session.accessToken !== 'string' || session.accessToken.length < 32 || session.accessToken.length > 512 || !Number.isFinite(session.expiresAt) || session.expiresAt <= Date.now()) throw new Error('Invalid authentication response.');
           signal.throwIfAborted(); this.accessToken = session.accessToken; this.accessTokenExpiresAt = session.expiresAt;
           return session.accessToken;
         } catch (error) {
           if (!recovered && error instanceof AuthHttpError && error.status === 404 && error.code === 'UNKNOWN_INSTALLATION') {
-            recovered = true; installationId = await this.register(requestId, signal); continue;
+            recovered = true; installationId = await this.register(requestId, signal, emit); continue;
           }
           if (signal.aborted || !this.retryable(error) || attempt === 3) throw error;
           await this.backoff(attempt, signal);
         }
       }
       throw new Error('Authentication recovery exhausted.');
-    }, 30_000, caller);
+    }, 30_000, caller, observe);
   }
   invalidateSession() { this.accessToken = null; this.accessTokenExpiresAt = 0; }
-  async fetch(path: string, init: RequestInit = {}, timeoutMs = 15_000): Promise<Response> {
-    const requestId = crypto.randomUUID();
+  async fetch(path: string, init: AiRequestInit = {}, timeoutMs = 15_000): Promise<Response> {
+    return withOperationDeadline(signal => this.fetchOperation(path, { ...init, signal }, timeoutMs), AI_END_TO_END_TIMEOUT_MS, init.signal);
+  }
+  private async fetchOperation(path: string, init: AiRequestInit, timeoutMs: number): Promise<Response> {
+    const incoming = new Headers(init.headers).get('X-Request-ID');
+    const requestId = incoming && /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(incoming) ? incoming : crypto.randomUUID();
+    let processingRemainingMs = timeoutMs;
     let sentToken: string | null = null;
     init.signal?.throwIfAborted();
-    if (path.startsWith('/api/gemini/')) await this.ensureReady(requestId, init.signal);
+    if (path.startsWith('/api/gemini/')) await this.ensureReady(requestId, init.signal, init.onPhase);
     const send = async (attempt: number) => {
-      const token = await this.getAccessToken(requestId, init.signal);
+      const token = await this.getAccessToken(requestId, init.signal, init.onPhase);
       sentToken = token;
       init.signal?.throwIfAborted();
       const headers = new Headers(init.headers);
       if (init.body != null && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
       headers.set('Authorization', 'Bearer ' + token); headers.set('X-Request-ID', requestId);
-      return this.phase(requestId, 'ai_dispatch', attempt, () => this.rawFetch(path, { ...init, headers }, timeoutMs, init.signal));
+      if (processingRemainingMs <= 0) throw new DOMException('AI processing deadline expired.', 'TimeoutError');
+      const started = this.now();
+      try {
+        return await this.phase(requestId, 'ai_dispatch', attempt, () => this.rawFetch(path, { ...init, headers }, processingRemainingMs, init.signal), init.onPhase);
+      } finally { processingRemainingMs -= Math.max(0, this.now() - started); }
     };
     let response = await send(1);
     if (response.status === 401) {

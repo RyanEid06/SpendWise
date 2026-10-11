@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Sparkles,
-    RotateCw,
       AlertTriangle,
   Brain,
   Info,
@@ -15,6 +14,8 @@ import { getCategoryInfo } from '../utils/categories';
 import { getLocalizedCategoryName, getLocalizedMonthName, t } from '../utils/translations';
 import { selectPrimaryInsights } from '../utils/insightSelection';
 import { wp17Copy } from '../utils/wp17Copy';
+import { AiProgressPanel } from '../components/AiProgressPanel';
+import type { AiProgress } from '../app/hooks/aiOperation';
 
 interface AiInsightsScreenProps {
   currentMonthYear: MonthYear;
@@ -26,6 +27,9 @@ interface AiInsightsScreenProps {
   onPreviousMonth: () => void;
   onNextMonth: () => void;
   onAnalyzeClick: () => void;
+  progress?: AiProgress;
+  onCancel?: () => void;
+  retryAllowed?: boolean;
 }
 
 export const AiInsightsScreen: React.FC<AiInsightsScreenProps> = ({
@@ -38,6 +42,9 @@ export const AiInsightsScreen: React.FC<AiInsightsScreenProps> = ({
   onPreviousMonth,
   onNextMonth,
   onAnalyzeClick,
+  progress = { stage: 'idle', active: false },
+  onCancel,
+  retryAllowed = true,
 }) => {
   const monthName = getLocalizedMonthName(currentMonthYear, language);
   const primaryInsights = analysisResult ? selectPrimaryInsights(analysisResult) : [];
@@ -75,8 +82,8 @@ export const AiInsightsScreen: React.FC<AiInsightsScreenProps> = ({
         >
           {isLoading ? (
             <>
-              <RotateCw className="w-4 h-4 animate-spin" />
-              <span>{t(language, 'evaluatingStatus')}</span>
+              <Sparkles className="w-4 h-4" />
+              <span>{t(language, 'analyzeBtn')}</span>
             </>
           ) : (
             <>
@@ -85,21 +92,11 @@ export const AiInsightsScreen: React.FC<AiInsightsScreenProps> = ({
             </>
           )}
         </button>
+        <div className="mt-3"><AiProgressPanel progress={progress} language={language} onCancel={onCancel}
+          onRetry={retryAllowed ? onAnalyzeClick : undefined} /></div>
       </div>
 
       {/* States Handling */}
-      {isLoading && (
-        <div className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800 rounded-3xl p-8 text-center space-y-3.5 shadow-xs">
-          <div className="w-12 h-12 rounded-full border-3 border-indigo-600 border-t-transparent animate-spin mx-auto" />
-          <h4 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base">
-            {t(language, 'evaluatingStatus')}
-          </h4>
-          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
-            {t(language, 'evaluatingSub')}
-          </p>
-        </div>
-      )}
-
       {error && !isLoading && (
         <div className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800 rounded-3xl p-6 text-center space-y-3 shadow-xs">
           <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center mx-auto">
