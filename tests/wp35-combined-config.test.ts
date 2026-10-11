@@ -1,6 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { parseEnv } from 'node:util';
 import { parseServerConfig } from '../server/config';
+
+test('sample environment starts locally and still requires durable storage on Render', () => {
+  const sample = parseEnv(readFileSync('.env.example', 'utf8'));
+  const local = parseServerConfig(sample);
+  assert.equal(local.backendHostProfile, 'always_on');
+  assert.equal(local.authStore, 'file');
+  assert.equal(local.geminiOperationBudgetMs, 90_000);
+  assert.throws(() => parseServerConfig({ ...sample, RENDER: 'true' }), /database configuration/i);
+  assert.throws(() => parseServerConfig({ ...sample, RENDER: 'true', SPENDWISE_AUTH_STORE: 'file' }), /durable/i);
+});
 
 // Catches integration dropping durable-store enforcement when adding host/runtime profiles.
 for (const profile of ['render_free', 'always_on']) {

@@ -1,6 +1,6 @@
 # WP35 combined integration execution and review
 
-Plan: `docs/superpowers/plans/2026-10-11-wp35-integration.md`. Specification: `docs/SpendWise_WP35_Implementation_Plan.md`, read in full. Inline execution under the user's conditional combine/main/APK instruction. Gemini key unchanged; no live generation, production changes, version bump or device installation has occurred.
+Plan: `docs/superpowers/plans/2026-10-11-wp35-integration.md`. Specification: `docs/SpendWise_WP35_Implementation_Plan.md`, read in full. Latest user instruction supersedes the earlier main/APK request: combine all three lanes on `codex/wp35-integration`, debug until combined verification and independent review are green, then stop and report for a possible additional WP. Main merge, deployment and signed APK are deferred until fresh authorization. Gemini key unchanged; no live generation, production changes, version bump or device installation has occurred.
 
 Base main `7d00b2dafadf829f63d2b6074b08d08c00ca352d`; WP35.1 `c19a960ff49a18ebfc2f2eab1ccba45c16476402`; WP35.2 `97055ed8a219d598c16eb7c731f09324029fb80d`; WP35.3 receipt `6616c09` with tested code `59e4a805d0a5b92271530d2afa567bf8a350747c`. WP35.3 exact-code run38121734881 passed both jobs before any lane merge. Exact web/native evidence is in `artifacts/wp35-3-ci-passed-*`.
 
@@ -10,7 +10,7 @@ Base main `7d00b2dafadf829f63d2b6074b08d08c00ca352d`; WP35.1 `c19a960ff49a18ebfc
 - [x] Task 2: combine recovery, shared processing/overall budgets, correlation and per-caller observers.
 - [x] Task 3: exercise actual combined progress/client and preserve all feature/layout/draft checks.
 - [ ] Task 4: combined CI, real isolated PostgreSQL, Android/Maestro and independent immutable review.
-- [ ] Task 5: conditional main/deployment and exact-source permanent-keystore APK handoff.
+- [ ] Task 5: DEFERRED by latest user instruction; no main merge, deployment or signed APK at this checkpoint.
 
 Preflight interfaces: Task1 backend consumes WP35.1 auth-store enforcement plus WP35.2 runtime fields; retain both with one host-profile field. Task2 consumes WP35.1 shared recovery and WP35.2 budgets; Task3 consumes its real start/success/failure signals and existing structural adapter. Task4 consumes all previous changes and must disable automatic live-generation smoke. Task5 consumes green exact-source CI/review plus actual durable-store cutover prerequisites, not an inferred DB state.
 
@@ -36,6 +36,24 @@ Ruling: the user's screenshot plus “so continue normally” authorizes the kno
 
 ## Pending gates
 
-Full combined Node22/WP32/CI/DB/native verification and final independent review are pending. Render durable database configuration and complete identity/revocation migration are unverified; production rollout must not restart an ephemeral sole registry before preserving that history. Actual Render idle/restart/provider and physical-phone acceptance remain separate. No deferred minor findings yet.
+Ruling: the user's latest explicit stop boundary overrides every earlier conditional main/APK instruction in this ledger and the saved plan — finish Task4 and report with all work on the integration branch. Cost if wrong: release waits for clarification; main and production remain untouched. Production DB/history cutover is documented future work, not a prerequisite for the synthetic integration checkpoint.
+
+First pushed integration source: `9e7cecfbbd1ef94ddf642fa39fbbe610f93c767a`. Combined CI38123923615 has successful web/real PostgreSQL, API36 both-navigation/IME geometry and encrypted-draft recovery jobs. API34 full acceptance was cancelled at the job's45-minute limit during the upgrade tail; exact logs/artifacts establish the cause below. The independent whole-branch review resumed successfully after an initial usage-limit interruption and has completed.
+
+Full API34 acceptance completion is pending. The other combined CI jobs and independent review passed as detailed below; the sole Minor template finding is corrected. Render durable database configuration and complete identity/revocation migration remain unverified future rollout gates. Actual Render idle/restart/provider and physical-phone acceptance remain separate.
+
+### Combined CI and independent review receipts
+
+CI38123923615 at `9e7cecf` proved **505 Node22 tests, zero failures/skips**, including real PostgreSQL17; runner19/19, failure11/11, components39/39, browser73/73, accessibility3/3, visual8/8, WP33 browser10/10 and diagnostics173/173. TypeScript/build passed. API36 real keyboard and both navigation modes passed; encrypted-draft recovery passed.
+
+The full API34 acceptance job's annotation explicitly states `The job has exceeded the maximum execution time of 45m0s`. All25 completed Maestro flows passed, including persistence/delete/cancellation, actual gallery/media boundaries, encrypted backup export/restore/corruption, old backup formats, App Lock and v1.4 seed. Its retained final-flow log shows migrated ledger/amount/photo assertions passed, followed by cold-restart system-PIN authentication and ledger visibility; cancellation arrived during the final History navigation, before the final photo assertion. No failing assertion or product stall is established. Prior main full acceptance log `artifacts/wp34-release-monitor/main-full-d6838dc-success.log` completed the same broad sequence in approximately36minutes after preparation; this run took longer, notably9m17s for its passing media flow.
+
+Ruling: give only the full acceptance CI job a60-minute ceiling and add a manual `acceptance_only` selector, defaultfalse — rerunning the old immutable job would retain the insufficient45-minute cap. All flow assertions, app/provider budgets and fixture sequence remain unchanged. Cost if wrong: extra hosted CI time; per-flow failure/timeout checks still apply. Skip automatic CI for this workflow/template/docs-only repair commit, then dispatch only acceptance; retain the three successful original job receipts and prove unchanged application source. Do not claim one all-green exact-head run from these complementary receipts.
+
+Fresh immutable whole-branch review by `wp35_integration_review` of `7d00b2da..9e7cecf`: **no Critical or Important findings**; fresh independent synthetic subset52/52 and diff check passed. Minor sample-environment defect reproduced RED (`Missing auth database configuration`), corrected by commenting the explicit `render_free` override, then GREEN3/3 including Render durable-store enforcement. No runtime/security policy changed. Full Node22 after repair: **505 passed, zero failed, one DB-only local skip** (`artifacts/wp35-integration-node22-review-fix-normal.log`); the real DB already passed original CI. An initial sandbox attempt blocked loopback HTTP/bash execution and was stopped; normal Windows verification passed. No second review round required for this narrow repair.
+
+Reviewer declined actual Render idle/restart and Google quality, production database credentials/roles/TLS/history migration/backup restore, physical HONOR/OEM keyboard/navigation/TalkBack/upgrade, final remote API34 completion, signed APK/rollout provenance, and optional model/thinking-route qualification. These require unavailable live/private/physical evidence or are explicitly deferred. Synthetic/emulator proof cannot certify them; routing remains disabled.
+
+Ruling: future delegated work uses the user's requested GPT-6 Luna at high reasoning — overrides the skill's most-capable-reviewer preference. The existing review was allowed to finish and is complete; no further subagent work is currently needed. Cost if wrong: review depth may differ, while concrete tests and review gates remain mandatory.
 
 Local completion receipt for Tasks1–3: **504 Node22 passed, one DB-only skip; 39 components; 70 browser plus the three focused corrected/retried cases; 3 accessibility; 8 visual; runner19/19 and failure11/11; TypeScript/build passed.** Latest screenshot `receipt-ar-dark.png` inspected: real waiting status, one reduced-motion bar, readable RTL actions and reachable footer. No UI or timeout changes were made for font-network failures. Task4's dedicated workflow uses real isolated PostgreSQL17 and must establish one complete exact-source web/native run before main integration. Both new workflow YAML and the main workflow manual live-smoke input parsed successfully using a temporary pinned js-yaml4.1.0 parser; no dependency was added.

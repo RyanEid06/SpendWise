@@ -77,7 +77,9 @@
 - [ ] When local changes stabilize, request one fresh independent review of immutable main-base..integration-head using the documented five review-focus cases. Reproduce/fix Important findings in one repair pass with RED/GREEN and full appropriate verification; record declined-to-judge items and rulings.
 - [ ] Finalize report exact source refs, changed-file manifest, actual CI/DB/emulator screenshots/geometry and remaining live/physical/cutover gates. Stop before main push if Render auto-deploy would perform an unapproved production rollout.
 
-### Task 5: Conditional main merge and signed APK handoff
+### Task 5: DEFERRED — conditional main merge and signed APK handoff
+
+Latest user instruction overrides this task: stop after combined integration CI and independent review are green, keeping all three lanes only on `codex/wp35-integration`, and report before any further WP, main merge, deployment or APK. The historical steps below are retained for possible later authorization; do not execute them now.
 
 **Files:** reuse existing candidate signing/provenance verification helpers; add a build-only manual candidate workflow if the existing guarded candidate workflow cannot produce the requested artifact without live calls. No version or signing identity change.
 

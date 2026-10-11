@@ -2,6 +2,11 @@ name: WP35 Combined Integration
 
 on:
   workflow_dispatch:
+    inputs:
+      acceptance_only:
+        description: 'Retry only full Android acceptance; retain completed web/API36/recovery receipts'
+        type: boolean
+        default: false
   push:
     branches: ['codex/wp35-integration']
     paths-ignore: ['docs/**']
@@ -11,6 +16,7 @@ permissions:
 
 jobs:
   web-regressions:
+    if: ${{ !inputs.acceptance_only }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -56,6 +62,7 @@ jobs:
           retention-days: 14
 
   android-isolated:
+    if: ${{ !inputs.acceptance_only }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
@@ -133,7 +140,9 @@ jobs:
   android-acceptance:
     # Full existing synthetic black-box acceptance; API36 insets run separately.
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # The full fixture/backup/upgrade sequence reached its final assertions at
+    # 45 minutes. This is a CI job ceiling, not an app/provider deadline.
+    timeout-minutes: 60
     env:
       VITE_API_BASE_URL: https://127.0.0.1:1
       MAESTRO_VERSION: "2.11.0"
@@ -296,6 +305,7 @@ jobs:
           retention-days: 7
 
   android-recovery:
+    if: ${{ !inputs.acceptance_only }}
     name: encrypted-draft-recovery
     runs-on: ubuntu-latest
     timeout-minutes: 35
