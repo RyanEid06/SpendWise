@@ -1,0 +1,102 @@
+{
+  "kind": "actual-google-api-synthetic-only",
+  "tierEvidence": "WP35 owner-attested Free tier; current billing tier not independently observable",
+  "startedAt": "2026-10-11T17:12:38.379Z",
+  "requestCap": 3,
+  "perRequestTimeoutMs": 50000,
+  "metadata": [
+    {
+      "name": "gemini-3.5-flash-lite",
+      "supportedActions": [
+        "generateContent",
+        "countTokens",
+        "createCachedContent",
+        "batchGenerateContent"
+      ],
+      "inputTokenLimit": 1048576,
+      "outputTokenLimit": 65536
+    },
+    {
+      "name": "gemini-3.7-flash",
+      "supportedActions": [
+        "generateContent",
+        "countTokens",
+        "createCachedContent",
+        "batchGenerateContent"
+      ],
+      "inputTokenLimit": 1048576,
+      "outputTokenLimit": 65536
+    },
+    {
+      "name": "gemini-3.8-flash",
+      "supportedActions": [
+        "generateContent",
+        "countTokens",
+        "createCachedContent",
+        "batchGenerateContent"
+      ],
+      "inputTokenLimit": 1048576,
+      "outputTokenLimit": 65536
+    }
+  ],
+  "results": [
+    {
+      "task": "analyze",
+      "language": "en",
+      "model": "gemini-3.5-flash-lite",
+      "thinking": "low",
+      "variant": "wp36-spending-facts",
+      "attempts": 1,
+      "jsonValid": true,
+      "schemaValid": true,
+      "sanitizerValid": true,
+      "financialGate": true,
+      "usage": {
+        "promptTokens": 368,
+        "outputTokens": 34,
+        "totalTokens": 402
+      },
+      "qualityPass": true,
+      "latencyMs": 842
+    },
+    {
+      "task": "analyze",
+      "language": "fr",
+      "model": "gemini-3.5-flash-lite",
+      "thinking": "low",
+      "variant": "wp36-spending-facts",
+      "attempts": 1,
+      "jsonValid": true,
+      "schemaValid": true,
+      "sanitizerValid": true,
+      "financialGate": true,
+      "usage": {
+        "promptTokens": 400,
+        "outputTokens": 34,
+        "totalTokens": 434
+      },
+      "qualityPass": true,
+      "latencyMs": 851
+    },
+    {
+      "task": "analyze",
+      "language": "ar",
+      "model": "gemini-3.5-flash-lite",
+      "thinking": "low",
+      "variant": "wp36-spending-facts",
+      "attempts": 1,
+      "jsonValid": true,
+      "schemaValid": true,
+      "sanitizerValid": true,
+      "financialGate": true,
+      "usage": {
+        "promptTokens": 430,
+        "outputTokens": 34,
+        "totalTokens": 464
+      },
+      "qualityPass": true,
+      "latencyMs": 817
+    }
+  ],
+  "completedAt": "2026-10-11T17:12:41.622Z"
+}
