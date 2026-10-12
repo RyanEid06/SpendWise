@@ -38,4 +38,3 @@ Merged feature `fix/wp37-localization-native-auth-ux` and integration
 exact tips are ancestors of main and PR47/PR48 are merged with no open dependency.
 No extra worktree or stash existed. The final documentation branch is removed
 only after its own PR merge; canonical main and all commit history remain.
-
