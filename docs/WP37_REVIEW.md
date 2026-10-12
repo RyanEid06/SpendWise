@@ -4,9 +4,9 @@ Date: 2026-10-12. Approved scope: [original prompt](WP37_ORIGINAL_PROMPT.md) plu
 
 ## Identity and boundaries
 
-Baseline: clean `codex/wp35-integration` at `269ddfaa7c9707c2d95739be5e3ddfc6fb726fc1`, containing approved WP36 merge `13b4a93`. Implementation branch: `fix/wp37-localization-native-auth-ux`. Tested application commit: **`4547b7e63814e9350f37c094a3aafec82ce9f962`**; documentation follows separately. PR/CI/APK receipts remain pending. Version remains **2.1.2 / Android code12**, package `com.spendwise.app`.
+Baseline: clean `codex/wp35-integration` at `269ddfaa7c9707c2d95739be5e3ddfc6fb726fc1`, containing approved WP36 merge `13b4a93`. Implementation branch: `fix/wp37-localization-native-auth-ux`. Initial tested application commit: **`4547b7e63814e9350f37c094a3aafec82ce9f962`**. Foreground-auth correction: **`d837c35bf0f9edeb89eee163df27c369b2aa81b3`**; documentation follows separately. [PR47](https://github.com/RyanEid06/SpendWise/pull/47) targets integration. Required overall CI/private APK receipts remain pending. Version remains **2.1.2 / Android code12**, package `com.spendwise.app`.
 
-No merge, main change, backend deployment/configuration change, public release/tag, signing identity change, branch deletion or owner-data reset is authorized or performed.
+Original scope stopped at review. The owner subsequently authorized merging through integration to main and restoring Render auto-deploy from main **after automated review, required CI and signed private APK verification pass**, explicitly stating "Automated checks are enough". Those conditional actions have not yet been performed. Physical acceptance remains unverified. Public release/tag, version/signing identity change, branch deletion, data reset and unrelated configuration changes remain unauthorized.
 
 ## Original Part60 findings and resulting behavior
 
@@ -56,7 +56,11 @@ Supported local runtime: Node22.23.3. Scratch logs/screenshots are preserved und
 | Independent review |Fresh GPT6.1 Sol High reviewer rechecked immutable `4547b7e` against baseline: **no remaining required actionable findings**. Two original P2 defects and related cache/copy gaps resolved; final workflow guards and unchanged application tree verified. Baseline-to-source diff check passed |
 | Required CI / private signed artifact |Pending |
 
+CI update2026-10-12T12:47Z, exact head `185ccc8f0aeada0d3933b448fcb239ac261bd18a`: Android Build38249976083 and combined web job passed (647/647 Node including PostgreSQL,78components,75browser,3accessibility,8visual,10performance datasets). Native reports verify4gate+2acquisition JUnit tests,0failures/errors. Encrypted recovery failed at background unlock: React remains `Unlocking…` but native credential input is absent. Auth author is reproducing background auto-prompt timing and native launch readiness before accepting a fix. API36 isolated/API34 full acceptance remain running and preserved. This source has **not** passed the overall automated gate; private APK/main merge/Render changes must wait.
+
 Sandbox-only Git Bash/Chromium/localhost failures were rerun in normal Windows context with the existing keyring; credentials were not changed. Local database integration is skipped unless a test PostgreSQL URL is available; required CI supplies isolated PostgreSQL.
+
+Foreground-auth follow-up `d837c35`: the real background-mounted LockScreen sequence produced3/3 meaningful browser failures before the fix. Native modes now wait for classified foreground and reject changed revisions/disposed presentations; the native bridge refuses unsafe Activity/FragmentManager launch state with a settled cancellation. Root independently verified75/75 affected Node checks, TypeScript/production build and3/3 actual-component browser checks under the unchanged standard configuration. Author pure-JVM gate5/5 passed. Independent GPT6.1 Sol High review of immutable `d837c35` found **no required actionable findings**; corrected-source native CI remains pending. API36 isolated passed on the old source; API34 acceptance remains running. See [auth follow-up report](WP37_AUTH_REPORT.md) for the absent native launch-log limitation. No corrected Android recovery success is claimed.
 
 ## Compatibility and future deployment
 
