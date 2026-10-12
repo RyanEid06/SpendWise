@@ -18,12 +18,12 @@ permissions:
 
 jobs:
   signed-test-apk:
-    if: github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/codex/wp35-integration' || github.ref == 'refs/heads/fix/wp37-localization-native-auth-ux')
+    if: github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/codex/wp35-integration' || github.ref == 'refs/heads/fix/wp37-localization-native-auth-ux')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
       VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
-      VALIDATION_PACKET: ${{ github.ref == 'refs/heads/fix/wp37-localization-native-auth-ux' && 'WP37' || 'WP36' }}
+      VALIDATION_PACKET: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/fix/wp37-localization-native-auth-ux') && 'WP37' || 'WP36' }}
     steps:
       - uses: actions/checkout@v7
         with:

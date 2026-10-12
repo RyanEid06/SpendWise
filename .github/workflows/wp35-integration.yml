@@ -223,7 +223,8 @@ jobs:
           npm run build
           npm run android:sync
           chmod +x android/gradlew
-          (cd android && ./gradlew assembleDebug --stacktrace)
+          # Bound the historical fixture packager after its observed heap OOM.
+          (cd android && ./gradlew '-Dorg.gradle.jvmargs=-Xmx2g' --max-workers=2 assembleDebug --stacktrace)
           popd
           cp "$fixture/android/app/build/outputs/apk/debug/app-debug.apk"             artifacts/android-e2e/apks/v14-debug.apk
           git worktree remove "$fixture" --force
@@ -494,7 +495,7 @@ jobs:
           retention-days: 7
 
   signed-test-apk:
-    if: github.event_name == 'workflow_dispatch' && inputs.signed_test_apk && (github.ref == 'refs/heads/codex/wp35-integration' || github.ref == 'refs/heads/fix/wp37-localization-native-auth-ux')
+    if: github.event_name == 'workflow_dispatch' && inputs.signed_test_apk && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/codex/wp35-integration' || github.ref == 'refs/heads/fix/wp37-localization-native-auth-ux')
     uses: ./.github/workflows/wp35-test-apk.yml
     with:
       expected_source: ${{ inputs.expected_source }}
