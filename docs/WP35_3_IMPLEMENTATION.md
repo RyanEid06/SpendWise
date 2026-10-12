@@ -1,5 +1,7 @@
 # WP35.3 execution notes
 
+> Current status (2026-10-11): **working and GREEN through WP36**, including CI, the deployed backend, private signed 2.1.2/code12 APK and owner phone acceptance. WP37 is upcoming; main stays untouched until after WP37. See [current status](STATUS.md). This document retains its historical checkpoint/specification; earlier pending deployment/device statements are superseded by that sign-off.
+
 Authority: approved WP35 plan at `c19a960ff49a18ebfc2f2eab1ccba45c16476402:docs/SpendWise_WP35_Implementation_Plan.md`, read in full, and supplied WP35.3 objective. Execution is inline using the clean existing checkout and requested branch. No WP35.1/2 merge or cherry-pick.
 
 Base: verified remote main `7d00b2dafadf829f63d2b6074b08d08c00ca352d`; WP34 integrated at `cfc9c954fe51242fbc22f62da9f5b3bfaae8ce49`. Read WP35.2 review and integration contract at `97055ed8a219d598c16eb7c731f09324029fb80d` and WP35.1 observable RecoveryPhase contract at `c19a960`.

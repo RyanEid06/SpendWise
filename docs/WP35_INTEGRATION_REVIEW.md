@@ -1,5 +1,7 @@
 # WP35 combined integration execution and review
 
+> Current status (2026-10-11): **working and GREEN through WP36**, including CI, the deployed backend, private signed 2.1.2/code12 APK and owner phone acceptance. WP37 is upcoming; main stays untouched until after WP37. See [current status](STATUS.md). This document retains its historical checkpoint/specification; earlier pending deployment/device statements are superseded by that sign-off.
+
 Subsequent user-authorized packaging: a private phone-test APK on Desktop before
 any main merge/public release, version2.1.1/code11. See
 `docs/superpowers/plans/2026-10-11-wp35-test-apk.md`. Only version metadata,

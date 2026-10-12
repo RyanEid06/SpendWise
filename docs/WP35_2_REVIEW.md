@@ -1,5 +1,7 @@
 # WP35.2 review checkpoint
 
+> Current status (2026-10-11): **working and GREEN through WP36**, including CI, the deployed backend, private signed 2.1.2/code12 APK and owner phone acceptance. WP37 is upcoming; main stays untouched until after WP37. See [current status](STATUS.md). This document retains its historical checkpoint/specification; earlier pending deployment/device statements are superseded by that sign-off.
+
 Branch: `wp35-02/gemini-runtime`. Initial implementation commit: `a543cac3bf40c2ab940e98f3358c6972b2efbb43`; verified review-fix/code commit: `e339eae65d9e15aa00536186328e39d937becdd7`. Later documentation-only commits do not change the tested runtime.
 Base: live-verified main `7d00b2dafadf829f63d2b6074b08d08c00ca352d`; WP34 PR41 merged at `cfc9c954fe51242fbc22f62da9f5b3bfaae8ce49`.
 WP35.1 inspected read-only at `c19a960ff49a18ebfc2f2eab1ccba45c16476402`, open draft PR45. No WP35.1 merge/cherry-pick; no WP35.3 implementation.

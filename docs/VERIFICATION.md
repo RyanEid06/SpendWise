@@ -1,5 +1,18 @@
 # SpendWise 2.1 automated verification
 
+## Current 2.1.2 / WP36 checkpoint — GREEN
+
+As of 2026-10-11, code/CI, backend deployment, signed APK delivery and owner
+phone acceptance are green. The owner confirmed “all works nice”.
+[Current status](STATUS.md) records the exact application/backend commits,
+[combined CI38164832712](https://github.com/RyanEid06/SpendWise/actions/runs/38164832712),
+[Android Build38164841401](https://github.com/RyanEid06/SpendWise/actions/runs/38164841401)
+and [signed APK38168712767](https://github.com/RyanEid06/SpendWise/actions/runs/38168712767).
+See the [2.1.2 artifact receipt](WP36_PRIVATE_APK.md). WP37 is upcoming;
+main and the public 2.1.0 release remain unchanged.
+
+## Historical published 2.1.0 verification
+
 Published release **2.1.0/code10**, package `com.spendwise.app`:
 [official release and verification assets](https://github.com/RyanEid06/SpendWise/releases/tag/v2.1.0).
 Tagged application and documentation source:
@@ -62,4 +75,6 @@ Generated evidence and complete pre-cleanup Git/file backups are kept locally
 under ignored `artifacts/wp34-release-monitor/`, not committed with financial data.
 
 The owner authorized publication followed by phone trial.
-[Physical Honor, TalkBack and manual visual acceptance](MANUAL_ACCEPTANCE.md) remain pending.
+[Current owner phone acceptance and future regression checklist](MANUAL_ACCEPTANCE.md)
+supersede this historical trial's pending status; separate per-scenario TalkBack
+or splash recordings were not supplied with the 2.1.2 owner sign-off.

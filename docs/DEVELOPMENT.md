@@ -1,5 +1,10 @@
 # Development and maintenance
 
+**Working and green through WP36, 2026-10-11.** Current private version:
+2.1.2/code12; CI, backend and owner phone acceptance passed. See
+[status](STATUS.md) and [roadmap](ROADMAP.md). WP37 awaits its specification;
+keep main untouched until after WP37.
+
 ## Product constraints
 
 Release scope is frozen for 2.1.
@@ -28,7 +33,9 @@ Copy `.env.example` to `.env`; actual defaults and bounds live in `server/config
 | `GEMINI_MODEL`, `GEMINI_FALLBACK_MODELS`, `GEMINI_TIMEOUT_MS` | Provider/reliability controls |
 | `VITE_API_BASE_URL` | Same-origin locally; deployed HTTPS API for Android |
 | `ALLOWED_ORIGINS` | Exact origins; browser `http://localhost:3000`, Android `https://localhost` |
-| `SPENDWISE_INSTALLATION_STORE_PATH` | Durable installation public-key/revocation registry |
+| `SPENDWISE_AUTH_STORE`, `SPENDWISE_AUTH_DATABASE_URL` | Required durable PostgreSQL identities/revocations on Render; database URL is server-only |
+| `SPENDWISE_INSTALLATION_STORE_PATH` | Local file registry for supported non-Render development |
+| `GEMINI_TASK_ROUTES`, `GEMINI_VERIFIED_MODELS`, `GEMINI_ROUTING_QUALITY_APPROVED` | Qualified task-specific routing; current routes use Lite LOW then Flash LOW |
 | `SPENDWISE_DENIED_INSTALLATION_IDS` | Emergency deny-list |
 | `SPENDWISE_TELEMETRY_SALT` | Optional server-only scope hash salt |
 | `SPENDWISE_API_TOKEN`, `SPENDWISE_LEGACY_AUTH_UNTIL` | Explicitly expiring legacy compatibility only |
@@ -39,7 +46,8 @@ assurance. Key possession does not attest official-client identity. Persist the
 installation registry across backend restarts. Never ship keys in `VITE_*` values.
 Origin checks, bounded requests and installation/IP/global quotas remain mandatory.
 `scripts/deployed-auth-smoke.mjs` exercises registration, proof and Gemini analysis
-on main/tag pushes without printing credentials. Ordinary E2E uses synthetic AI.
+only through explicit opt-in without printing credentials; main/tag pushes do
+not automatically generate live AI calls. Ordinary E2E uses synthetic AI.
 
 ## Android and tests
 

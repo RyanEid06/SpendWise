@@ -4,6 +4,11 @@ Current candidate metadata: **2.1.2 / Android versionCode12**, package `com.spen
 This is the user-requested private WP36 phone-test candidate on
 `codex/wp35-integration`; public main remains2.1.0/code10. No2.1.2 tag or
 public release is authorized yet.
+
+**Current checkpoint: GREEN through WP36, owner phone acceptance confirmed
+2026-10-11.** Backend deployment and signed APK delivery passed.
+See [status](STATUS.md), [APK receipt](WP36_PRIVATE_APK.md) and [roadmap](ROADMAP.md).
+WP37 is next; main remains untouched until after WP37.
 `version.json` is authoritative; package and lockfile root versions must match.
 The current authoritative values are:
 
@@ -47,8 +52,10 @@ It calls the reusable `wp35-test-apk.yml`; this build-only workflow uses
 the permanent key and checks actual package/version/signature/hash; it does not
 repeat signed upgrade emulator certification, deploy the backend or publish.
 WP35's combined full native/recovery/API36 gates have separate green receipts.
-Current Render still runs main, so this APK alone cannot validate the new durable
-auth/provider runtime backend end-to-end. Do not uninstall the owner's app.
+Render now runs the manually selected integration commit `d89063b8630c74355074544d1e5dfe215c66aab2`.
+The configured branch label remains main and auto-deploy is disabled. Health
+reports `d89063b8630c`; authenticated synthetic analysis and the owner's phone
+test passed. Do not uninstall the owner's app.
 
 ## Certification and publication
 

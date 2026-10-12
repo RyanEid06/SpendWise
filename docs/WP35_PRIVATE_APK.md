@@ -1,5 +1,7 @@
 # WP35 private phone-test APK
 
+> Current status (2026-10-11): **working and GREEN through WP36**, including CI, the deployed backend, private signed 2.1.2/code12 APK and owner phone acceptance. WP37 is upcoming; main stays untouched until after WP37. See [current status](STATUS.md). This document retains its historical checkpoint/specification; earlier pending deployment/device statements are superseded by that sign-off.
+
 User-authorized unpublished candidate: version **2.1.1**, Android code **11**.
 All three WP35 lanes remain on `codex/wp35-integration`; main remains
 `7d00b2dafadf829f63d2b6074b08d08c00ca352d`. No backend deployment or public release occurred.

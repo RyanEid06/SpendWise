@@ -1,5 +1,7 @@
 # SpendWise WP35 — Gemini Reliability, Honest AI Progress UX & Safe-Area Fix
 
+> Current status (2026-10-11): **working and GREEN through WP36**, including CI, the deployed backend, private signed 2.1.2/code12 APK and owner phone acceptance. WP37 is upcoming; main stays untouched until after WP37. See [current status](STATUS.md). This document retains its historical checkpoint/specification; earlier pending deployment/device statements are superseded by that sign-off.
+
 **Status:** Implementation plan only; no code changes.
 **Baseline:** Uploaded `SpendWise-main (1)(2).zip`, version 2.1.0, Oct 9 snapshot; reconcile with current `main` after WP34 is merged before creating branches.
 **Deployment:** Render Free web service, `https://spendwise-api-v9sv.onrender.com`; Google AI Studio Gemini API; GitHub Actions.

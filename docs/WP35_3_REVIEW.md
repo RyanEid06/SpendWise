@@ -1,5 +1,7 @@
 # WP35.3 review checkpoint
 
+> Current status (2026-10-11): **working and GREEN through WP36**, including CI, the deployed backend, private signed 2.1.2/code12 APK and owner phone acceptance. WP37 is upcoming; main stays untouched until after WP37. See [current status](STATUS.md). This document retains its historical checkpoint/specification; earlier pending deployment/device statements are superseded by that sign-off.
+
 Branch: `wp35-03/ai-progress-safe-area`. Base: live-verified main `7d00b2dafadf829f63d2b6074b08d08c00ca352d`, including WP34 PR41 at `cfc9c954fe51242fbc22f62da9f5b3bfaae8ce49`. Tested code: `59e4a805d0a5b92271530d2afa567bf8a350747c`. Dedicated CI [38121734881](https://github.com/RyanEid06/SpendWise/actions/runs/38121734881) passed both jobs, completed 2026-10-11 07:44 UTC. Initial implementation `425887b`; independent-review fixes `fb9f775`. Subsequent receipt-only commits do not change tested runtime or flows.
 
 Read-only references: WP35.1 `c19a960ff49a18ebfc2f2eab1ccba45c16476402` (draft PR45), WP35.2 `97055ed8a219d598c16eb7c731f09324029fb80d`, its complete review/integration notes, and the entire approved WP35 plan from the immutable WP35.1 ref. Neither branch was merged or cherry-picked. This main-based branch deliberately does not deploy the auth/runtime work from those lanes.

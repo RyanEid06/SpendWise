@@ -1,5 +1,9 @@
 # Security, storage and recovery
 
+Current checkpoint: **GREEN through WP36**, including automated security
+regressions and owner phone acceptance (2026-10-11). See [status](STATUS.md).
+This sign-off does not expand the threat model or waive the safeguards below.
+
 This records implemented boundaries and release checks. It does not establish
 physical-device acceptance or protection against a compromised OS.
 
