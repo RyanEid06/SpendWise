@@ -4,6 +4,12 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class NativeAuthenticationGateTest {
+    @Test public void promptLaunchRequiresResumedActivityAndUnsavedFragmentState() {
+        assertFalse(NativeAuthenticationGate.canLaunchPrompt(false, false, false));
+        assertFalse(NativeAuthenticationGate.canLaunchPrompt(true, true, false));
+        assertFalse(NativeAuthenticationGate.canLaunchPrompt(true, false, true));
+        assertTrue(NativeAuthenticationGate.canLaunchPrompt(true, false, false));
+    }
     @Test public void serializesAndRejectsStaleCallbacks() {
         NativeAuthenticationGate gate = new NativeAuthenticationGate();
         long first = gate.begin(60000);

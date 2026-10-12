@@ -14,6 +14,7 @@ import type {
 } from '../security/SecureSessionService';
 import { androidSecurityAdapter, classifyNativeAuthenticationCapabilities } from '../platform/android/AndroidSecurityAdapter';
 import { AUTHENTICATION_LIMIT_COPY, AUTHENTICATION_RECOVERY_COPY, type AuthenticationMethod } from '../security/authenticationCopy';
+import { securityLifecycle } from '../security/SecurityLifecycleCoordinator';
 
 interface LockScreenProps {
   unlockMode: SecureUnlockMode;
@@ -103,6 +104,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({
   const [now, setNow] = useState(Date.now());
   const autoAttempted = useRef(false);
   const requestPending = useRef(false);
+  const presentationCurrent = useRef(true);
   const [recoveryAvailable, setRecoveryAvailable] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [attempted, setAttempted] = useState(false);
@@ -111,6 +113,11 @@ export const LockScreen: React.FC<LockScreenProps> = ({
   const remainingMs = remainingLockDelayMs(throttle, now);
   const isThrottled = pinMode && remainingMs > 0;
   const remainingSeconds = Math.max(1, Math.ceil(remainingMs / 1000));
+
+  useEffect(() => {
+    presentationCurrent.current = true;
+    return () => { presentationCurrent.current = false; };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -208,7 +215,14 @@ export const LockScreen: React.FC<LockScreenProps> = ({
     setAttempted(true);
     setError(null);
     try {
-      const result = await onUnlock(pinMode ? pin : undefined, method);
+      // Immediate lock can mount this surface while Android is stopped. Keep
+      // it redacted, but defer the one automatic request until foreground.
+      // This covers both bootstrap and the mounted AppShell unlock callback.
+      const requestUnlock = () => onUnlock(pinMode ? pin : undefined, method);
+      const nativeMode = unlockMode === 'native' || unlockMode === 'native-repair' || unlockMode === 'legacy-native-migration';
+      const result = nativeMode
+        ? await securityLifecycle.authenticateWhenForeground(requestUnlock, () => presentationCurrent.current)
+        : await requestUnlock();
       if (result.ok) {
         if (pinMode) clearLockThrottle();
         setPin('');

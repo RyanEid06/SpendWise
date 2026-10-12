@@ -29,6 +29,7 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.ActivityCallback;
+import androidx.lifecycle.Lifecycle;
 
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
@@ -303,6 +304,15 @@ public class SpendWiseSecurityPlugin extends Plugin {
         call.resolve(result);
     }
 
+    private boolean canLaunchAuthentication() {
+        FragmentActivity activity = (FragmentActivity) getActivity();
+        return NativeAuthenticationGate.canLaunchPrompt(
+            activity.getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED),
+            activity.getSupportFragmentManager().isStateSaved(),
+            activity.isFinishing() || activity.isDestroyed()
+        );
+    }
+
     private void promptForAuthentication(
         PluginCall call,
         String title,
@@ -310,6 +320,10 @@ public class SpendWiseSecurityPlugin extends Plugin {
         AuthSuccess success
     ) {
         getActivity().runOnUiThread(() -> {
+            if (!canLaunchAuthentication()) {
+                call.resolve(authResult("cancelled", "AUTHENTICATION_NOT_FOREGROUND", null));
+                return;
+            }
             if (activeAuthCall != null || pendingCredentialCall != null || cancellingPromptAttempt != 0) {
                 call.resolve(authResult("cancelled", "AUTHENTICATION_BUSY", null));
                 return;
@@ -363,6 +377,10 @@ public class SpendWiseSecurityPlugin extends Plugin {
     }
 
     private void startBiometricAuthentication(long token, String title, String reason, boolean credentialOnly) {
+        if (!canLaunchAuthentication()) {
+            finishAuthentication(token, authResult("cancelled", "AUTHENTICATION_NOT_FOREGROUND", null));
+            return;
+        }
         PluginCall call = activeAuthCall;
         long attempt = ++promptAttempt;
         // API30+ credential BiometricPrompt is not a legacy external activity.
@@ -425,6 +443,10 @@ public class SpendWiseSecurityPlugin extends Plugin {
 
     @SuppressWarnings("deprecation")
     private void startCredentialAuthentication(long token, String title, String reason) {
+        if (!canLaunchAuthentication()) {
+            finishAuthentication(token, authResult("cancelled", "AUTHENTICATION_NOT_FOREGROUND", null));
+            return;
+        }
         if (!deviceCredentialAvailable()) {
             finishAuthentication(token, authResult("unavailable", "SECURE_DEVICE_CREDENTIAL_UNAVAILABLE", null));
             return;

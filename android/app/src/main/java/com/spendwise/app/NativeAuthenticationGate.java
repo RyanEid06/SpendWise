@@ -2,6 +2,9 @@ package com.spendwise.app;
 
 /** Monotonic, session-bound guard. Contains no Android UI or key material. */
 final class NativeAuthenticationGate {
+    static boolean canLaunchPrompt(boolean resumed, boolean fragmentStateSaved, boolean destroyed) {
+        return resumed && !fragmentStateSaved && !destroyed;
+    }
     private long serial = 0;
     private long active = 0;
     private long backgroundedAt = -1;

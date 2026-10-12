@@ -1,6 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
-import { secureSessionService, type SecureSessionService, type SecureSessionSnapshot } from './SecureSessionService';
+import { secureSessionService, type SecureSessionService, type SecureSessionSnapshot, type SecureSessionActionResult } from './SecureSessionService';
 
 interface LifecycleObserver {
   onBackground(): void;
@@ -64,6 +64,18 @@ export class SecurityLifecycleCoordinator {
       if (this.active) return;
       await new Promise<void>(resolve => { this.foregroundWaiters.add(resolve); });
     }
+  }
+
+  async authenticateWhenForeground(
+    operation: () => Promise<SecureSessionActionResult>,
+    presentationCurrent: () => boolean = () => true
+  ): Promise<SecureSessionActionResult> {
+    const revision = this.session.getSnapshot().sessionRevision;
+    await this.waitUntilForeground();
+    if (!presentationCurrent() || this.session.getSnapshot().sessionRevision !== revision) {
+      return { ok: false, code: 'cancelled', detailCode: 'AUTHENTICATION_STALE' };
+    }
+    return operation();
   }
 }
 

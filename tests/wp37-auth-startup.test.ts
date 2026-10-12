@@ -69,3 +69,30 @@ test('WP37 a changed lock revision rejects an old bootstrap entry even after a l
   session.locked = false;
   assert.equal(module.canEnterProtectedApplication(0, session.getSnapshot() as any), false);
 });
+
+test('WP37 background authentication waits for classified foreground before invoking its protected operation', async () => {
+  const { lifecycle } = await fixture();
+  lifecycle.background(1_000);
+  let calls = 0;
+  const result = lifecycle.authenticateWhenForeground(async () => { calls++; return { ok: false, code: 'cancelled' as const }; });
+  await Promise.resolve();
+  assert.equal(calls, 0);
+  lifecycle.foreground(2_000);
+  assert.equal((await result).code, 'cancelled');
+  assert.equal(calls, 1);
+});
+
+test('WP37 a lock revision change or disposed presentation cancels queued foreground authentication', async () => {
+  for (const cancelSession of [true, false]) {
+    const { lifecycle, session } = await fixture();
+    lifecycle.background(1_000);
+    let calls = 0;
+    let mounted = true;
+    const result = lifecycle.authenticateWhenForeground(async () => { calls++; return { ok: true, code: 'success' as const }; }, () => mounted);
+    if (cancelSession) session.lock();
+    else mounted = false;
+    lifecycle.foreground(2_000);
+    assert.equal((await result).ok, false);
+    assert.equal(calls, 0);
+  }
+});
