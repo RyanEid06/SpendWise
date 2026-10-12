@@ -1,14 +1,17 @@
 # Signing and release runbook
 
 Current candidate metadata: **2.1.2 / Android versionCode12**, package `com.spendwise.app`.
-This is the user-requested private WP36 phone-test candidate on
-`codex/wp35-integration`; public main remains2.1.0/code10. No2.1.2 tag or
+The accepted private WP36 candidate is on `codex/wp35-integration`.
+WP37 retains this metadata on `fix/wp37-localization-native-auth-ux` for a separate
+authorized private validation artifact; identify candidates by source/checksum receipt.
+Public main remains2.1.0/code10. No2.1.2 tag or
 public release is authorized yet.
 
 **Current checkpoint: GREEN through WP36, owner phone acceptance confirmed
 2026-10-11.** Backend deployment and signed APK delivery passed.
 See [status](STATUS.md), [APK receipt](WP36_PRIVATE_APK.md) and [roadmap](ROADMAP.md).
-WP37 is next; main remains untouched until after WP37.
+WP37 implementation and validation are in progress under the [approved scope](WP37_SPEC.md);
+main remains untouched until after WP37 and fresh owner approval.
 `version.json` is authoritative; package and lockfile root versions must match.
 The current authoritative values are:
 

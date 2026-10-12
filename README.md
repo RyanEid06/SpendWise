@@ -5,7 +5,9 @@ monthly budget planner for Android and the web. Package: `com.spendwise.app`.
 
 **Working and green through WP36 (2026-10-11).** Automated checks passed,
 the compatible WP36 backend is live, and the owner confirmed successful phone
-testing: “all works nice”. WP37 is next, awaiting the owner's specification.
+testing: “all works nice”. WP37 hardening is now in implementation and validation;
+its [approved scope](docs/WP37_SPEC.md) and [progress ledger](docs/WP37_PROGRESS.md)
+track the separate review checkpoint.
 See [current status and evidence](docs/STATUS.md) and [roadmap](docs/ROADMAP.md).
 
 The current 2.1.2 APK is a private signed test build delivered to the owner.

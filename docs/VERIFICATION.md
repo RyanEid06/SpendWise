@@ -8,7 +8,9 @@ phone acceptance are green. The owner confirmed “all works nice”.
 [combined CI38164832712](https://github.com/RyanEid06/SpendWise/actions/runs/38164832712),
 [Android Build38164841401](https://github.com/RyanEid06/SpendWise/actions/runs/38164841401)
 and [signed APK38168712767](https://github.com/RyanEid06/SpendWise/actions/runs/38168712767).
-See the [2.1.2 artifact receipt](WP36_PRIVATE_APK.md). WP37 is upcoming;
+See the [2.1.2 artifact receipt](WP36_PRIVATE_APK.md). WP37 is in implementation
+and validation under its [approved scope](WP37_SPEC.md); its independent evidence
+is tracked in the [progress ledger](WP37_PROGRESS.md). This WP36 receipt does not certify WP37;
 main and the public 2.1.0 release remain unchanged.
 
 ## Historical published 2.1.0 verification

@@ -2,7 +2,8 @@
 
 **Working and green through WP36, 2026-10-11.** Current private version:
 2.1.2/code12; CI, backend and owner phone acceptance passed. See
-[status](STATUS.md) and [roadmap](ROADMAP.md). WP37 awaits its specification;
+[status](STATUS.md) and [roadmap](ROADMAP.md). WP37 is in implementation and validation
+under its [approved scope](WP37_SPEC.md);
 keep main untouched until after WP37.
 
 ## Product constraints
