@@ -494,7 +494,7 @@ jobs:
           retention-days: 7
 
   signed-test-apk:
-    if: github.event_name == 'workflow_dispatch' && inputs.signed_test_apk && github.ref == 'refs/heads/codex/wp35-integration'
+    if: github.event_name == 'workflow_dispatch' && inputs.signed_test_apk && (github.ref == 'refs/heads/codex/wp35-integration' || github.ref == 'refs/heads/fix/wp37-localization-native-auth-ux')
     uses: ./.github/workflows/wp35-test-apk.yml
     with:
       expected_source: ${{ inputs.expected_source }}
