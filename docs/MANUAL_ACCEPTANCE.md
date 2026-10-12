@@ -1,6 +1,6 @@
-# Owner phone acceptance
+# Historical WP36 owner phone acceptance
 
-Status: **GREEN — owner accepted the current 2.1.2/code12 phone build on
+Status: **GREEN — owner accepted the historical WP36 2.1.2/code12 phone build on
 2026-10-11**, reporting “all works nice”. This closes the WP36 practical phone
 acceptance checkpoint. See [status and evidence](STATUS.md) and [APK receipt](WP36_PRIVATE_APK.md).
 The owner did not supply a row-by-row checklist, device/OS measurements or a

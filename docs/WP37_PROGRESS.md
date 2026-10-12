@@ -6,7 +6,7 @@ Spec: `docs/WP37_SPEC.md`; original full prompt: `docs/WP37_ORIGINAL_PROMPT.md`;
 **2.1.3/code13**. Review and required exact-head CI gate integration/main merges;
 then build the private APK from exact main and verify Render auto-deploy from
 main. Automated checks are enough; physical/OEM/TalkBack remains unverified.
-No public release, tag, further version increment or branch deletion is authorized.
+No public release, tag or further version increment is authorized. Later owner authorization permits the audited completed-branch cleanup recorded below.
 
 ## Baseline and authorization
 
@@ -32,7 +32,7 @@ Ruling: Owner explicitly approved starting the supplied detailed prompt and seve
 - [x] Task2 backup restore policy (runtime recovery/cache regressions passed)
 - [x] Task3 Statistics facts and disclosure (independent compatibility finding fixed)
 - [x] Task4 localization/bidi/progress
-- [ ] Task5 combined validation/review/PR/CI/private artifact
+- [x] Task5 combined validation/review/PR/CI/private artifact (final receipts below)
 
 ## Evidence and next actions
 
@@ -169,3 +169,42 @@ Task agents will save `docs/WP37_AUTH_REPORT.md`, `docs/WP37_BACKUP_REPORT.md`, 
 - Normal-context verification completed: **649 tests,648 passed,0 failed,1 PostgreSQL integration skipped**, exit0 (`.superpowers/wp37/version-213-node.log`); TypeScript and production build passed, exit0 (`version-213-build.log`). Existing bundle-size warning remains. CI supplies isolated PostgreSQL.
 - Immutable version correction **`89c4ca32ffbf8dbbb39af8ff32c10c106f726668`** independently reviewed by **GPT6 Luna High**: no actionable findings. Lockfile changes are only the two root version fields; dependencies, signing identity and historical receipts remain intact. Current status/spec/release/checklist documentation reconciled separately.
 - Existing run38282236223 at261c5a9 has web/API36/recovery green and full API34 still active; its historical fixture now builds successfully with the bounded heap fix. Preserve that run. Its 2.1.2 source is not final2.1.3 verification; new exact-head CI follows this correction.
+- Pushed documentation child **`99278cebbc1b46e80b8e6b434e33f727954c5927`**; remote SHA verified. Final-version required [combined38286074724](https://github.com/RyanEid06/SpendWise/actions/runs/38286074724) is queued. PR47 and the existing heartbeat now carry2.1.3/code13 and main-before-private-APK instructions. This handoff receipt remains uncommitted during CI; no main merge/private build/deployment yet.
+- Scheduled checkpoint2026-10-12T17:55Z: prior workflow head261c5a9 combined38282236223 finished **SUCCESS**, all4requiredjobs passed including historical fixture packaging and fullAPI34 acceptance. Final2.1.3 head99278ce combined38286074724 has web green; API36/recovery/fullAPI34 remain healthy and active. Preserve exact-source distinction; no merge/build/deployment while final required gates run.
+- Final2.1.3 run38286074724: web/API36/encrypted recovery **SUCCESS**; fullAPI34 job114934658412 failed media assertion Attached photos after the eight-photo save. Failure artifact11763884674 retained at artifacts/wp37/ci-38286074724-acceptance. Screenshot shows Edit Expense; Maestro log selected dashboard label WP32 Eight Photos, $88.00 (Home opens editor) rather than History label including category (opens details). No app crash/ANR captured. Application/native/harness unchanged from prior green261c5a9; save/navigation timing is a hypothesis, not an established product defect. Requested ONE unchanged job-only retry via gh run rerun38286074724 --job114934658412, preserving all3green siblings, all assertions and timeouts. If repeated, inspect new evidence before changing code; no merge while acceptance red.
+- Owner added step6: fully update current documentation and clean proven unneeded/outdated WP37 material. Deadline **2026-10-12T19:59:24Z /22:59Beirut** (90minutes from request); report concrete external blockers by then, without bypassing checks. Preserve useful CI/artifact evidence, branches, installed/user data and secrets. Read-only cleanup audit delegated to existing LunaHigh reviewer. Fresh Render browser attempt reached GitHub username/password login; authenticated session is missing, owner sign-in requested asynchronously. IAB2 tab1 retained for handoff. CI and unaffected cleanup continue; no Render settings changed.
+- Owner supplied signed-in Chrome Render screenshot: spendwise-api service srv-dasop7u0tbcc738c6pe0, branchmain, live d89063b, auto-deploydisabled. Chrome browser control failed header-policy initialization twice. Explicitly requested Windows Computer Use found returned Chrome window66740 but safety enforcement stopped before capture because current browserURL could not be verified; no UI input/settings changes. Owner then chose manual Render configuration. Give Auto-Deploy Settings/main/After CI Checks Pass instructions only after checked main merge; obtain owner settings/deployment receipt and independently verify publichealth/source. Do not request login again. Acceptance retry still running.
+
+### Final-version CI and main integration — 2026-10-12T19:22Z
+
+- Final2.1.3/code13 source `99278cebbc1b46e80b8e6b434e33f727954c5927`: combined38286074724 attempt2 **ALL FOUR required jobs GREEN**. One unchanged acceptance retry passed media, background cancel/retry and hardened verification. Earlier failure evidence remains retained; no source/assertion/timeout changes were needed.
+- PR47 merged to integration as `fa1dae1220f3824856f750dff8d926084d6353ad`; [PR48](https://github.com/RyanEid06/SpendWise/pull/48) merged to main as **`9045c699346f44f7867cf9d1238c6558ca17e841`** at19:22:21Z. Feature, integration and main tree hashes all equal `08d4b0912d8be04efa4c83d34979eb8cda0737fa`. Main PR [Android Build38296180292](https://github.com/RyanEid06/SpendWise/actions/runs/38296180292) passed. No branch deletion or protection bypass.
+- Owner explicitly rejected imposing duplicate45minute native waits after the exact application tree passed. Healthy duplicate automatic runs remain active. Additional isolated backup job114967699360 failed when Android killed SpendWise because Google FontsProvider's process died (device-logcat line7005), before backup restoration; artifact11768143813 retained under `artifacts/wp37/main-backup-failure`. This infrastructure failure is not labeled application acceptance success. Job-only retry CLI printed cannot rerun; subsequent workflow status queued, so inspect existing attempt before another request.
+- Private signed-only [run38297255401](https://github.com/RyanEid06/SpendWise/actions/runs/38297255401) dispatched AFTER main merge with expected_source9045c699. No duplicate native gate is part of signed-only dispatch. Artifact verification pending; physical/OEM/TalkBack remains unverified.
+- Owner notified main is ready and can manually enable Render **After CI Checks Pass**, retaining main. Await actual settings/deploy receipt; old backend d89063b is not WP37 deployment proof. Existing blocked browser control is not retried.
+
+### Private APK and live-main runtime verification — 2026-10-12T19:34Z
+
+- Private run38297255401 **SUCCESS**, artifact11768889340 downloaded to ignored artifacts/wp37/private-main-9045c699. Independent Google apksig confirms V2/permanent certificate; SHA256 `708a12a38d89fa5956b9eb63d45346683c895423993aed49c369dd7922a1a8c8`. Decoded compiled package2.1.3/code13, protected manifest, embedded source/run and configured HTTPS endpoint match receipt/main9045c699. [Private receipt](WP37_PRIVATE_APK.md).
+- Post-merge main Android Build38297213552 passed. Owner screenshots verify existing Render branchmain / After CI Checks Pass. HTTP200 health changed from historicald89063b to **9045c699346f**, matching main. Synthetic installation registration/challenge/signature/verify passed; two bounded legacy-periodless and new144month All-Time Statistics requests returned exact deterministic summaries and client-accepted shapes. Sanitized local receipt .superpowers/wp37/render-compatibility.json. No credentials persisted or printed.
+- Render deployment ID/control-plane trigger receipt was not captured; public runtime provenance and owner settings screenshots are the available evidence. Physical/OEM/TalkBack remains unverified.
+- Cleanup removed only proven dead visual-server.log. Retained useful failure/green logs/artifacts, branches, data and secrets. Current-facing docs reconciled; historicalWP36 acceptance remains labeled separately. Final documentation-only PR will preserve application/APK/deployment9045c699 identity separately from its later metadata commit.
+
+## Final owner-authorized cleanup — 2026-10-12
+
+The owner explicitly authorized deleting completed SpendWise branches/worktrees
+and disposable temporary files locally and on GitHub; other projects are excluded.
+This supersedes earlier no-branch-deletion boundaries for this audited cleanup.
+Merged feature `fix/wp37-localization-native-auth-ux` and integration
+`codex/wp35-integration` were deleted locally/remotely after verifying their
+exact tips are ancestors of main and PR47/PR48 are merged with no open dependency.
+No extra worktree or stash existed. The final documentation branch is removed
+only after its own PR merge; canonical main and all commit history remain.
+
+After19/19 focused existing documentation-dependent checks and65local link checks
+passed, removed only audited regenerable `node_modules`, `dist`,
+`android/.gradle` and `android/build`:11,424files /282,500,955bytes.
+Run `npm ci` before future local development; builds regenerate the other outputs.
+Useful unique CI/runtime/review evidence, signed APKs, source and secrets remain.
+The independently hash-verified delivery copy is
+`C:\Users\Administrator\Desktop\SpendWise-v2.1.3-test.apk`.

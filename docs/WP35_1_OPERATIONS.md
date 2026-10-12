@@ -1,6 +1,6 @@
 # WP35.1 review and deployment runbook
 
-> Current status (2026-10-11): **working and GREEN through WP36**, including CI, the deployed backend, private signed 2.1.2/code12 APK and owner phone acceptance. WP37 is upcoming; main stays untouched until after WP37. See [current status](STATUS.md). This document retains its historical checkpoint/specification; earlier pending deployment/device statements are superseded by that sign-off.
+> Historical WP36 sign-off (2026-10-11): code/CI, deployed backend, private signed2.1.2/code12 and owner phone acceptance passed. WP37 automated application gates now passed and main merged; artifact/deployment status is tracked in [current status](STATUS.md). This document preserves its original specification and historical evidence.
 
 WP35.1 only, based on `7d00b2dafadf829f63d2b6074b08d08c00ca352d`.
 WP34 PR41 is integrated as `cfc9c954fe51242fbc22f62da9f5b3bfaae8ce49`;

@@ -1,6 +1,6 @@
 # SpendWise WP35 — Gemini Reliability, Honest AI Progress UX & Safe-Area Fix
 
-> Current status (2026-10-11): **working and GREEN through WP36**, including CI, the deployed backend, private signed 2.1.2/code12 APK and owner phone acceptance. WP37 is upcoming; main stays untouched until after WP37. See [current status](STATUS.md). This document retains its historical checkpoint/specification; earlier pending deployment/device statements are superseded by that sign-off.
+> Historical WP36 sign-off (2026-10-11): code/CI, deployed backend, private signed2.1.2/code12 and owner phone acceptance passed. WP37 automated application gates now passed and main merged; artifact/deployment status is tracked in [current status](STATUS.md). This document preserves its original specification and historical evidence.
 
 **Status:** Implementation plan only; no code changes.
 **Baseline:** Uploaded `SpendWise-main (1)(2).zip`, version 2.1.0, Oct 9 snapshot; reconcile with current `main` after WP34 is merged before creating branches.
