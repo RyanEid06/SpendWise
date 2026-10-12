@@ -1,16 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { DownloadCloud, AlertTriangle, X } from 'lucide-react';
 import { Language, SpendWiseBackup } from '../types';
 import { t } from '../utils/translations';
 import { ViewportPortal } from './ViewportPortal';
 import { useModalFocus } from './useModalFocus';
+import { RestorePreferencesControl } from './RestorePreferencesControl';
+import type { BackupRestoreOptions } from '../utils/backupRestore';
 
 interface ImportPreviewModalProps {
   isOpen: boolean;
   backup: SpendWiseBackup;
   currentExpenseCount: number;
   language: Language;
-  onConfirm: (replaceExisting: boolean) => void;
+  onConfirm: (replaceExisting: boolean, options?: BackupRestoreOptions) => void;
   onClose: () => void;
 }
 
@@ -23,6 +25,12 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
   onClose,
 }) => {
   const [replaceExisting, setReplaceExisting] = useState(false);
+  const [restoreAppPreferences, setRestoreAppPreferences] = useState(false);
+  useEffect(() => {
+    setReplaceExisting(false);
+    setRestoreAppPreferences(false);
+  }, [backup, isOpen]);
+  useEffect(() => { if (!replaceExisting) setRestoreAppPreferences(false); }, [replaceExisting]);
   const dialogRef = useModalFocus(undefined, isOpen);
 
   if (!isOpen) return null;
@@ -37,7 +45,7 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
       ref={dialogRef}
       tabIndex={-1}
     >
-      <div className="bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden transition-colors">
+      <div className="bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md max-h-[calc(100dvh-2rem)] shadow-2xl overflow-y-auto transition-colors">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200/80 dark:border-slate-800">
           <div className="flex items-center space-x-2.5 rtl:space-x-reverse">
@@ -150,6 +158,8 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
             </label>
           </div>
 
+          <RestorePreferencesControl language={language} replace={replaceExisting} checked={restoreAppPreferences} onChange={setRestoreAppPreferences} />
+
           {/* Warning notice if replace */}
           {replaceExisting && (
             <div className="flex items-center space-x-2.5 rtl:space-x-reverse p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/50 text-rose-800 dark:text-rose-200 text-xs font-medium border border-rose-200 dark:border-rose-900/60">
@@ -170,7 +180,7 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => onConfirm(replaceExisting)}
+            onClick={() => onConfirm(replaceExisting, { restoreAppPreferences: replaceExisting && restoreAppPreferences })}
             className={`min-h-[48px] px-5 py-2 rounded-xl text-sm font-extrabold shadow-sm transition-all cursor-pointer active:scale-95 ${
               replaceExisting
                 ? 'bg-rose-600 hover:bg-rose-700 text-white'

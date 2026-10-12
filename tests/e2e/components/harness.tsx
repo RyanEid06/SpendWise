@@ -16,6 +16,7 @@ import { TechnicalDiagnostics } from '../../../src/features/settings/TechnicalDi
 import { BudgetSummaryCards } from '../../../src/components/BudgetSummaryCards';
 import { TopExpensesSection } from '../../../src/components/TopExpensesSection';
 import { AddEditExpenseModal } from '../../../src/components/AddEditExpenseModal';
+import { StatisticsScreen } from '../../../src/screens/StatisticsScreen';
 
 declare global {
   interface Window {
@@ -189,7 +190,7 @@ const DialogHarness = () => {
           mediaIncluded: true,
           mediaBytes: 2048,
         }}
-        onConfirm={(replace) => record(replace ? 'replace' : 'merge')}
+        onConfirm={(replace, options) => { record(replace ? 'replace' : 'merge'); record(`restore-preferences:${options?.restoreAppPreferences === true}`); }}
         onClose={() => record('close')}
       />
     );
@@ -220,6 +221,12 @@ const AmountHarness = () => {
   </div>;
 };
 
+const statisticsFixtures: Expense[] = Array.from({ length: 36 }, (_, index) => {
+  const date = new Date(2023, index, 15, 12).getTime();
+  const month = `${new Date(date).getFullYear()}-${String(new Date(date).getMonth() + 1).padStart(2, '0')}`;
+  return { id: 100 + index, amount: 10, category: 'Travel', description: `Statistics trip ${month}`, note: null, date, createdAt: date };
+});
+
 async function render() {
   applyLanguage(initialLanguage);
   await StorageManager.init();
@@ -230,8 +237,9 @@ async function render() {
        testCase === 'diagnostics' ? <TechnicalDiagnostics language={initialLanguage} /> :
        testCase === 'history' ? <HistoryHarness /> :
        testCase === 'amounts' ? <AmountHarness /> :
+       testCase === 'statistics' ? <StatisticsScreen currentMonthYear={{ year: 2025, month: 12 }} expenses={statisticsFixtures} budgets={[]} currencyCode="USD" language={initialLanguage} /> :
        testCase === 'expense' ? <AddEditExpenseModal protectDraft={params.has('protect')} isOpen={true} language={initialLanguage} currencyCode="USD"
-         initialExpense={params.get('edit') ? fixtures[0] : null} onSave={() => record('expense-save')} onClose={() => record('expense-close')} /> :
+         initialExpense={params.get('edit') ? fixtures[0] : null} onSave={(amount, description, category) => { record('expense-save'); record(`expense-save:${amount}:${description}:${category}`); }} onClose={() => record('expense-close')} /> :
        testCase.startsWith('lock-') ? <LockHarness /> :
        <DialogHarness />}
     </React.StrictMode>

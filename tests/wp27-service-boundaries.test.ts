@@ -166,8 +166,8 @@ test('backend config preserves production limits and model fallback defaults', (
   assert.equal(config.rateWindowMs, 60_000);
   assert.equal(config.rateLimit, 30);
   assert.equal(config.rateBucketMaxEntries, 2_000);
-  assert.equal(config.geminiTimeoutMs, 22_000);
-  assert.deepEqual(config.geminiFallbackModels, ['gemini-3.7-flash', 'gemini-3.5-flash-lite']);
+  assert.equal(config.geminiTimeoutMs, 50_000);
+  assert.deepEqual(config.geminiFallbackModels, []);
 });
 
 test('backend authentication and rate limiting are independently testable', () => {
@@ -241,7 +241,7 @@ test('WP27 secure seams remain the only app-facing owners after WP28 implementat
 test('WP27 preserves approved release metadata', () => {
   const packageJson = JSON.parse(read('package.json')) as { version: string };
   const versionJson = JSON.parse(read('version.json')) as { versionName: string; versionCode: number };
-  assert.equal(packageJson.version, '2.1.0');
-  assert.equal(versionJson.versionName, '2.1.0');
-  assert.equal(versionJson.versionCode, 10);
+  assert.equal(packageJson.version, '2.1.3');
+  assert.equal(versionJson.versionName, '2.1.3');
+  assert.equal(versionJson.versionCode, 13);
 });

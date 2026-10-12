@@ -22,7 +22,7 @@ test('real API observer counts health, auth, parser, oversize, proof, validation
   const request = (path: string, body: unknown, bearer?: string) => fetch(base + path, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(bearer ? { Authorization: 'Bearer ' + bearer } : {}) }, body: typeof body === 'string' ? body : JSON.stringify(body) });
   try {
     const health = await fetch(base + '/api/health?merchant=private-merchant');
-    assert.equal(health.status, 200); assert.deepEqual(Object.keys(await health.json()).sort(), ['aiConfigured', 'authentication', 'legacyCompatibilityEnabled', 'ok']);
+    assert.equal(health.status, 200); assert.deepEqual(Object.keys(await health.json()).sort(), ['aiConfigured', 'authentication', 'legacyCompatibilityEnabled', 'ok', 'version']);
     assert.equal((await request('/api/gemini/analyze', { amount: 887766.55, receipt: 'private-receipt', image: 'private-photo' })).status, 401);
     assert.equal((await request('/api/auth/verify', '{malformed-private-token')).status, 400);
     assert.equal((await request('/api/auth/verify', { passphrase: 'private-passphrase'.repeat(10000) })).status, 413);
@@ -56,16 +56,18 @@ test('existing AI and security log entry points sanitize arbitrary technical str
 test('actual Gemini service measures successful fallback, failed attempts and retry without content logging', async () => {
   const logs: unknown[][] = []; const warn = console.warn; console.warn = (...args) => { logs.push(args); };
   const delay = serverConfig.geminiRetryDelayMs; serverConfig.geminiRetryDelayMs = 0;
+  const previousRoute = serverConfig.geminiTaskRoutes.analyze;
+  serverConfig.geminiTaskRoutes.analyze = { models: ['gemini-3.8-flash', 'gemini-3.5-flash-lite'] };
   metrics.reset(); let attempts = 0;
   const service = new GeminiService();
   // Substitute the provider transport in the test object; authentication/crypto production paths stay unchanged.
-  (service as any).createClient = () => ({ models: { generateContent: async () => { attempts++; if (attempts <= 2) throw { status: 503, message: 'private-provider-financial-error' }; return { text: '{"ok":true,"receipt":"private-provider-response"}' }; } } });
+  (service as any).createClient = () => ({ models: { generateContent: async () => { attempts++; if (attempts === 1) throw { status: 503, message: 'private-provider-financial-error' }; return { text: '{"ok":true,"receipt":"private-provider-response"}' }; } } });
   try {
-    const result = await service.generateJson({ endpoint: '/api/gemini/analyze', requestId: 'private-request-token', contents: 'private-financial-prompt', responseJsonSchema: {}, systemInstruction: 'private-system-prompt', validate: (value) => value && typeof value === 'object' && (value as any).ok ? { ok: true } : null });
+    const result = await service.generateJson({ endpoint: '/api/gemini/analyze', requestId: 'private-request-token', contents: 'private-financial-prompt', responseJsonSchema: { type: 'object' }, systemInstruction: 'private-system-prompt', validate: (value) => value && typeof value === 'object' && (value as any).ok ? { ok: true } : null });
     assert.deepEqual(result, { ok: true }); const report = metrics.snapshot();
-    assert.equal(report.provider.attempts, 3); assert.equal(report.provider.failures, 2); assert.equal(report.provider.successes, 1); assert.equal(report.provider.retries, 1); assert.equal(report.provider.fallbacks, 1); assert.equal(report.provider.roles.primary, 2); assert.equal(report.provider.roles.fallback, 1);
-    assert.equal(report.provider.latency.samples, 3); assert.ok(!JSON.stringify({ logs, report }).includes('private-'));
-  } finally { console.warn = warn; serverConfig.geminiRetryDelayMs = delay; }
+    assert.equal(report.provider.attempts, 2); assert.equal(report.provider.failures, 1); assert.equal(report.provider.successes, 1); assert.equal(report.provider.retries, 1); assert.equal(report.provider.fallbacks, 1); assert.equal(report.provider.roles.primary, 1); assert.equal(report.provider.roles.fallback, 1);
+    assert.equal(report.provider.latency.samples, 2); assert.ok(!JSON.stringify({ logs, report }).includes('private-'));
+  } finally { console.warn = warn; serverConfig.geminiRetryDelayMs = delay; if (previousRoute) serverConfig.geminiTaskRoutes.analyze = previousRoute; else delete serverConfig.geminiTaskRoutes.analyze; }
 });
 
 test('unhandled API logger discards error objects and arbitrary raw request paths', () => {

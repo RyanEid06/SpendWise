@@ -2,6 +2,19 @@ import { expect, type Page } from '@playwright/test';
 
 export const BACKUP_PASSPHRASE = 'wp32-public-fixture-passphrase';
 
+// Exercise the real readiness/auth client while replacing the unavailable test backend.
+// Gemini routes remain owned by each test, including request-count assertions.
+export async function mockReadyAuthenticatedBackend(page: Page) {
+  await page.route('**/api/health', route => route.fulfill({ json: { ok: true } }));
+  await page.route('**/api/auth/register', route => route.fulfill({ json: { installationId: 'browser-fixture' } }));
+  await page.route('**/api/auth/challenge', route => route.fulfill({ json: {
+    challengeId: 'fixture-challenge', payload: 'public-browser-test-challenge', expiresAt: Date.now() + 60_000,
+  } }));
+  await page.route('**/api/auth/verify', route => route.fulfill({ json: {
+    accessToken: 'synthetic-browser-test-token'.repeat(2), expiresAt: Date.now() + 60_000, tokenType: 'Bearer',
+  } }));
+}
+
 export async function clearBrowserState(page: Page) {
   await page.goto('/');
   // Startup writes its initialization marker asynchronously. Wait for that

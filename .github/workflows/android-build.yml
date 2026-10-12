@@ -2,6 +2,12 @@ name: Android Build
 
 on:
   workflow_dispatch:
+    inputs:
+      run_live_backend_smoke:
+        description: Explicitly authorize deployed authentication and live Gemini smoke calls
+        type: boolean
+        default: false
+        required: false
   pull_request:
     branches:
       - main
@@ -111,6 +117,9 @@ jobs:
       - name: Run WP31 backend authentication and network hardening tests
         run: npm run test:wp31
 
+      - name: Run WP35 readiness and authentication fault regressions
+        run: npm run test:wp35
+
       - name: Run WP32 Android harness regression tests
         run: npm run test:wp32:runner
 
@@ -155,9 +164,7 @@ jobs:
 
       - name: Smoke test deployed Gemini backend with installation authentication
         if: >-
-          (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))) ||
-          github.event_name == 'workflow_dispatch' ||
-          (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'wp33/observability-performance' && github.event.pull_request.head.repo.full_name == github.repository)
+          github.event_name == 'workflow_dispatch' && inputs.run_live_backend_smoke == true
         shell: bash
         run: |
           set -euo pipefail

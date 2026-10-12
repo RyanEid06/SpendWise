@@ -39,6 +39,9 @@ import { APP_VERSION_CODE, APP_VERSION_NAME } from '../utils/appVersion';
 import { exportBlobFile, exportTextFile } from '../utils/fileExport';
 import { MediaLibraryScreen } from './MediaLibraryScreen';
 import { BackupV2ImportModal } from '../components/BackupV2ImportModal';
+import { BackupRecoveryIncompleteError, type BackupRestoreOptions } from '../utils/backupRestore';
+import { backupRestoreCopy } from '../features/backup/restoreCopy';
+import { AUTHENTICATION_LIMIT_COPY } from '../security/authenticationCopy';
 import { BackupPassphraseModal } from '../components/BackupPassphraseModal';
 import type { BackupV2Preview } from '../utils/backupV2';
 import type { BackupV3Preview } from '../utils/backupV3';
@@ -101,6 +104,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const restoreInputRef = useRef<HTMLInputElement>(null);
   const statusMessageRef = useRef<HTMLDivElement>(null);
+  const recoveryMessageRef = useRef<HTMLDivElement>(null);
+  const recoveryFeedbackPending = useRef(false);
   const clearFeedbackPending = useRef(false);
   const restoreFeedbackPending = useRef(false);
   const copy = overviewCopy[currentLanguage];
@@ -155,6 +160,17 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     return () => cancelAnimationFrame(frame);
   }, [showClearModal, statusMessage, pendingV3Backup, pendingV2Backup, pendingImportBackup]);
 
+  useEffect(() => {
+    if (pendingV3Backup || pendingV2Backup || pendingImportBackup || !recoveryFeedbackPending.current) return;
+    recoveryFeedbackPending.current = false;
+    // Present incomplete recovery after the import dialog restores its focus.
+    const frame = requestAnimationFrame(() => {
+      recoveryMessageRef.current?.focus({ preventScroll: true });
+      recoveryMessageRef.current?.scrollIntoView({ block: 'center' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [errorMessage, pendingV3Backup, pendingV2Backup, pendingImportBackup]);
+
   const hasSavedPin = hasWebPin;
   const hasFinancialData = totalExpensesCount > 0 || totalBudgetsCount > 0;
   const currencyPreviewAmount =
@@ -170,6 +186,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   ];
 
   const securityFailureMessage = (result: SecureSessionActionResult) => {
+    if (result.detailCode === 'CREDENTIAL_IMMEDIATE_LOCK_UNSUPPORTED') return AUTHENTICATION_LIMIT_COPY[currentLanguage];
     if (currentLanguage === 'ar') {
       if (result.code === 'cancelled') return 'تم إلغاء المصادقة.';
       if (result.code === 'unavailable') return 'اضبط قفل شاشة Android آمنًا أو مصادقة حيوية قوية ثم أعد المحاولة.';
@@ -216,6 +233,23 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     } catch {
       setMediaSummary(null);
     }
+  };
+
+  const reconcileIncompleteRecovery = async () => {
+    const recoveryCopy = backupRestoreCopy[currentLanguage];
+    let message = recoveryCopy.recoveryIncomplete as string;
+    try {
+      // This callback refreshes AppShell ledger/preferences. It does not signal
+      // success: compensation can leave either domain at a different snapshot.
+      await onBackupRestored();
+    } catch {
+      // Keep the explicit recovery warning even if readback is unavailable.
+      message += ' ' + recoveryCopy.recoveryRefreshFailed;
+    }
+    // Media readback handles failure independently and must not replace the
+    // recovery alert or delay it behind an unavailable filesystem.
+    void refreshMediaSummary();
+    return message;
   };
 
   useEffect(() => {
@@ -328,7 +362,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     }
   };
 
-  const handleConfirmV3Import = async (replaceExisting: boolean) => {
+  const handleConfirmV3Import = async (replaceExisting: boolean, options?: BackupRestoreOptions) => {
     if (!pendingV3Backup || isBackupBusy) return;
     if (replaceExisting && !(await requireFresh('replace-restore'))) return;
     setIsBackupBusy(true);
@@ -336,7 +370,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       const summary = await backupService.restoreV3(
         pendingV3Backup.file,
         pendingV3Backup.passphrase,
-        replaceExisting
+        replaceExisting,
+        options,
       );
       setPendingV3Backup(null);
       onBackupRestored();
@@ -348,7 +383,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       );
       setErrorMessage(summary.warnings.length ? copy.backupWarning : null);
     } catch (error) {
-      if (error instanceof Error && error.message === 'BACKUP_CURRENCY_MISMATCH') {
+      if (error instanceof BackupRecoveryIncompleteError) {
+        const message = await reconcileIncompleteRecovery();
+        recoveryFeedbackPending.current = true;
+        setPendingV3Backup(null);
+        setStatusMessage(null);
+        setErrorMessage(message);
+      } else if (error instanceof Error && error.message === 'BACKUP_CURRENCY_MISMATCH') {
         setErrorMessage(copy.currencyMismatch);
       } else if (error instanceof Error && error.message === 'BACKUP_WRONG_PASSPHRASE_OR_TAMPER') {
         setErrorMessage(copy.backupPassphraseFailed);
@@ -360,11 +401,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     }
   };
 
-  const handleConfirmImport = async (replaceExisting: boolean) => {
+  const handleConfirmImport = async (replaceExisting: boolean, options?: BackupRestoreOptions) => {
     if (!pendingImportBackup) return;
     if (replaceExisting && !(await requireFresh('replace-restore'))) return;
     try {
-      const summary = await backupService.restoreLegacy(pendingImportBackup, replaceExisting);
+      const summary = await backupService.restoreLegacy(pendingImportBackup, replaceExisting, options);
       setPendingImportBackup(null);
       onBackupRestored();
       restoreFeedbackPending.current = true;
@@ -373,9 +414,15 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           ? t(currentLanguage, 'replaceRestoreBtn') + ': ' + summary.expensesImported
           : t(currentLanguage, 'mergeImportBtn') + ': ' + summary.expensesImported
       );
-      setErrorMessage(null);
+      setErrorMessage(summary.warnings?.length ? copy.backupWarning : null);
     } catch (error) {
-      if (error instanceof Error && error.message === 'BACKUP_CURRENCY_MISMATCH') {
+      if (error instanceof BackupRecoveryIncompleteError) {
+        const message = await reconcileIncompleteRecovery();
+        recoveryFeedbackPending.current = true;
+        setPendingImportBackup(null);
+        setStatusMessage(null);
+        setErrorMessage(message);
+      } else if (error instanceof Error && error.message === 'BACKUP_CURRENCY_MISMATCH') {
         setErrorMessage(copy.currencyMismatchReplace);
       } else {
         setErrorMessage(copy.importFailed);
@@ -383,12 +430,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     }
   };
 
-  const handleConfirmV2Import = async (replaceExisting: boolean) => {
+  const handleConfirmV2Import = async (replaceExisting: boolean, options?: BackupRestoreOptions) => {
     if (!pendingV2Backup || isBackupBusy) return;
     if (replaceExisting && !(await requireFresh('replace-restore'))) return;
     setIsBackupBusy(true);
     try {
-      const summary = await backupService.restoreV2(pendingV2Backup.file, replaceExisting);
+      const summary = await backupService.restoreV2(pendingV2Backup.file, replaceExisting, options);
       setPendingV2Backup(null);
       onBackupRestored();
       await refreshMediaSummary();
@@ -396,7 +443,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       setStatusMessage(copy.imported + ': ' + summary.expensesImported + ' ' + copy.expenses + ', ' + summary.photosImported + ' ' + copy.photos);
       setErrorMessage(summary.warnings.length ? copy.backupWarning : null);
     } catch (error) {
-      if (error instanceof Error && error.message === 'BACKUP_CURRENCY_MISMATCH') {
+      if (error instanceof BackupRecoveryIncompleteError) {
+        const message = await reconcileIncompleteRecovery();
+        recoveryFeedbackPending.current = true;
+        setPendingV2Backup(null);
+        setStatusMessage(null);
+        setErrorMessage(message);
+      } else if (error instanceof Error && error.message === 'BACKUP_CURRENCY_MISMATCH') {
         setErrorMessage(copy.currencyMismatch);
       } else {
         setErrorMessage(copy.backupRestoreFailed);
@@ -512,7 +565,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       )}
 
       {errorMessage && (
-        <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-900 dark:text-rose-200 text-xs font-medium flex items-center justify-between gap-2">
+        <div ref={recoveryMessageRef} role="alert" tabIndex={-1} className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-900 dark:text-rose-200 text-xs font-medium flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
             <span>{errorMessage}</span>
@@ -897,7 +950,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             preview={pendingV3Backup.preview}
             version={3}
             language={currentLanguage}
-            onConfirm={(replaceExisting) => void handleConfirmV3Import(replaceExisting)}
+            onConfirm={(replaceExisting, options) => void handleConfirmV3Import(replaceExisting, options)}
             onClose={() => setPendingV3Backup(null)}
           />
         )}
@@ -917,7 +970,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           <BackupV2ImportModal
             preview={pendingV2Backup.preview}
             language={currentLanguage}
-            onConfirm={(replaceExisting) => void handleConfirmV2Import(replaceExisting)}
+            onConfirm={(replaceExisting, options) => void handleConfirmV2Import(replaceExisting, options)}
             onClose={() => setPendingV2Backup(null)}
           />
         )}

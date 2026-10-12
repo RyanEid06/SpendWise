@@ -1,10 +1,8 @@
 import { expect, test } from '@playwright/test';
-import { addExpense, startFresh } from './helpers';
+import { addExpense, mockReadyAuthenticatedBackend, startFresh } from './helpers';
 
 test.beforeEach(async ({ page }) => {
-  await page.route('**/api/auth/register', route => route.fulfill({ json: { installationId: 'wp05-fixture' } }));
-  await page.route('**/api/auth/challenge', route => route.fulfill({ json: { challengeId: 'fixture-challenge', payload: 'wp05-public-challenge', expiresAt: Date.now() + 60000 } }));
-  await page.route('**/api/auth/verify', route => route.fulfill({ json: { accessToken: 'wp05-synthetic-token', expiresAt: Date.now() + 60000, tokenType: 'Bearer' } }));
+  await mockReadyAuthenticatedBackend(page);
 });
 
 test('unfinished Add restores all meaningful fields after restart and clears after Save', async ({ page }) => {
@@ -173,7 +171,14 @@ test('accepted photo capacity uses encrypted IndexedDB and can recover and Save 
     for (let offset = 3; offset < image.data.length; offset += 4) image.data[offset] = 255;
     context.putImageData(image, 0, 0);
     const blob = await new Promise<Blob>(resolve => canvas.toBlob(value => resolve(value!), 'image/jpeg', 0.95));
-    return Array.from(new Uint8Array(await blob.arrayBuffer()));
+    // Return compact base64 rather than millions of JSON number entries across
+    // the browser/test boundary; keep the same high-entropy JPEG and byte size.
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(',')[1]);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
   });
   await page.getByRole('button', { name: 'Add Expense', exact: true }).click();
   const editor = page.getByRole('dialog', { name: 'Add Expense' });
@@ -182,7 +187,7 @@ test('accepted photo capacity uses encrypted IndexedDB and can recover and Save 
   await editor.getByTestId('tool-photos-button').click();
   const chooser = page.waitForEvent('filechooser');
   await editor.getByRole('button', { name: 'Choose Photo', exact: true }).click();
-  await (await chooser).setFiles(Array.from({ length: 8 }, (_, i) => ({ name: `capacity-${i}.jpg`, mimeType: 'image/jpeg', buffer: Buffer.from(bytes) })));
+  await (await chooser).setFiles(Array.from({ length: 8 }, (_, i) => ({ name: `capacity-${i}.jpg`, mimeType: 'image/jpeg', buffer: Buffer.from(bytes, 'base64') })));
   await expect(editor.getByRole('button', { name: 'Remove photo', exact: true })).toHaveCount(8);
   await expect(editor.getByTestId('draft-status')).toHaveText('Unfinished expense protected');
   const encryptedBytes = await page.evaluate(async () => {

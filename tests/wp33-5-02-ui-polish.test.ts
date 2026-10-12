@@ -57,9 +57,11 @@ test('WP33.5-02 Settings summary is photo-count only with localized number forms
 test('WP33.5-02 removes diagnostics from normal Settings but preserves the failure path', () => {
   assert.doesNotMatch(settings, /TechnicalDiagnostics/);
   assert.doesNotMatch(settingsOverview, /technicalDiagnostics/);
-  assert.match(bootstrap, /TechnicalDiagnostics/);
+  const failureScreen = readFileSync('src/screens/StorageFailureScreen.tsx', 'utf8');
+  assert.match(failureScreen, /TechnicalDiagnostics/);
   assert.match(bootstrap, /renderStorageFailure/);
-  assert.match(bootstrap, /<TechnicalDiagnostics language=\{bootstrapLanguage\(\)\} \/>/);
+  assert.match(bootstrap, /<StorageFailureScreen language=\{bootstrapLanguage\(\)\} \/>/);
+  assert.match(failureScreen, /<TechnicalDiagnostics language=\{language\} \/>/);
   assert.match(readFileSync('src/services/diagnostics/diagnostics.ts', 'utf8'), /DiagnosticStore/);
   assert.match(readFileSync('src/services/diagnostics/exportDiagnostics.ts', 'utf8'), /exportTechnicalDiagnostics/);
 });

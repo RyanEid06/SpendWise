@@ -1,0 +1,114 @@
+name: WP35 Progress and Safe Areas
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['wp35-03/ai-progress-safe-area']
+    paths-ignore: ['docs/**']
+
+permissions:
+  contents: read
+
+jobs:
+  web-regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: TypeScript and production build
+        run: npm run verify
+      - name: Synthetic progress, security, reliability, encrypted storage and diagnostics regressions
+        run: node --import tsx --test tests/*.test.ts
+      - name: Existing WP32 components, browser, accessibility and visual suites
+        run: npm run test:wp32
+      - name: Upload synthetic UI evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: wp35-3-web-evidence
+          path: |
+            artifacts/wp35-3/screenshots/
+            playwright-report/
+            test-results/
+          retention-days: 14
+
+  android-isolated:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      # Deliberately unreachable local endpoint: never dispatch Google/Render calls.
+      VITE_API_BASE_URL: https://127.0.0.1:1
+      MAESTRO_VERSION: '2.11.0'
+      WP32_INSPECT_WEBVIEW: '1'
+      WP32_TARGET: wp33-5-04-continuity
+      WP35_EDITOR_INSETS: '1'
+      ANDROID_SERIAL: emulator-5554
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: Build SDK36 debug app and geometry probe
+        run: |
+          npm run verify
+          npm run android:sync
+          chmod +x android/gradlew
+          (cd android && ./gradlew assembleDebug)
+          mkdir -p artifacts/android-e2e/apks artifacts/wp35
+          cp android/app/build/outputs/apk/debug/app-debug.apk artifacts/android-e2e/apks/current-debug.apk
+          ./node_modules/.bin/esbuild scripts/wp35/editorLayout.ts --bundle --platform=node --format=esm --outfile=artifacts/wp35/editor-layout.mjs
+          bash -n scripts/run-wp32-isolated-gate.sh
+      - name: Install pinned Maestro
+        run: |
+          archive="$RUNNER_TEMP/maestro-2.11.0.zip"
+          curl --fail --location --retry 3 https://github.com/mobile-dev-inc/Maestro/releases/download/cli-2.11.0/maestro.zip --output "$archive"
+          echo "5384593cb4e7a106489e75a821d157dd43f4e438df6bc308b72e82c685e1283a  $archive" | sha256sum --check
+          unzip -q "$archive" -d "$RUNNER_TEMP/maestro-2.11.0"
+          maestro_bin="$(find "$RUNNER_TEMP/maestro-2.11.0" -type f -path '*/bin/maestro' -print -quit)"
+          chmod +x "$maestro_bin"
+          echo "$(dirname "$maestro_bin")" >> "$GITHUB_PATH"
+      - name: Enable emulator KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: API36 Add/Edit with real keyboard, gesture and three-button navigation
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          avd-name: wp33-synthetic-wp35-api36
+          cores: 2
+          ram-size: 4096M
+          disk-size: 3G
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save -camera-back none
+          script: |
+            adb -s emulator-5554 shell cmd overlay enable-exclusive --category com.android.internal.systemui.navbar.gestural
+            RESULT_ROOT=artifacts/android-isolated/wp35-gesture bash scripts/run-wp32-isolated-gate.sh
+            adb -s emulator-5554 shell cmd overlay enable-exclusive --category com.android.internal.systemui.navbar.threebutton
+            RESULT_ROOT=artifacts/android-isolated/wp35-threebutton bash scripts/run-wp32-isolated-gate.sh
+      - name: Upload isolated emulator evidence (no APK publication)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: wp35-3-api36-emulator-evidence
+          path: artifacts/android-isolated/wp35-*/
+          if-no-files-found: ignore
+          retention-days: 14

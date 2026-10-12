@@ -1,13 +1,16 @@
+import { AI_PROCESSING_TIMEOUT_MS } from '../security/aiOperationBudget';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { apiFetchJson } from '../utils/api';
-import { getAiErrorMessage } from '../utils/apiErrors';
+import { getAiErrorMessage, normalizeApiException, SpendWiseApiError } from '../utils/apiErrors';
+import { parseTrendResult } from '../utils/aiResultValidation';
+import { useAiOperation } from '../app/hooks/useAiOperation';
+import { AiProgressPanel } from '../components/AiProgressPanel';
 import {
   BarChart3,
   CalendarDays,
   Sparkles,
   ArrowUpRight,
   Receipt,
-  RotateCw,
   Clock,
 } from 'lucide-react';
 import {
@@ -24,6 +27,7 @@ import { getLocalizedCategoryName, getLocalizedMonthName, t } from '../utils/tra
 import { CategoryStatisticsSection } from '../components/CategoryStatisticsSection';
 import { getCategoryInfo } from '../utils/categories';
 import { rankLargestExpensesByMonth } from '../utils/statisticsRanking';
+import { statisticsText } from '../features/statistics/copy';
 
 interface StatisticsScreenProps {
   expenses: Expense[];
@@ -45,8 +49,12 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('LAST_3_MONTHS');
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [showAllLargestExpenses, setShowAllLargestExpenses] = useState(false);
+  const [showAllMonths, setShowAllMonths] = useState(false);
 
   // AI Trend Explanation state
+  const { operation, progress } = useAiOperation();
+  const [aiIsLocal, setAiIsLocal] = useState(false);
+  const [retryAllowed, setRetryAllowed] = useState(true);
   const [aiExplanation, setAiExplanation] = useState<AiTrendExplanationResult | null>(null);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -65,15 +73,17 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
 
   useEffect(() => {
     aiRequestIdRef.current += 1;
+    operation.reset();
     aiInFlightRef.current = false;
     setIsLoadingAi(false);
     setAiExplanation(null);
     setAiError(null);
-  }, [expenses, budgets, currentMonthYear, selectedPeriod, currencyCode, language]);
+  }, [expenses, budgets, currentMonthYear, selectedPeriod, currencyCode, language, operation]);
 
   useEffect(() => {
     return () => {
       aiRequestIdRef.current += 1;
+      operation.reset();
       aiInFlightRef.current = false;
     };
   }, []);
@@ -95,38 +105,58 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
     }
 
     aiInFlightRef.current = true;
+    const run = operation.begin();
+    if (!run) { aiInFlightRef.current = false; return; }
+    setRetryAllowed(true);
     const requestId = ++aiRequestIdRef.current;
     setIsLoadingAi(true);
     setAiError(null);
 
-    const localFallback = StatisticsEngine.generateLocalTrendExplanation(stats, currencyCode);
+    const localFallback = StatisticsEngine.generateLocalTrendExplanation(stats, currencyCode, language);
 
     try {
-      const data = await apiFetchJson<AiTrendExplanationResult>(
+      const response = await apiFetchJson<unknown>(
         '/api/gemini/explain-trends',
         {
           method: 'POST',
+          signal: run.signal,
+          onPhase: run.onPhase,
           body: JSON.stringify({
             stats,
             currencyCode,
             language,
           }),
         },
-        30000
+        AI_PROCESSING_TIMEOUT_MS
       );
 
-      if (requestId !== aiRequestIdRef.current) return;
+      if (requestId !== aiRequestIdRef.current || !run.isCurrent()) return;
+      const data = parseTrendResult(response);
+      if (!data) throw new SpendWiseApiError('invalid_response');
       setAiExplanation(data);
+      setAiIsLocal(false);
+      run.finish('ready');
     } catch (error) {
-      if (requestId !== aiRequestIdRef.current) return;
+      if (requestId !== aiRequestIdRef.current || !run.isCurrent()) return;
       setAiExplanation(localFallback);
+      setAiIsLocal(true);
       setAiError(getAiErrorMessage(language, error));
+      setRetryAllowed(normalizeApiException(error).kind !== 'quota_exhausted');
+      run.finish('local');
     } finally {
       if (requestId === aiRequestIdRef.current) {
         aiInFlightRef.current = false;
         setIsLoadingAi(false);
       }
     }
+  };
+
+  const cancelAi = () => {
+    aiRequestIdRef.current += 1;
+    aiInFlightRef.current = false;
+    operation.cancel();
+    setIsLoadingAi(false);
+    setAiError(null);
   };
 
   // Max spending among months for bar scaling
@@ -142,6 +172,9 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
   const visibleLargestExpenses = showAllLargestExpenses
     ? rankedLargestExpenses
     : rankedLargestExpenses.slice(0, 3);
+  // Only detail cards are disclosed progressively; every aggregate and chart retains full stats.
+  const canCollapseMonths = selectedPeriod === 'ALL_TIME' && stats.monthlyStats.length > 6;
+  const visibleMonths = canCollapseMonths && !showAllMonths ? stats.monthlyStats.slice(-6) : stats.monthlyStats;
 
   return (
     <div className="space-y-4 pb-28 animate-screen-enter">
@@ -158,7 +191,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
       </div>
 
       {/* Time Period Selector Chips */}
-      <div className="flex items-center space-x-1.5 rtl:space-x-reverse overflow-x-auto pb-1 scrollbar-none" role="tablist" aria-label="Time Period">
+      <div className="flex items-center space-x-1.5 rtl:space-x-reverse overflow-x-auto pb-1 scrollbar-none" role="tablist" aria-label={statisticsText(language, 'timePeriod')}>
         {periods.map((p) => {
           const isSelected = selectedPeriod === p.key;
           return (
@@ -171,6 +204,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                 setAiExplanation(null);
                 setAiError(null);
                 setShowAllLargestExpenses(false);
+                setShowAllMonths(false);
               }}
               className={`min-h-[48px] px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 active:scale-95 ${
                 isSelected
@@ -250,7 +284,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
               ? formatCurrency(stats.overallLargestExpense.amount, currencyCode)
               : '—'}
           </div>
-          <div className="text-[10px] min-[390px]:text-[11px] text-slate-500 dark:text-slate-400 truncate leading-snug">
+          <div dir="auto" className="text-[10px] min-[390px]:text-[11px] text-slate-500 dark:text-slate-400 truncate leading-snug [unicode-bidi:isolate]">
             {stats.overallLargestExpense ? stats.overallLargestExpense.description : t(language, 'statNoneRecorded')}
           </div>
         </div>
@@ -277,8 +311,8 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
           >
             {isLoadingAi ? (
               <>
-                <RotateCw className="w-3.5 h-3.5 animate-spin" />
-                <span>{t(language, 'explainingBtn')}</span>
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>{t(language, 'explainBtn')}</span>
               </>
             ) : (
               <>
@@ -289,6 +323,10 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
           </button>
         </div>
 
+        <AiProgressPanel progress={progress} language={language} onCancel={cancelAi}
+          tone="indigo" errorMessage={aiError}
+          onRetry={retryAllowed ? () => void handleExplainWithAi() : undefined} />
+
         {/* AI Explanation Result Card */}
         {aiExplanation && (
           <div className="p-3.5 rounded-2xl bg-white/90 dark:bg-[#0B0F19]/80 border border-indigo-200 dark:border-indigo-900/60 space-y-2.5 text-xs">
@@ -297,11 +335,11 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                 {t(language, 'aiTrendsTitle')}
               </span>
               <span className="bg-indigo-100 dark:bg-indigo-900/60 text-indigo-800 dark:text-indigo-300 px-2 py-0.5 rounded-md font-semibold text-[10px]">
-                {t(language, 'trendVerifiedTag')}
+                {t(language, aiIsLocal ? 'localBadge' : 'geminiBadge')}
               </span>
             </div>
 
-            <p className="text-slate-700 dark:text-slate-200 font-medium leading-relaxed">
+            <p dir="auto" className="text-slate-700 dark:text-slate-200 font-medium leading-relaxed [unicode-bidi:isolate]">
               {aiExplanation.summary}
             </p>
 
@@ -310,7 +348,18 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                 {aiExplanation.keyObservations.map((obs, idx) => (
                   <div key={idx} className="flex items-start space-x-2 rtl:space-x-reverse text-slate-600 dark:text-slate-300">
                     <span className="text-indigo-600 dark:text-indigo-400 font-bold">•</span>
-                    <span>{obs}</span>
+                    <span dir="auto" className="[unicode-bidi:isolate]">{obs}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {aiExplanation.categoryHighlights.length > 0 && (
+              <div className="space-y-1 pt-1" data-statistics-category-highlights>
+                {aiExplanation.categoryHighlights.map((highlight, idx) => (
+                  <div key={idx} className="flex items-start gap-2 text-slate-600 dark:text-slate-300">
+                    <span aria-hidden="true" className="text-indigo-600 dark:text-indigo-400 font-bold">•</span>
+                    <span dir="auto" className="[unicode-bidi:isolate]">{highlight}</span>
                   </div>
                 ))}
               </div>
@@ -319,13 +368,13 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
             {aiExplanation.recommendation && (
               <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800/40 text-indigo-900 dark:text-indigo-200 text-[11px] leading-relaxed">
                 <strong className="text-indigo-800 dark:text-indigo-300">{t(language, 'tipLabel')}</strong>
-                {aiExplanation.recommendation}
+                <span dir="auto" className="[unicode-bidi:isolate]">{aiExplanation.recommendation}</span>
               </div>
             )}
           </div>
         )}
 
-        {aiError && (
+        {aiError && progress.stage !== 'error' && (
           <p className="text-xs text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 p-2.5 rounded-xl border border-rose-200 dark:border-rose-900/60">
             {aiError}
           </p>
@@ -346,11 +395,28 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
           </span>
         </div>
 
+        {canCollapseMonths && (
+          <div className="space-y-1">
+            <div role="img" aria-label={statisticsText(language, 'chart')} className="flex items-end gap-1 h-24 overflow-x-auto pb-1">
+              {stats.monthlyStats.map(item => (
+                <div key={item.monthKey} data-statistics-chart-month={item.monthKey}
+                  title={`${item.monthKey}: ${formatCurrency(item.totalSpent, currencyCode)}`}
+                  className="flex-1 min-w-2 bg-emerald-500 rounded-t-sm"
+                  style={{height: `${item.totalSpent===0 ? 0 : Math.max(2,item.totalSpent/maxMonthSpent*100)}%`}} />
+              ))}
+            </div>
+            <div className="flex justify-between text-[10px] text-slate-500 dark:text-slate-400">
+              <span dir="ltr">{stats.monthlyStats[0].monthKey}</span>
+              <span dir="ltr">{stats.monthlyStats.at(-1)!.monthKey}</span>
+            </div>
+          </div>
+        )}
+
         {stats.monthlyStats.length === 0 ? (
           <p className="text-xs text-slate-500 text-center py-4">{t(language, 'noMonthlyRecords')}</p>
         ) : (
           <div className="space-y-3 pt-1">
-            {stats.monthlyStats.map((item) => {
+            {visibleMonths.map((item) => {
               const heightPercent = item.totalSpent === 0
                 ? 0
                 : Math.min(100, Math.max(2, (item.totalSpent / maxMonthSpent) * 100));
@@ -361,7 +427,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
               const localizedMonthName = getLocalizedMonthName({ year: y, month: m }, language);
 
               return (
-                <div key={item.monthKey} className="space-y-1.5 p-3 rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/70 dark:border-slate-800/60">
+                <div key={item.monthKey} data-statistics-month-detail={item.monthKey} className="space-y-1.5 p-3 rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200/70 dark:border-slate-800/60">
                   <div className="flex flex-wrap items-start justify-between gap-2 text-xs">
                     <div className="flex items-start space-x-2 rtl:space-x-reverse min-w-0">
                       <CalendarDays className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" aria-hidden="true" />
@@ -411,6 +477,15 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                 </div>
               );
             })}
+          </div>
+        )}
+        {canCollapseMonths && (
+          <div className="space-y-1">
+            {!showAllMonths && <p className="text-[11px] text-slate-500 dark:text-slate-400 text-center">{statisticsText(language, 'showingLatest', {count: stats.monthlyStats.length})}</p>}
+            <button type="button" aria-expanded={showAllMonths} onClick={() => setShowAllMonths(current => !current)}
+              className="w-full min-h-[48px] rounded-xl text-xs font-bold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/25 transition-colors">
+              {statisticsText(language, showAllMonths ? 'showLatest' : 'showAllMonths', {count: stats.monthlyStats.length})}
+            </button>
           </div>
         )}
       </div>
@@ -490,11 +565,11 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
                     </div>
                     <span className="text-xl shrink-0" aria-hidden="true">{categoryInfo.iconEmoji}</span>
                     <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-sm text-slate-900 dark:text-white leading-tight break-words">
+                      <p dir="auto" className="font-semibold text-sm text-slate-900 dark:text-white leading-tight break-words [unicode-bidi:isolate]">
                         {expense.description}
                       </p>
                       <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                        <span className="break-words">{getLocalizedCategoryName(expense.category, language)}</span>
+                        <span dir="auto" className="break-words [unicode-bidi:isolate]">{getLocalizedCategoryName(expense.category, language)}</span>
                         <span aria-hidden="true">·</span>
                         <span className="font-semibold text-slate-600 dark:text-slate-300 break-words">{monthLabel}</span>
                       </div>

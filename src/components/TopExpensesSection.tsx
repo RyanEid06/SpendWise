@@ -79,7 +79,7 @@ export const TopExpensesSection: React.FC<TopExpensesSectionProps> = ({
                   </div>
                   <span className="text-xl shrink-0" aria-hidden="true">{catInfo.iconEmoji}</span>
                   <div className="min-w-0">
-                    <p className="font-semibold text-sm text-slate-900 dark:text-white truncate">
+                    <p dir="auto" className="user-content font-semibold text-sm text-slate-900 dark:text-white truncate">
                       {expense.description}
                     </p>
                     <p className="text-xs text-slate-500 dark:text-slate-400 truncate">

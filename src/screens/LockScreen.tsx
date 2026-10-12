@@ -12,16 +12,19 @@ import type {
   SecureSessionActionResult,
   SecureUnlockMode,
 } from '../security/SecureSessionService';
+import { androidSecurityAdapter, classifyNativeAuthenticationCapabilities } from '../platform/android/AndroidSecurityAdapter';
+import { AUTHENTICATION_LIMIT_COPY, AUTHENTICATION_RECOVERY_COPY, type AuthenticationMethod } from '../security/authenticationCopy';
+import { securityLifecycle } from '../security/SecurityLifecycleCoordinator';
 
 interface LockScreenProps {
   unlockMode: SecureUnlockMode;
   migrationIssue: string | null;
   language: Language;
-  onUnlock: (credential?: string) => Promise<SecureSessionActionResult>;
+  onUnlock: (credential?: string, method?: AuthenticationMethod) => Promise<SecureSessionActionResult>;
   autoUnlock?: boolean;
 }
 
-const COPY = {
+export const LOCK_SCREEN_COPY = {
   en: {
     nativePrompt: 'Use your Android screen lock or strong biometric to unlock SpendWise.',
     migratePrompt: 'Enter your existing SpendWise PIN once. Android device authentication will replace it securely.',
@@ -35,6 +38,8 @@ const COPY = {
     cancel: 'Authentication was cancelled.',
     unavailable: 'Set a secure Android screen lock or strong biometric, then try again.',
     keyProblem: 'The protected device key is unavailable. SpendWise kept App Lock enabled and did not discard security state.',
+    invalidatedKey: 'The device protection changed and its protected key is no longer usable. Your data and App Lock were kept.',
+    unrecoverableKey: 'The protected device key cannot be recovered. Your data and App Lock were kept.',
     repairRequired: 'The saved lock state needs repair before SpendWise can unlock.',
     generic: 'Authentication failed. Try again.',
     migrationPending: 'Secure migration could not finish. Your old PIN was kept so you are not locked out; SpendWise will retry later.',
@@ -52,6 +57,8 @@ const COPY = {
     cancel: 'Authentification annulée.',
     unavailable: 'Configurez un verrouillage Android sécurisé ou une biométrie forte, puis réessayez.',
     keyProblem: 'La clé protégée de l’appareil est indisponible. SpendWise a conservé le verrouillage et son état de sécurité.',
+    invalidatedKey: 'La protection de l’appareil a changé et sa clé protégée est inutilisable. Vos données et le verrouillage ont été conservés.',
+    unrecoverableKey: 'La clé protégée de l’appareil est irrécupérable. Vos données et le verrouillage ont été conservés.',
     repairRequired: 'L’état de verrouillage enregistré doit être réparé avant le déverrouillage.',
     generic: 'Échec de l’authentification. Réessayez.',
     migrationPending: 'La migration sécurisée n’a pas pu finir. Votre ancien PIN a été conservé pour éviter tout blocage.',
@@ -69,11 +76,14 @@ const COPY = {
     cancel: 'تم إلغاء المصادقة.',
     unavailable: 'اضبط قفل شاشة Android آمنًا أو مصادقة حيوية قوية ثم أعد المحاولة.',
     keyProblem: 'مفتاح الجهاز المحمي غير متاح. أبقى SpendWise قفل التطبيق مفعّلًا ولم يحذف حالة الأمان.',
+    invalidatedKey: 'تغيّرت حماية الجهاز ولم يعد مفتاحه المحمي صالحًا للاستخدام. تم الاحتفاظ ببياناتك وقفل التطبيق.',
+    unrecoverableKey: 'تعذرت استعادة مفتاح الجهاز المحمي. تم الاحتفاظ ببياناتك وقفل التطبيق.',
     repairRequired: 'تحتاج حالة القفل المحفوظة إلى إصلاح قبل فتح SpendWise.',
     generic: 'فشلت المصادقة. حاول مجددًا.',
     migrationPending: 'لم تكتمل الترقية الآمنة. تم الاحتفاظ بالرمز القديم حتى لا يتم منعك من الدخول.',
   },
 } as const;
+const COPY = LOCK_SCREEN_COPY;
 
 export const LockScreen: React.FC<LockScreenProps> = ({
   unlockMode,
@@ -93,10 +103,35 @@ export const LockScreen: React.FC<LockScreenProps> = ({
   const [busy, setBusy] = useState(canAutoUnlock);
   const [now, setNow] = useState(Date.now());
   const autoAttempted = useRef(false);
+  const requestPending = useRef(false);
+  const presentationCurrent = useRef(true);
+  const [recoveryAvailable, setRecoveryAvailable] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [attempted, setAttempted] = useState(false);
+  const recovery = AUTHENTICATION_RECOVERY_COPY[language];
   const throttle = pinMode ? readLockThrottleState() : { failedAttempts: 0, blockedUntil: 0 };
   const remainingMs = remainingLockDelayMs(throttle, now);
   const isThrottled = pinMode && remainingMs > 0;
   const remainingSeconds = Math.max(1, Math.ceil(remainingMs / 1000));
+
+  useEffect(() => {
+    presentationCurrent.current = true;
+    return () => { presentationCurrent.current = false; };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    if (!pinMode && androidSecurityAdapter.isAvailable()) {
+      void androidSecurityAdapter.getCapabilities().then(capabilities => {
+        if (active) {
+          const capability = classifyNativeAuthenticationCapabilities(capabilities);
+          setRecoveryAvailable(capabilities.deviceCredentialAvailable && capabilities.credentialOnlySupported !== false);
+          setBiometricAvailable(capability === 'biometric-and-credential' || capability === 'biometric-only');
+        }
+      }).catch(() => { if (active) setRecoveryAvailable(false); });
+    }
+    return () => { active = false; };
+  }, [pinMode]);
 
   useEffect(() => {
     if (!isThrottled) return;
@@ -132,20 +167,31 @@ export const LockScreen: React.FC<LockScreenProps> = ({
           : t(language, 'unlockBtn');
 
   const messageFor = useCallback((result: SecureSessionActionResult): string => {
+    if (result.detailCode === 'CREDENTIAL_IMMEDIATE_LOCK_UNSUPPORTED') return AUTHENTICATION_LIMIT_COPY[language];
     if (result.code === 'cancelled') return copy.cancel;
     if (result.code === 'unavailable') return copy.unavailable;
-    if (
-      result.code === 'missing_key' ||
-      result.code === 'invalidated_key' ||
-      result.code === 'unrecoverable_key'
-    ) return copy.keyProblem;
+    if (result.code === 'missing_key') return copy.keyProblem;
+    if (result.code === 'invalidated_key') return copy.invalidatedKey;
+    if (result.code === 'unrecoverable_key') return copy.unrecoverableKey;
     if (result.code === 'repair_required') return copy.repairRequired;
     if (result.code === 'migration_pending') return copy.migrationPending;
+    if (result.biometricCondition === 'temporary-lockout' || result.detailCode === 'BIOMETRIC_7') return recovery.temporary;
+    if (result.biometricCondition === 'permanent-lockout' || result.detailCode === 'BIOMETRIC_9') return recovery.permanent;
     return copy.generic;
-  }, [copy]);
+  }, [copy, recovery, language]);
 
-  const performUnlock = useCallback(async () => {
-    if (busy && !canAutoUnlock) return;
+  const migrationMessage = migrationIssue === 'KEY_INVALIDATED'
+    ? copy.invalidatedKey
+    : migrationIssue === 'KEY_UNRECOVERABLE' || migrationIssue === 'ACTIVE_KEY_METADATA_MISSING'
+      ? copy.unrecoverableKey
+      : migrationIssue === 'KEY_MISSING' || migrationIssue === 'ACTIVE_KEY_MISSING'
+        ? copy.keyProblem
+        : unlockMode === 'legacy-native-migration'
+          ? copy.migrationPending
+          : copy.repairRequired;
+
+  const performUnlock = useCallback(async (method: AuthenticationMethod = 'primary') => {
+    if (requestPending.current) return;
     if (unlockMode === 'web-repair') return;
 
     if (pinMode) {
@@ -164,10 +210,19 @@ export const LockScreen: React.FC<LockScreenProps> = ({
       }
     }
 
+    requestPending.current = true;
     setBusy(true);
+    setAttempted(true);
     setError(null);
     try {
-      const result = await onUnlock(pinMode ? pin : undefined);
+      // Immediate lock can mount this surface while Android is stopped. Keep
+      // it redacted, but defer the one automatic request until foreground.
+      // This covers both bootstrap and the mounted AppShell unlock callback.
+      const requestUnlock = () => onUnlock(pinMode ? pin : undefined, method);
+      const nativeMode = unlockMode === 'native' || unlockMode === 'native-repair' || unlockMode === 'legacy-native-migration';
+      const result = nativeMode
+        ? await securityLifecycle.authenticateWhenForeground(requestUnlock, () => presentationCurrent.current)
+        : await requestUnlock();
       if (result.ok) {
         if (pinMode) clearLockThrottle();
         setPin('');
@@ -183,10 +238,13 @@ export const LockScreen: React.FC<LockScreenProps> = ({
       } else {
         setError(messageFor(result));
       }
+    } catch {
+      setError(copy.generic);
     } finally {
+      requestPending.current = false;
       setBusy(false);
     }
-  }, [busy, canAutoUnlock, copy.migrationPending, language, messageFor, onUnlock, pin, pinMode, unlockMode]);
+  }, [copy.generic, copy.migrationPending, language, messageFor, onUnlock, pin, pinMode, unlockMode]);
 
   useEffect(() => {
     if (!canAutoUnlock || autoAttempted.current) return;
@@ -245,7 +303,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({
 
           {(error || migrationIssue) && (
             <p className="text-xs font-medium text-rose-500 dark:text-rose-400">
-              {error || copy.generic}
+              {error || migrationMessage}
             </p>
           )}
 
@@ -255,8 +313,18 @@ export const LockScreen: React.FC<LockScreenProps> = ({
             className="flex min-h-[48px] w-full cursor-pointer items-center justify-center gap-2.5 rounded-2xl bg-emerald-500 px-4 py-3.5 text-sm font-extrabold text-slate-950 shadow-sm transition-all hover:bg-emerald-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {busy ? <span className="sw-secure-spinner sw-secure-spinner-dark" aria-hidden="true" /> : null}
-            <span>{busy ? copy.unlocking : buttonText}</span>
+            <span>{busy ? copy.unlocking : attempted && !pinMode && biometricAvailable ? recovery.retry : buttonText}</span>
           </button>
+          {attempted && !pinMode && recoveryAvailable && (
+            <div className="space-y-2">
+              <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">{recovery.explanation}</p>
+              <button type="button" disabled={busy}
+                onClick={() => { void performUnlock('device-credential'); }}
+                className="min-h-[48px] w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm font-semibold disabled:opacity-50 dark:border-slate-700">
+                {recovery.credentialButton}
+              </button>
+            </div>
+          )}
         </form>
 
         {pinMode && unlockMode !== 'legacy-native-migration' && (

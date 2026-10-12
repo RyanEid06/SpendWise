@@ -9,8 +9,9 @@ import type {
   MonthlyBudgetBackupItem,
 } from '../types';
 import type { FinancialState } from './financialState';
-import { financialStatesEqual, validateFinancialState } from './financialState';
+import { validateFinancialState } from './financialState';
 import { formatDate } from './date';
+import { BackupRecoveryIncompleteError, commitBackupRestore, type BackupRestoreOptions } from './backupRestore';
 
 export const BACKUP_V2_FORMAT = 'spendwise-backup-v2';
 export const BACKUP_V2_SCHEMA_VERSION = 2;
@@ -673,17 +674,16 @@ export function planBackupV2Restore(
 export async function restoreBackupV2WithAdapters(
   input: Blob,
   replaceExisting: boolean,
-  adapters: BackupV2RestoreAdapters
+  adapters: BackupV2RestoreAdapters,
+  options?: BackupRestoreOptions,
 ): Promise<BackupV2RestoreSummary> {
   const validated = await validateBackupV2Archive(input);
   const manifest = validated.manifest;
   const oldState = validateFinancialState(adapters.getState());
-  const oldSettings = adapters.getSettings();
+  const oldSettings = { ...adapters.getSettings() };
   const plan = planBackupV2Restore(manifest, oldState, replaceExisting);
   const staged: ExpenseAttachment[] = [];
   let photosSkipped = 0;
-  let mutationAttempted = false;
-  let settingsApplied = false;
 
   try {
     if (manifest.mediaIncluded) {
@@ -710,29 +710,7 @@ export async function restoreBackupV2WithAdapters(
       currencyCode: plan.currencyCode,
     });
 
-    mutationAttempted = true;
-    await adapters.replaceState(nextState);
-    const committedState = validateFinancialState(adapters.getState());
-    if (!financialStatesEqual(committedState, nextState)) {
-      throw new Error('BACKUP_V2_COMMIT_VERIFICATION_FAILED');
-    }
-
-    if (replaceExisting) {
-      await adapters.setSettings({
-        currencyCode: plan.currencyCode,
-        themeMode: manifest.settings.themeMode,
-        language: manifest.settings.language,
-      });
-      settingsApplied = true;
-      const appliedSettings = adapters.getSettings();
-      if (
-        appliedSettings.currencyCode !== plan.currencyCode ||
-        appliedSettings.themeMode !== manifest.settings.themeMode ||
-        appliedSettings.language !== manifest.settings.language
-      ) {
-        throw new Error('BACKUP_V2_SETTINGS_VERIFICATION_FAILED');
-      }
-    }
+    await commitBackupRestore(adapters, oldState, nextState, oldSettings, manifest.settings, replaceExisting, options);
 
     const warnings: string[] = [];
     if (replaceExisting && oldState.attachments.length > 0) {
@@ -755,30 +733,16 @@ export async function restoreBackupV2WithAdapters(
       warnings,
     };
   } catch (error) {
-    let rollbackSucceeded = true;
-    if (mutationAttempted) {
-      try {
-        await adapters.replaceState(oldState);
-        rollbackSucceeded = true;
-      } catch {
-        rollbackSucceeded = false;
-      }
-    }
-    if (settingsApplied || replaceExisting) {
-      try {
-        await adapters.setSettings(oldSettings);
-      } catch {
-        // Keep the original restore error. Structured data is the higher priority.
-      }
-    }
-    if (rollbackSucceeded && staged.length > 0) {
+    // Keep staged files if ledger recovery is uncertain: current metadata may
+    // still reference them. Preference-only failure does not block safe cleanup.
+    const financialRecovered = !(error instanceof BackupRecoveryIncompleteError) || error.financialRecovered;
+    if (financialRecovered && staged.length > 0) {
       try {
         await adapters.deleteFiles(staged);
       } catch {
         // Harmless staged orphans can be removed by Media Integrity later.
       }
     }
-    if (!rollbackSucceeded) throw new Error('BACKUP_V2_ROLLBACK_FAILED');
     throw error;
   }
 }

@@ -1,10 +1,19 @@
 # SpendWise
 
-SpendWise **2.1.0**, Android build **10**, is a local-first expense tracker and
+SpendWise **2.1.3**, Android build **13**, is a local-first expense tracker and
 monthly budget planner for Android and the web. Package: `com.spendwise.app`.
 
-[Signed APK](https://github.com/RyanEid06/SpendWise/releases/download/v2.1.0/SpendWise-v2.1.0.apk)
-· [Release and verification assets](https://github.com/RyanEid06/SpendWise/releases/tag/v2.1.0).
+**Working and green through WP36 (2026-10-11).** Automated checks passed,
+the compatible WP36 backend is live, and the owner confirmed successful phone
+testing: “all works nice”. WP37 hardening is now in implementation and validation;
+its [approved scope](docs/WP37_SPEC.md) and [progress ledger](docs/WP37_PROGRESS.md)
+track the separate review checkpoint.
+See [current status and evidence](docs/STATUS.md) and [roadmap](docs/ROADMAP.md).
+
+The previously delivered WP36 APK is private2.1.2/code12. WP37 targets2.1.3/code13;
+its private signed build follows the checked main merge and is not yet delivered.
+The latest public release remains [2.1.0 and its verification assets](https://github.com/RyanEid06/SpendWise/releases/tag/v2.1.0).
+Main stays untouched until after WP37.
 
 Financial records stay on the device. Optional AI analysis, Smart Capture and
 receipt scanning send selected data to the backend/Gemini when invoked.
@@ -12,7 +21,8 @@ receipt scanning send selected data to the backend/Gemini when invoked.
 ## Features
 
 - Monthly budgets, remaining-money status, category breakdowns and top expenses.
-- Manual expense entry and editing, optional notes, and up to eight photos.
+- Manual expense entry and editing, optional description/merchant and notes, and up to eight photos.
+  A blank description saves the selected category's localized display name.
 - Searchable History, read-only details, grouped delete/Undo and multi-period Statistics.
 - Optional AI insights with deterministic local analysis and offline error handling.
 - Private media with All/Day/Category filters, integrity checks and safe repair.
@@ -23,8 +33,9 @@ receipt scanning send selected data to the backend/Gemini when invoked.
   Conversion defaults are dated suggestions, not a live exchange-rate feed.
 
 Home, History, AI Insights and Statistics are the four primary destinations.
-Settings opens from the top app bar. Physical Honor and TalkBack acceptance remain
-owner-pending; automated release evidence is recorded in [verification](docs/VERIFICATION.md).
+Settings opens from the top app bar. The owner accepted the current phone build;
+automated and owner-reported evidence is recorded in [verification](docs/VERIFICATION.md).
+The reusable [manual checklist](docs/MANUAL_ACCEPTANCE.md) remains available for future regressions.
 
 ## Development
 
@@ -67,6 +78,9 @@ The `wpNN` names identify active regressions and fixtures.
 - [Development, backend settings and frozen product constraints](docs/DEVELOPMENT.md)
 - [Security, storage, backup and recovery boundaries](docs/SECURITY.md)
 - [Signing and release runbook](docs/RELEASE.md)
+- [Current green checkpoint](docs/STATUS.md)
+- [Completed work and next WP](docs/ROADMAP.md)
+- [Private 2.1.2 APK receipt](docs/WP36_PRIVATE_APK.md)
 - [2.1 automated verification and artifact provenance](docs/VERIFICATION.md)
 - [Owner phone acceptance checklist](docs/MANUAL_ACCEPTANCE.md)
 - [Synthetic fixture inventory](tests/fixtures/README.md)

@@ -30,7 +30,7 @@ test('WP33.5-01 paints privacy-safe branded startup before async security work',
 });
 
 test('WP33.5-01 successful authentication keeps secure UI up until protected storage is ready', () => {
-  const unlockStart = main.indexOf('const result = await secureSessionService.unlock(credential)');
+  const unlockStart = main.indexOf('const result = await secureSessionService.unlock(credential, method)');
   const failureGuard = main.indexOf('if (!result.ok) return result;', unlockStart);
   const storageOpen = main.indexOf('await openProtectedStorage(homeFrameTiming)', failureGuard);
   const renderHome = main.indexOf('renderApp(homeFrameTiming)', main.indexOf('async function openProtectedStorage'));
@@ -40,7 +40,8 @@ test('WP33.5-01 successful authentication keeps secure UI up until protected sto
   assert.ok(failureGuard > unlockStart);
   assert.ok(storageOpen > failureGuard);
   assert.ok(renderHome > storageInit);
-  assert.match(lock, /\{busy \? copy\.unlocking : buttonText\}/);
+  assert.match(lock, /\{busy \? copy\.unlocking :/);
+  assert.match(lock, /disabled=\{busy \|\| isThrottled/);
   assert.match(lock, /data-testid="secure-lock-surface"/);
 });
 
@@ -57,7 +58,10 @@ test('WP33.5-01 native auto authentication is one-shot and cancellation leaves a
 
 test('WP33.5-01 keeps Android system strong biometric plus device credential authentication', () => {
   assert.match(plugin, /BIOMETRIC_STRONG\s*\|\s*BiometricManager\.Authenticators\.DEVICE_CREDENTIAL/);
-  assert.match(plugin, /setDeviceCredentialAllowed\(true\)/);
+  assert.match(plugin, /createConfirmDeviceCredentialIntent\(title, reason\)/);
+  assert.match(plugin, /Build\.VERSION\.SDK_INT >= Build\.VERSION_CODES\.R[\s\S]*startBiometricAuthentication\(token, title, reason, true\)/);
+  assert.match(plugin, /setAllowedAuthenticators\(BiometricManager\.Authenticators\.DEVICE_CREDENTIAL\)/);
+  assert.doesNotMatch(plugin, /setDeviceCredentialAllowed\(true\)/);
   assert.match(plugin, /ERROR_USER_CANCELED/);
   assert.doesNotMatch(plugin, /Camera|camera|FaceDetector|face recognition/i);
 });
@@ -118,5 +122,5 @@ test('WP33.5-01 steady-state cleanup optimization only skips duplicate validatio
 });
 
 test('WP06 uses the owner-selected candidate version and upgrade code', () => {
-  assert.deepEqual(version, { versionName: '2.1.0', versionCode: 10 });
+  assert.deepEqual(version, { versionName: '2.1.3', versionCode: 13 });
 });

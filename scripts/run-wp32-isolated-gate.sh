@@ -14,7 +14,8 @@ if [[ "$TARGET" = "wp33-native-startup" || "$TARGET" = "backup-export-full" || "
   export ANDROID_SERIAL="${ANDROID_SERIAL:-emulator-5554}"
   [[ "$ANDROID_SERIAL" =~ ^emulator-[0-9]+$ ]] || exit 2
   [ "$(adb -s "$ANDROID_SERIAL" shell getprop ro.kernel.qemu | tr -d '\r')" = "1" ] || exit 2
-  wp33_avd="$(adb -s "$ANDROID_SERIAL" emu avd name | head -n 1 | tr -d '\r')"
+  # Consume all output so pipefail cannot turn a producer SIGPIPE into exit141.
+  wp33_avd="$(adb -s "$ANDROID_SERIAL" emu avd name | sed -n '1p' | tr -d '\r')"
   [[ "$wp33_avd" =~ ^wp33-synthetic(-[A-Za-z0-9_-]+)?$ ]] || exit 2
 fi
 

@@ -55,17 +55,20 @@ test('provider use bounds describe configured attempts without understating larg
 
 test('finish and close count exactly once and detach their listeners', () => {
   const metrics = new OperationalAggregates(); const res = new EventEmitter() as any; res.statusCode = 200; res.writableFinished = true; res.json = (input: unknown) => input;
-  let nextCount = 0; observeApiRequests(metrics)({ originalUrl: '/api/health?secret' } as any, res, () => nextCount++);
+  res.locals = {}; res.setHeader = () => {};
+  let nextCount = 0; observeApiRequests(metrics)({ originalUrl: '/api/health?secret', header: () => undefined } as any, res, () => nextCount++);
   res.emit('finish'); res.emit('close');
   assert.equal(nextCount, 1); assert.equal(metrics.snapshot().requests.total, 1); assert.equal(res.listenerCount('finish'), 0); assert.equal(res.listenerCount('close'), 0);
   const aborted = new EventEmitter() as any; aborted.statusCode = 200; aborted.writableFinished = false; aborted.json = (input: unknown) => input;
-  observeApiRequests(metrics)({ originalUrl: '/api/secret' } as any, aborted, () => {}); aborted.emit('close'); aborted.emit('finish');
+  aborted.locals = {}; aborted.setHeader = () => {};
+  observeApiRequests(metrics)({ originalUrl: '/api/secret', header: () => undefined } as any, aborted, () => {}); aborted.emit('close'); aborted.emit('finish');
   assert.equal(metrics.snapshot().requests.total, 2); assert.equal(metrics.snapshot().requests.aborted, 1);
 });
 
 test('response error capture extracts only sanitized code without financial fields', () => {
   const metrics = new OperationalAggregates(); const res = new EventEmitter() as any; res.statusCode = 400; res.writableFinished = true; res.json = (input: unknown) => input;
-  observeApiRequests(metrics)({ originalUrl: '/api/auth/verify' } as any, res, () => {});
+  res.locals = {}; res.setHeader = () => {};
+  observeApiRequests(metrics)({ originalUrl: '/api/auth/verify', header: () => undefined } as any, res, () => {});
   const payload = { error: 'INVALID_PROOF', amount: 12345.67, receipt: 'private-receipt', token: 'private-token' };
   assert.equal(res.json(payload), payload); res.emit('finish');
   assert.equal(metrics.snapshot().reasons.INVALID_PROOF, 1); assert.ok(!JSON.stringify(metrics.snapshot()).includes('private'));

@@ -1,7 +1,11 @@
+import { AI_PROCESSING_TIMEOUT_MS } from '../security/aiOperationBudget';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { AlertCircle, Camera, CheckCircle2, ImagePlus, Loader2, Sparkles, X } from 'lucide-react';
+import { AlertCircle, Camera, CheckCircle2, ImagePlus, Sparkles, X } from 'lucide-react';
 import { Language, SmartCaptureResult } from '../types';
 import type { DraftToolState } from '../data/ExpenseDraft';
+import { useAiOperation } from '../app/hooks/useAiOperation';
+import { AiProgressPanel } from './AiProgressPanel';
+import { normalizeApiException } from '../utils/apiErrors';
 import { apiFetchJson } from '../utils/api';
 import { getAiErrorMessage, SpendWiseApiError } from '../utils/apiErrors';
 import { AttachmentDraft, AttachmentStorage } from '../utils/attachmentStorage';
@@ -124,6 +128,8 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
   protectAcquisition,
   onDraftStateChange,
 }) => {
+  const { operation, progress } = useAiOperation();
+  const [retryAllowed, setRetryAllowed] = useState(true);
   const selectionGenerationRef = useRef(0);
   const mountedRef = useRef(true);
   const preparationRequestIdRef = useRef(0);
@@ -149,6 +155,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
     if (previousContext.current.currencyCode === currencyCode && previousContext.current.language === language) return;
     previousContext.current = { currencyCode, language };
     requestIdRef.current += 1;
+    operation.reset();
     analysisInFlightRef.current = false;
     setResult(null);
     setError(null);
@@ -173,6 +180,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
       mountedRef.current = false;
       preparationRequestIdRef.current += 1;
       requestIdRef.current += 1;
+      operation.reset();
       acquisitionInFlightRef.current = false;
       analysisInFlightRef.current = false;
       if (preparedPreviewUrlRef.current) URL.revokeObjectURL(preparedPreviewUrlRef.current);
@@ -191,6 +199,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
     setInterrupted(false);
     preparationRequestIdRef.current += 1;
     requestIdRef.current += 1;
+    operation.reset();
     analysisInFlightRef.current = false;
     clearPreparedPreview();
     setPreviewUrl(null);
@@ -211,6 +220,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
       const acquired = source === 'camera' ? await takePhoto() : (await choosePhotos(1))[0] || null;
       if (!acquired) return [];
       requestIdRef.current += 1;
+      operation.reset();
       analysisInFlightRef.current = false;
       clearPreparedPreview();
       setPreviewUrl(null);
@@ -250,7 +260,10 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
       return;
     }
 
+    const run = operation.begin('preparing');
+    if (!run) return;
     analysisInFlightRef.current = true;
+    setRetryAllowed(true);
     setInterrupted(false);
     const requestId = ++requestIdRef.current;
     setIsAnalyzing(true);
@@ -259,12 +272,14 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
 
     try {
       const imageBase64 = await blobToDataUrl(preparedDraft.blob);
-      if (requestId !== requestIdRef.current) return;
+      if (requestId !== requestIdRef.current || !run.isCurrent()) return;
 
       const responseData = await apiFetchJson<unknown>(
         '/api/gemini/smart-capture',
         {
           method: 'POST',
+          signal: run.signal,
+          onPhase: run.onPhase,
           body: JSON.stringify({
             imageBase64,
             mimeType: preparedDraft.mimeType,
@@ -272,22 +287,33 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
             currencyCode,
           }),
         },
-        45000
+        AI_PROCESSING_TIMEOUT_MS
       );
 
       const data = parseSmartCaptureResult(responseData, currencyCode);
       if (!data) throw new SpendWiseApiError('invalid_response');
-      if (requestId !== requestIdRef.current) return;
+      if (requestId !== requestIdRef.current || !run.isCurrent()) return;
       setResult(data);
+      run.finish('ready');
     } catch (error) {
-      if (requestId !== requestIdRef.current) return;
+      if (requestId !== requestIdRef.current || !run.isCurrent()) return;
       setError(getAiErrorMessage(language, error));
+      setRetryAllowed(normalizeApiException(error).kind !== 'quota_exhausted');
+      run.finish('error');
     } finally {
       if (requestId === requestIdRef.current) {
         analysisInFlightRef.current = false;
         setIsAnalyzing(false);
       }
     }
+  };
+
+  const cancelAnalysis = () => {
+    requestIdRef.current += 1;
+    analysisInFlightRef.current = false;
+    operation.cancel();
+    setIsAnalyzing(false);
+    setError(null);
   };
 
   const applyResult = () => {
@@ -344,10 +370,15 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
           onClick={() => void beginPhotoSelection('gallery')}
           className="min-h-[44px] rounded-xl border border-emerald-400 dark:border-emerald-700 bg-white dark:bg-[#111928] text-emerald-800 dark:text-emerald-200 text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50"
         >
-          {isAcquiring ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
+          <ImagePlus className="w-4 h-4" />
           <span>{ta(language, 'choosePhoto')}</span>
         </button>
       </div>
+
+      <AiProgressPanel progress={isPreparing ? { stage: 'preparing', active: true } : progress}
+        tone="cyan" errorMessage={error}
+        language={language} onCancel={isPreparing ? resetSelection : cancelAnalysis}
+        onRetry={retryAllowed && !disabled ? () => void analyze() : undefined} />
 
       {previewUrl && (
         <>
@@ -357,12 +388,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
               alt={t(language, 'smartCapturePreviewAlt')}
               className="w-full max-h-48 object-contain"
             />
-            {isPreparing && (
-              <div className="absolute inset-x-0 bottom-0 bg-slate-950/75 text-white px-3 py-2 text-xs font-semibold flex items-center justify-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>{ta(language, 'processingPhoto')}</span>
-              </div>
-            )}
+
           </div>
           <button
             type="button"
@@ -370,13 +396,13 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
             onClick={() => void analyze()}
             className="w-full min-h-[44px] rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-extrabold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-            <span>{isAnalyzing ? t(language, 'smartCaptureAnalyzing') : t(language, 'smartCaptureAnalyze')}</span>
+            <Sparkles className="w-4 h-4" />
+            <span>{t(language, 'smartCaptureAnalyze')}</span>
           </button>
         </>
       )}
 
-      {error && (
+      {error && progress.stage !== 'error' && (
         <div className="rounded-xl border border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/40 p-3 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           <span>{error}</span>
@@ -393,7 +419,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
           <div className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-3 text-xs">
             <div className="min-w-0">
               <span className="text-slate-500 dark:text-slate-400">{t(language, 'descriptionLabel')}</span>
-              <p className="font-semibold text-slate-900 dark:text-white break-words">
+              <p dir="auto" className="user-content font-semibold text-slate-900 dark:text-white break-words">
                 {result.description || t(language, 'uncertainLabel')}
               </p>
             </div>

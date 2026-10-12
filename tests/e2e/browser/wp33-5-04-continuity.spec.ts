@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { addExpense, startFresh } from './helpers';
+import { addExpense, mockReadyAuthenticatedBackend, startFresh } from './helpers';
 import { t } from '../../../src/utils/translations';
 
 function deferred() {
@@ -124,10 +124,10 @@ test('resetting a photo rejects its late suggestion and keeps the existing draft
   await editor.getByRole('textbox', { name: /Description/ }).fill('Manual draft');
   await editor.getByRole('button', { name: 'Analyze with Gemini', exact: true }).click();
   await expect.poll(() => started).toBe(true);
+  const cancelled = page.waitForEvent('requestfailed', request => request.url().endsWith('/api/gemini/smart-capture'));
   await editor.getByRole('button', { name: t('en', 'smartCaptureRemovePhoto'), exact: true }).click();
-  const completed = page.waitForResponse('**/api/gemini/smart-capture');
+  expect((await cancelled).failure()?.errorText).toMatch(/ABORTED|cancelled/i);
   gate.finish();
-  await completed;
   await expect(editor.getByRole('button', { name: 'Apply to Expense Draft', exact: true })).toHaveCount(0);
   await expect(editor.getByRole('textbox', { name: /Description/ })).toHaveValue('Manual draft');
 });
@@ -179,9 +179,10 @@ for (const screen of ['AI Insights', 'Statistics'] as const) {
       await expect.poll(() => requests).toBe(1);
       for (let index = 0; index < 3; index++) {
         await page.getByRole('button', { name: 'Home', exact: true }).click();
-        await expect(page.getByRole('button', { name: /Explaining|Evaluating personal/ })).toHaveCount(0);
+        await expect(page.locator('.ai-progress:visible')).toHaveCount(0);
         await page.getByRole('button', { name: screen, exact: true }).click();
-        await expect(page.getByRole('button', { name: /Explaining|Evaluating personal/ })).toBeDisabled();
+        await expect(page.getByRole('button', { name: screen === 'Statistics' ? 'Explain' : 'Analyze My Spending', exact: true })).toBeDisabled();
+        await expect(page.locator('.ai-progress:visible')).toHaveAttribute('data-ai-stage', 'sending');
       }
       await page.getByRole('button', { name: 'Home', exact: true }).click();
       gate.finish();
@@ -280,14 +281,7 @@ test('a completed Analysis cannot reappear under a different language context', 
 });
 
 test.beforeEach(async ({ page }) => {
-  // Keep real client registration/signing; replace only the unavailable test backend.
-  await page.route('**/api/auth/register', route => route.fulfill({ json: { installationId: 'wp04-fixture' } }));
-  await page.route('**/api/auth/challenge', route => route.fulfill({ json: {
-    challengeId: 'wp04-challenge', expiresAt: Date.now() + 60_000, payload: 'wp04-public-test-challenge',
-  } }));
-  await page.route('**/api/auth/verify', route => route.fulfill({ json: {
-    accessToken: 'wp04-public-test-token', expiresAt: Date.now() + 60_000, tokenType: 'Bearer',
-  } }));
+  await mockReadyAuthenticatedBackend(page);
 });
 
 test('Statistics retains selected period and in-flight success through repeated tab switches', async ({ page }) => {

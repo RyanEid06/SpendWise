@@ -1,10 +1,15 @@
 # Owner phone acceptance
 
-Status: **pending for the final2.1.0/code10 APK**. Automated CI/emulator results do
-not establish acceptance on HONOR X9d/Android16 or verify the owner's real records.
+Status: **GREEN — owner accepted the current 2.1.2/code12 phone build on
+2026-10-11**, reporting “all works nice”. This closes the WP36 practical phone
+acceptance checkpoint. See [status and evidence](STATUS.md) and [APK receipt](WP36_PRIVATE_APK.md).
+The owner did not supply a row-by-row checklist, device/OS measurements or a
+TalkBack transcript; the reusable scenarios below do not claim such records.
 The old code8 startup failure was repaired; do not use that artifact for the trial.
+WP37 adds a separate [device acceptance checklist](WP37_DEVICE_ACCEPTANCE.md);
+the WP36 sign-off above does not certify those new changes.
 
-Use the permanent-signed2.1 APK and record its published checksum/source receipt.
+For future regression testing, use the permanent-signed APK and record its checksum/source receipt.
 Update the installed application without uninstalling or clearing storage. Preserve
 a known-readable backup. If update fails, retain the exact error instead of replacing
 the signing identity or removing app data.
@@ -25,4 +30,5 @@ For each row record artifact hash/source, date, expected/observed behavior and
 pass/fail/pending/unsupported. Use synthetic entries for destructive experiments;
 never expose owner financial data or device credentials in public evidence.
 Signed production may deny `run-as`; retain that limit without rooting the phone
-or weakening protections. A failed or unrun check leaves physical sign-off pending.
+or weakening protections. Record any future failed or unrun scenario explicitly;
+do not infer exhaustive scenario coverage from the current owner sign-off.

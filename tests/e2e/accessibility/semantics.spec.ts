@@ -28,7 +28,7 @@ test('critical navigation and forms expose accessible names', async ({ page }) =
   const dialog = page.getByRole('dialog', { name: 'Add Expense' });
   await expect(dialog).toHaveAttribute('aria-modal', 'true');
   await expect(dialog.getByRole('spinbutton', { name: 'Amount *' })).toBeAttached();
-  await expect(dialog.getByRole('textbox', { name: 'Description / Merchant *' })).toBeAttached();
+  await expect(dialog.getByRole('textbox', { name: 'Description / Merchant (optional)' })).toBeAttached();
   await expect(dialog.getByRole('textbox', { name: 'Optional Note / Breakdown' })).toBeAttached();
   const closeButton = dialog.getByLabel('Cancel', { exact: true });
   await expect(closeButton).toBeAttached();

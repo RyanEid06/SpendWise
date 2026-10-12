@@ -1,11 +1,22 @@
 # Signing and release runbook
 
-Current metadata: **2.1.0 / Android versionCode10**, package `com.spendwise.app`.
+Current WP37 candidate metadata: **2.1.3 / Android versionCode13**, package `com.spendwise.app`.
+The owner selected this next version after the accepted private WP36 **2.1.2/code12** build.
+The permanent signing identity is retained. Review and required CI gate merging
+through integration to main; then build the private APK from the exact merged main SHA.
+No2.1.3 tag or public release is authorized.
+
+**Current checkpoint: GREEN through WP36, owner phone acceptance confirmed
+2026-10-11.** Backend deployment and signed APK delivery passed.
+See [status](STATUS.md), [APK receipt](WP36_PRIVATE_APK.md) and [roadmap](ROADMAP.md).
+WP37 implementation and validation are in progress under the [approved scope](WP37_SPEC.md);
+The owner authorized the WP37 main merge after automated checks, followed by the
+private main APK and restoring Render auto-deploy from main. These steps remain pending.
 `version.json` is authoritative; package and lockfile root versions must match.
 The current authoritative values are:
 
 ```json
-{"versionName": "2.1.0", "versionCode": 10}
+{"versionName": "2.1.3", "versionCode": 13}
 ```
 
 Every future APK update must increase the Android version code and retain the
@@ -25,7 +36,8 @@ key for this application. Repository signing secrets are `SPENDWISE_KEYSTORE_BAS
 Never put them in Git, frontend variables, public receipts or test archives.
 
 PR/main verification builds a debug APK and runs regression/dependency gates.
-Main/tag pushes also check the deployed installation-authenticated Gemini backend.
+Live installation-authenticated Gemini smoke is manual opt-in, defaultfalse;
+main/tag pushes do not automatically issue live generation calls.
 Debug artifacts do not update an installed official release signed with another key.
 
 The manually dispatched `wp33-5-06-candidate.yml` builds the permanent-signed APK
@@ -36,6 +48,19 @@ exact checked-out SHA, expected name/code and actual owner baseline code. Review
 pairs are 2.0.2/code9 and 2.1.0/code10; strict baseline/source/hash/signature checks
 must be updated deliberately for later releases. Code8 is never launched in its
 historical upgrade path because that artifact has the known Android16 startup bug.
+
+For WP37's private2.1.3/code13 APK, after the checked main merge dispatch
+`wp35-integration.yml` on `main` with `signed_test_apk=true` and
+`expected_source` equal to the exact merged main SHA.
+It calls the reusable `wp35-test-apk.yml`; this build-only workflow uses
+the permanent key and checks actual package/version/signature/hash; it does not
+repeat signed upgrade emulator certification, deploy the backend or publish.
+WP35's combined full native/recovery/API36 gates have separate green receipts.
+Historical WP36 Render verification used manually selected integration commit
+`d89063b8630c74355074544d1e5dfe215c66aab2`, with main branch label and auto-deploy disabled.
+Its health/authenticated synthetic analysis and owner's phone test passed then.
+WP37 requires fresh exact-main deployment/health/compatibility receipts before claiming
+the new backend is verified. Preserve the owner's installed app and data.
 
 ## Certification and publication
 

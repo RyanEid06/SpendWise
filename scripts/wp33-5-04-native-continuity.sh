@@ -19,6 +19,9 @@ require_wp04_soft_ime() {
     adb shell dumpsys window > "$receipt-window.txt"
     if app_is_foreground && grep -Eq 'mInputShown=true|mIsInputViewShown=true|type=ime.*visible=true' "$receipt-input-method.txt" "$receipt-window.txt"; then
       adb exec-out screencap -p > "$receipt.png"
+      if [ "${WP35_EDITOR_INSETS:-0}" = 1 ]; then
+        node artifacts/wp35/editor-layout.mjs "$receipt" || return 1
+      fi
       echo "WP04_SOFT_IME_VISIBLE:$phase"
       return 0
     fi

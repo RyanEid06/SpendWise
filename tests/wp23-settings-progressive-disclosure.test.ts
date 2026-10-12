@@ -75,8 +75,8 @@ test('Storage and backup capabilities remain reachable without engine rewrites',
   includesRequired('backupService.createV3(includeMedia, passphrase)');
   includesRequired('backupService.createLegacy()');
   includesRequired('backupService.createCsv()');
-  includesRequired('backupService.restoreLegacy(pendingImportBackup, replaceExisting)');
-  includesRequired('backupService.restoreV2(pendingV2Backup.file, replaceExisting)');
+  includesRequired('backupService.restoreLegacy(pendingImportBackup, replaceExisting, options)');
+  includesRequired('backupService.restoreV2(pendingV2Backup.file, replaceExisting, options)');
   includesRequired('BACKUP_CURRENCY_MISMATCH');
 });
 
