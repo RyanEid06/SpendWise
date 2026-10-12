@@ -1,4 +1,5 @@
 import { argon2id } from 'hash-wasm';
+import type { BackupRestoreOptions } from './backupRestore';
 import {
   MAX_BACKUP_V2_ARCHIVE_BYTES,
   type BackupV2Preview,
@@ -429,12 +430,13 @@ export async function restoreBackupV3WithAdapters(
   input: Blob,
   passphrase: string,
   replaceExisting: boolean,
-  adapters: BackupV2RestoreAdapters
+  adapters: BackupV2RestoreAdapters,
+  options?: BackupRestoreOptions,
 ): Promise<BackupV3RestoreSummary> {
   const parsed = await parseEnvelope(input);
   const payload = await decryptParsedEnvelope(parsed, passphrase);
   await validateV3Payload(payload, parsed.header.payload.mediaIncluded);
-  const summary = await restoreBackupV2WithAdapters(payload, replaceExisting, adapters);
+  const summary = await restoreBackupV2WithAdapters(payload, replaceExisting, adapters, options);
   return { ...summary, schemaVersion: 3 };
 }
 

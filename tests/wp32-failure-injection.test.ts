@@ -322,7 +322,7 @@ test('settings failure after restore commit rolls financial state and settings b
       },
       stageMedia: async (source, targetExpenseId, blob) => staged(source, targetExpenseId, blob),
       deleteFiles: async () => {},
-    }),
+    }, { restoreAppPreferences: true }),
     /WP32_INJECTED_SETTINGS_FAILURE/
   );
 

@@ -1,14 +1,17 @@
 # SpendWise
 
-SpendWise **2.1.2**, Android build **12**, is a local-first expense tracker and
+SpendWise **2.1.3**, Android build **13**, is a local-first expense tracker and
 monthly budget planner for Android and the web. Package: `com.spendwise.app`.
 
 **Working and green through WP36 (2026-10-11).** Automated checks passed,
 the compatible WP36 backend is live, and the owner confirmed successful phone
-testing: “all works nice”. WP37 is next, awaiting the owner's specification.
+testing: “all works nice”. WP37 hardening is now in implementation and validation;
+its [approved scope](docs/WP37_SPEC.md) and [progress ledger](docs/WP37_PROGRESS.md)
+track the separate review checkpoint.
 See [current status and evidence](docs/STATUS.md) and [roadmap](docs/ROADMAP.md).
 
-The current 2.1.2 APK is a private signed test build delivered to the owner.
+The previously delivered WP36 APK is private2.1.2/code12. WP37 targets2.1.3/code13;
+its private signed build follows the checked main merge and is not yet delivered.
 The latest public release remains [2.1.0 and its verification assets](https://github.com/RyanEid06/SpendWise/releases/tag/v2.1.0).
 Main stays untouched until after WP37.
 

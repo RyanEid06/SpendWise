@@ -92,12 +92,12 @@ export const AiInsightsScreen: React.FC<AiInsightsScreenProps> = ({
             </>
           )}
         </button>
-        <div className="mt-3"><AiProgressPanel progress={progress} language={language} onCancel={onCancel}
+        <div className="mt-3"><AiProgressPanel progress={progress} language={language} tone="indigo" errorMessage={error} onCancel={onCancel}
           onRetry={retryAllowed ? onAnalyzeClick : undefined} /></div>
       </div>
 
       {/* States Handling */}
-      {error && !isLoading && (
+      {error && !isLoading && progress.stage !== 'error' && (
         <div className="bg-white dark:bg-[#111928] border border-slate-200/90 dark:border-slate-800 rounded-3xl p-6 text-center space-y-3 shadow-xs">
           <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center mx-auto">
             <Info className="w-6 h-6" />

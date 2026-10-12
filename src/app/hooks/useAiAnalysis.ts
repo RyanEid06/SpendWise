@@ -6,10 +6,10 @@ import { diagnostics } from '../../services/diagnostics/diagnostics';
 import { getAiErrorMessage, normalizeApiException, SpendWiseApiError } from '../../utils/apiErrors';
 import { parseAnalysisResult } from '../../utils/aiResultValidation';
 import { useAiOperation } from './useAiOperation';
-import { getDisplayName, getMonthKey, MonthYear } from '../../utils/date';
+import { getMonthKey, MonthYear } from '../../utils/date';
 import { SpendingAnalyzer } from '../../utils/spendingAnalyzer';
 import { StorageManager } from '../../utils/storage';
-import { t } from '../../utils/translations';
+import { getLocalizedMonthName, t } from '../../utils/translations';
 
 import { AiRequestGate } from './aiRequestGate';
 
@@ -57,16 +57,12 @@ export function useAiAnalysis({
 
   const analyze = useCallback(async () => {
     if (expenses.length === 0) {
-      setError('No expenses recorded yet. Please add some expenses before analyzing your spending.');
+      setError(t(language, 'noExpensesYetForAi'));
       return;
     }
 
     if (monthlyExpenses.length === 0) {
-      setError(
-        `No expenses recorded for ${getDisplayName(
-          currentMonthYear
-        )}. Switch to a month with recorded expenses to run analysis.`
-      );
+      setError(t(language, 'noExpensesForAi', { month: getLocalizedMonthName(currentMonthYear, language) }));
       return;
     }
 

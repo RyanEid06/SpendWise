@@ -1,6 +1,7 @@
 import {
   androidSecurityAdapter,
   AndroidSecurityAdapter,
+  type NativeBiometricCondition,
 } from '../platform/android/AndroidSecurityAdapter';
 import { preferencesRepository } from '../data/PreferencesRepository';
 import {
@@ -22,6 +23,7 @@ import {
   WebPinService,
   webPinService,
 } from './WebPinService';
+import type { AuthenticationMethod } from './authenticationCopy';
 
 export type SecureSessionState = 'locked' | 'unlocked';
 export type SecureSecurityMode = 'native' | 'web';
@@ -59,6 +61,8 @@ export interface SecureSessionActionResult {
   warning?: 'migration_pending';
   detailCode?: string;
   authSucceededAtElapsedRealtimeMs?: number;
+  recoveryAvailable?: boolean;
+  biometricCondition?: NativeBiometricCondition;
 }
 
 export interface SecureSessionSnapshot {
@@ -69,6 +73,7 @@ export interface SecureSessionSnapshot {
   unlockMode: SecureUnlockMode;
   hasWebPin: boolean;
   migrationIssue: string | null;
+  sessionRevision: number;
 }
 
 export function shouldLockAfterTimeout(
@@ -95,6 +100,8 @@ function actionFromKeyFailure(result: SecureKeyResult<unknown>): SecureSessionAc
     ok: false,
     code: mapping[result.kind],
     detailCode: result.code,
+    ...(result.recoveryAvailable === undefined ? {} : { recoveryAvailable: result.recoveryAvailable }),
+    ...(result.biometricCondition === undefined ? {} : { biometricCondition: result.biometricCondition }),
   };
 }
 
@@ -132,6 +139,7 @@ export class DefaultSecureSessionService {
   private lastAuthenticatedAt = 0;
   private sensitiveSurfaceDepth = 0;
   private authenticating = false;
+  private authenticationGeneration = 0;
   private privacyShieldDesired: boolean | null = null;
   private initialized = false;
 
@@ -177,6 +185,7 @@ export class DefaultSecureSessionService {
     const migration = this.stateStore.getNativeMigration();
     return {
       state: this.state,
+      sessionRevision: this.authenticationGeneration,
       appLockEnabled,
       lockTimeoutSeconds: safeTimeout(),
       securityMode: this.securityMode(),
@@ -215,7 +224,7 @@ export class DefaultSecureSessionService {
 
     const result = await this.keyService.establish(
       false,
-      'Initialize SpendWise secure key storage'
+      'protect-local-data'
     );
     if (!result.ok) {
       this.stateStore.setNativeMigration('pending', result.code ?? result.kind);
@@ -254,17 +263,32 @@ export class DefaultSecureSessionService {
   private async runNativeKeyOperation<T>(
     operation: () => Promise<SecureKeyResult<T>>
   ): Promise<SecureKeyResult<T>> {
+    if (this.authenticating) return { ok: false, kind: 'cancelled', code: 'AUTHENTICATION_BUSY' };
+    const generation = this.authenticationGeneration;
     this.authenticating = true;
     await this.reconcilePrivacyShield();
+    let result: SecureKeyResult<T>;
     try {
-      return await operation();
+      if (generation !== this.authenticationGeneration) {
+        return { ok: false, kind: 'cancelled', code: 'AUTHENTICATION_STALE' };
+      }
+      result = await operation();
+      if (!result.ok && ['AUTHENTICATION_BACKGROUND', 'AUTHENTICATION_BACKGROUND_TIMEOUT', 'AUTHENTICATION_STALE', 'AUTHENTICATION_DESTROYED'].includes(result.code ?? '')) {
+        this.lock();
+      }
     } finally {
       this.authenticating = false;
       await this.reconcilePrivacyShield();
     }
+    if (generation !== this.authenticationGeneration) {
+      // Include final privacy-shield reconciliation in the protected scope.
+      this.keyService.releaseSessionSecrets();
+      return { ok: false, kind: 'cancelled', code: 'AUTHENTICATION_STALE' };
+    }
+    return result;
   }
 
-  async unlock(credential?: string): Promise<SecureSessionActionResult> {
+  async unlock(credential?: string, method: AuthenticationMethod = 'primary'): Promise<SecureSessionActionResult> {
     if (!safeAppLockEnabled()) {
       this.state = 'unlocked';
       return { ok: true, code: 'success' };
@@ -276,7 +300,7 @@ export class DefaultSecureSessionService {
 
       if (migration?.status === 'complete') {
         const result = await this.runNativeKeyOperation(() =>
-          this.keyService.establish(true, 'Unlock SpendWise')
+          this.keyService.establish(true, 'unlock', method)
         );
         if (!result.ok) return actionFromKeyFailure(result);
 
@@ -292,7 +316,7 @@ export class DefaultSecureSessionService {
         }
 
         const migrationResult = await this.runNativeKeyOperation(() =>
-          this.keyService.establish(true, 'Upgrade SpendWise App Lock')
+          this.keyService.establish(true, 'legacy-lock-upgrade', method)
         );
         if (migrationResult.ok) {
           this.stateStore.setNativeMigration('complete');
@@ -303,8 +327,11 @@ export class DefaultSecureSessionService {
         }
 
         // The legacy PIN was valid. Preserve it and preserve access to this
-        // session rather than locking a v1.4 user out because the secure
-        // migration was cancelled or unavailable.
+        // session when the secure migration is unavailable. Explicit cancellation
+        // still leaves this presentation locked and preserves the legacy PIN.
+        if (migrationResult.kind === 'cancelled') {
+          return actionFromKeyFailure(migrationResult);
+        }
         this.stateStore.setNativeMigration(
           'pending',
           migrationResult.code ?? migrationResult.kind
@@ -321,7 +348,7 @@ export class DefaultSecureSessionService {
 
       this.stateStore.setNativeMigration('repair_required');
       const repairResult = await this.runNativeKeyOperation(() =>
-        this.keyService.establish(true, 'Repair SpendWise App Lock')
+        this.keyService.establish(true, 'lock-repair', method)
       );
       if (!repairResult.ok) {
         this.stateStore.setNativeMigration(
@@ -370,6 +397,10 @@ export class DefaultSecureSessionService {
 
   lock(): void {
     if (!safeAppLockEnabled()) return;
+    this.authenticationGeneration += 1;
+    if (this.nativeAdapter.isAvailable() && typeof this.nativeAdapter.cancelAuthentication === 'function') {
+      void this.nativeAdapter.cancelAuthentication().catch(() => {});
+    }
     this.state = 'locked';
     this.lastAuthenticatedAt = 0;
     this.backgroundedAt = 0;
@@ -378,6 +409,19 @@ export class DefaultSecureSessionService {
 
   onBackground(now = Date.now()): void {
     this.backgroundedAt = now;
+    if (safeAppLockEnabled() && safeTimeout() === 0) this.lock();
+  }
+
+  async onNativeBackground(now = Date.now()): Promise<void> {
+    // Only the OS credential activity may stop our activity without representing
+    // a user departure. The native gate remains responsible for Home/screen-off.
+    if (typeof this.nativeAdapter.getAuthenticationLifecycle === 'function') {
+      try {
+        const lifecycle = await this.nativeAdapter.getAuthenticationLifecycle();
+        if (lifecycle.systemCredentialActive && safeTimeout() > 0) return;
+      } catch { /* Unknown lifecycle is treated as a real background transition. */ }
+    }
+    this.onBackground(now);
   }
 
   onForeground(now = Date.now()): boolean {
@@ -436,7 +480,7 @@ export class DefaultSecureSessionService {
     if (this.securityMode() === 'native') {
       if (enabled) {
         const result = await this.runNativeKeyOperation(() =>
-          this.keyService.establish(true, 'Enable SpendWise App Lock')
+          this.keyService.establish(true, 'enable-app-lock')
         );
         if (!result.ok) return actionFromKeyFailure(result);
 
@@ -454,7 +498,7 @@ export class DefaultSecureSessionService {
       const rotated = await this.runNativeKeyOperation(() =>
         this.keyService.rotateAuthenticationPolicy(
           false,
-          'Disable SpendWise App Lock'
+          'disable-app-lock'
         )
       );
       if (!rotated.ok) return actionFromKeyFailure(rotated);
@@ -487,6 +531,17 @@ export class DefaultSecureSessionService {
   async setLockTimeoutSeconds(seconds: number): Promise<SecureSessionActionResult> {
     if (![0, 60, 300, 900].includes(seconds)) {
       return { ok: false, code: 'error', detailCode: 'INVALID_LOCK_TIMEOUT' };
+    }
+
+    if (seconds === 0 && this.nativeAdapter.isAvailable() && typeof this.nativeAdapter.getCapabilities === 'function') {
+      try {
+        const capabilities = await this.nativeAdapter.getCapabilities();
+        if (capabilities.apiLevel !== undefined && capabilities.apiLevel < 30 && !capabilities.biometricStrongAvailable) {
+          return { ok: false, code: 'unavailable', detailCode: 'CREDENTIAL_IMMEDIATE_LOCK_UNSUPPORTED' };
+        }
+      } catch {
+        return { ok: false, code: 'unavailable', detailCode: 'AUTHENTICATION_CAPABILITIES_UNAVAILABLE' };
+      }
     }
 
     if (safeAppLockEnabled()) {
@@ -555,9 +610,10 @@ export class DefaultSecureSessionService {
 export interface SecureSessionService {
   getSnapshot(): SecureSessionSnapshot;
   initialize(): Promise<SecureSessionSnapshot>;
-  unlock(credential?: string): Promise<SecureSessionActionResult>;
+  unlock(credential?: string, method?: AuthenticationMethod): Promise<SecureSessionActionResult>;
   lock(): void;
   onBackground(now?: number): void;
+  onNativeBackground(now?: number): Promise<void>;
   onForeground(now?: number): boolean;
   configureFromSetup(pin?: string): Promise<SecureSessionActionResult>;
   setWebPin(pin: string): Promise<SecureSessionActionResult>;

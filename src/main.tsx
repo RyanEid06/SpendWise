@@ -9,10 +9,12 @@ import {
 } from './security/SecureSessionService';
 import type { Language, ThemeMode } from './types';
 import { StorageManager } from './utils/storage';
-import { TechnicalDiagnostics } from './features/settings/TechnicalDiagnostics';
+import { StorageFailureScreen } from './screens/StorageFailureScreen';
 import { measureDiagnostic } from './services/diagnostics/diagnostics';
 import { androidSecurityAdapter } from './platform/android/AndroidSecurityAdapter';
 import { StartupHomeFrameTiming } from './app/startup/StartupHomeFrameTiming';
+import type { AuthenticationMethod } from './security/authenticationCopy';
+import { canEnterProtectedApplication, securityLifecycle, startSecurityLifecycle } from './security/SecurityLifecycleCoordinator';
 import './index.css';
 
 function bootstrapLanguage(): Language {
@@ -61,34 +63,36 @@ function renderSecureStartup(): void {
 }
 
 function renderStorageFailure(): void {
-  root.render(
-    <div className="min-h-screen bg-slate-100 dark:bg-[#05080C] text-slate-900 dark:text-slate-100 flex items-center justify-center p-6">
-      <div className="w-full max-w-md rounded-3xl border border-rose-200 dark:border-rose-900/60 bg-white dark:bg-[#111928] p-6 shadow-sm space-y-3">
-        <h1 className="text-lg font-extrabold">SpendWise could not safely open local data</h1>
-        <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-          Your existing financial data was not deleted. Close and reopen the app. If this continues,
-          keep the current installation in place so the stored data remains available for recovery.
-        </p>
-        <TechnicalDiagnostics language={bootstrapLanguage()} />
-      </div>
-    </div>
-  );
+  root.render(<StorageFailureScreen language={bootstrapLanguage()} />);
 }
 
-async function openProtectedStorage(homeFrameTiming?: StartupHomeFrameTiming): Promise<void> {
+async function openProtectedStorage(homeFrameTiming?: StartupHomeFrameTiming): Promise<boolean> {
+  const revision = secureSessionService.getSnapshot().sessionRevision;
+  await securityLifecycle.waitUntilForeground();
+  if (!canEnterProtectedApplication(revision, secureSessionService.getSnapshot())) {
+    renderBootstrapLock(false);
+    return false;
+  }
   await measureDiagnostic('startup.secure_init', () =>
     measureDiagnostic('storage.init', () => StorageManager.init())
   );
+  await securityLifecycle.waitUntilForeground();
+  if (!canEnterProtectedApplication(revision, secureSessionService.getSnapshot())) {
+    renderBootstrapLock(false);
+    return false;
+  }
   renderApp(homeFrameTiming);
+  return true;
 }
 
 async function unlockAndOpen(
-  credential?: string
+  credential?: string,
+  method?: AuthenticationMethod
 ): Promise<SecureSessionActionResult> {
-  const result = await secureSessionService.unlock(credential);
+  const result = await secureSessionService.unlock(credential, method);
   if (!result.ok) return result;
 
-  // A v1.4 legacy PIN remains usable if Android key migration is cancelled.
+  // A v1.4 legacy PIN remains usable if Android key migration is unavailable.
   // That compatibility fallback cannot be used to open WP29 encrypted storage:
   // the Keystore-rooted key hierarchy must exist first. Keep the old database
   // untouched and let the user retry authentication instead.
@@ -109,9 +113,14 @@ async function unlockAndOpen(
         androidSecurityAdapter.elapsedSinceAuthentication(authSucceededAtElapsedRealtimeMs)
       );
   try {
-    await openProtectedStorage(homeFrameTiming);
+    const opened = await openProtectedStorage(homeFrameTiming);
+    if (!opened) return { ok: false, code: 'cancelled', detailCode: 'AUTHENTICATION_STALE' };
     return result;
   } catch {
+    if (secureSessionService.getSnapshot().appLockEnabled && secureSessionService.getSnapshot().state === 'locked') {
+      renderBootstrapLock(false);
+      return { ok: false, code: 'cancelled', detailCode: 'AUTHENTICATION_STALE' };
+    }
     renderStorageFailure();
     return {
       ok: false,
@@ -136,6 +145,7 @@ function renderBootstrapLock(autoUnlock = false): void {
 
 async function bootstrap() {
   try {
+    await startSecurityLifecycle();
     const security = await measureDiagnostic('security.init', () => secureSessionService.initialize());
 
     if (

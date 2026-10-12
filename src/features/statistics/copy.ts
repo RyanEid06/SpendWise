@@ -1,0 +1,46 @@
+import type { Language } from '../../types';
+
+export const statisticsCopy = {
+  en: { timePeriod: 'Time Period', showAllMonths: 'Show all {count} months', showLatest: 'Show latest 6',
+    showingLatest: 'Showing latest 6 of {count} months', chart: 'Full-period monthly spending',
+    total: 'Total spending: {total} across {count} transactions. Average: {average}.',
+    insufficient: 'Not enough recorded complete calendar months for a fair comparison.',
+    comparison: 'Monthly spending {direction} by {delta}{percent}: {before} to {after}, comparing {count} complete months per window ({first} vs {last}).',
+    categoryComparison: 'Monthly spending in {name} {direction} by {delta}{percent}: {before} to {after}, comparing {count} complete months per window ({first} vs {last}).',
+    increase: 'increased', decrease: 'decreased', stable: 'was unchanged', zeroBase: ' (zero baseline; percentage unavailable)', percentUnavailable: ' (percentage unavailable)',
+    peak: 'Highest recorded complete-month spending{tie}: {months}, {amount}.',
+    low: 'Lowest recorded non-zero complete-month spending{tie}: {months}, {amount}.',
+    tied: ' (tied)', more: ' and {count} more',
+    driver: '{name}{tie}: largest recorded category {direction}, {delta} per month ({first} vs {last}).',
+    share: '{name}: {amount}, {percent} of spending (rank {rank}).', review: 'To review the recent recorded increase, start with {name}.',
+  },
+  fr: { timePeriod: 'Période', showAllMonths: 'Afficher les {count} mois', showLatest: 'Afficher les 6 derniers mois',
+    showingLatest: 'Affichage des 6 derniers mois sur {count}', chart: 'Dépenses mensuelles sur toute la période',
+    total: 'Total des dépenses : {total} pour {count} transactions. Moyenne : {average}.',
+    insufficient: 'Pas assez de mois civils complets enregistrés pour une comparaison équitable.',
+    comparison: 'Les dépenses mensuelles ont {direction} de {delta}{percent} : de {before} à {after}, sur {count} mois complets par intervalle ({first} contre {last}).',
+    categoryComparison: 'Les dépenses mensuelles de {name} ont {direction} de {delta}{percent} : de {before} à {after}, sur {count} mois complets par intervalle ({first} contre {last}).',
+    increase: 'augmenté', decrease: 'diminué', stable: 'varié de zéro', zeroBase: ' (base nulle ; pourcentage indisponible)', percentUnavailable: ' (pourcentage indisponible)',
+    peak: 'Dépenses les plus élevées sur un mois complet enregistré{tie} : {months}, {amount}.',
+    low: 'Dépenses non nulles les plus faibles sur un mois complet enregistré{tie} : {months}, {amount}.',
+    tied: ' (ex æquo)', more: ' et {count} autres',
+    driver: '{name}{tie} : plus forte variation de catégorie enregistrée ({direction}), {delta} par mois ({first} contre {last}).',
+    share: '{name} : {amount}, soit {percent} des dépenses (rang {rank}).', review: 'Pour examiner la hausse enregistrée, commencez par {name}.',
+  },
+  ar: { timePeriod: 'الفترة الزمنية', showAllMonths: 'عرض كل الأشهر وعددها {count}', showLatest: 'عرض آخر 6 أشهر',
+    showingLatest: 'عرض آخر 6 أشهر من أصل {count}', chart: 'الإنفاق الشهري للفترة الكاملة',
+    total: 'إجمالي الإنفاق: {total} عبر {count} معاملات. المتوسط: {average}.',
+    insufficient: 'لا توجد أشهر تقويمية كاملة مسجلة كافية لإجراء مقارنة عادلة.',
+    comparison: 'الإنفاق الشهري {direction} بمقدار {delta}{percent}: من {before} إلى {after}، بمقارنة {count} أشهر كاملة لكل فترة ({first} مقابل {last}).',
+    categoryComparison: 'الإنفاق الشهري في فئة {name} {direction} بمقدار {delta}{percent}: من {before} إلى {after}، بمقارنة {count} أشهر كاملة لكل فترة ({first} مقابل {last}).',
+    increase: 'ارتفع', decrease: 'انخفض', stable: 'لم يتغير', zeroBase: ' (خط الأساس صفر؛ النسبة غير متاحة)', percentUnavailable: ' (النسبة غير متاحة)',
+    peak: 'أعلى إنفاق شهري كامل مسجل{tie}: {months}، {amount}.', low: 'أقل إنفاق غير صفري لشهر كامل مسجل{tie}: {months}، {amount}.',
+    tied: ' (بالتساوي)', more: ' و{count} أخرى',
+    driver: '{name}{tie}: أكبر تغير مسجل في الفئات ({direction})، {delta} شهريًا ({first} مقابل {last}).',
+    share: '{name}: {amount}، أي {percent} من الإنفاق (المرتبة {rank}).', review: 'لمراجعة الزيادة المسجلة، ابدأ بفئة {name}.',
+  },
+} satisfies Record<Language, Record<string, string>>;
+
+export function statisticsText(language: Language, key: keyof typeof statisticsCopy.en, values: Record<string, string | number> = {}) {
+  return statisticsCopy[language][key].replace(/\{(\w+)\}/g, (_, name: string) => String(values[name] ?? `{${name}}`));
+}

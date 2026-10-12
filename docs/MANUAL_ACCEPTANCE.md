@@ -6,6 +6,8 @@ acceptance checkpoint. See [status and evidence](STATUS.md) and [APK receipt](WP
 The owner did not supply a row-by-row checklist, device/OS measurements or a
 TalkBack transcript; the reusable scenarios below do not claim such records.
 The old code8 startup failure was repaired; do not use that artifact for the trial.
+WP37 adds a separate [device acceptance checklist](WP37_DEVICE_ACCEPTANCE.md);
+the WP36 sign-off above does not certify those new changes.
 
 For future regression testing, use the permanent-signed APK and record its checksum/source receipt.
 Update the installed application without uninstalling or clearing storage. Preserve

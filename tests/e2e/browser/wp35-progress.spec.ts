@@ -165,6 +165,8 @@ for (const feature of features) for (const language of ['en', 'fr', 'ar'] as con
     const panel = page.locator('.ai-progress:visible');
     await expect(panel).toHaveAttribute('data-ai-stage', 'sending');
     await expect(panel.getByRole('status')).toHaveAttribute('aria-live', 'polite');
+    await expect(panel).toHaveAttribute('data-ai-tone', feature.name === 'smart' ? 'cyan' : feature.name === 'receipt' ? 'purple' : 'indigo');
+    await expect(panel).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     await expect(panel.locator('.ai-progress-bar')).toHaveCSS('animation-name', 'none');
     await expect(page.locator('html')).toHaveAttribute('dir', language === 'ar' ? 'rtl' : 'ltr');
     expect(await panel.textContent()).not.toMatch(/\d\s*%/);

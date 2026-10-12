@@ -175,7 +175,7 @@ test('Backup v2 replace round trip restores ledger and photo ownership', async (
   assert.equal(summary.photosImported, 1);
   assert.equal(current.expenses[0].id, 1);
   assert.equal(current.attachments[0].expenseId, 1);
-  assert.equal(currentSettings.themeMode, 'DARK');
+  assert.equal(currentSettings.themeMode, 'LIGHT');
   assert.deepEqual(deleted, ['old']);
 });
 

@@ -304,14 +304,14 @@ test('WP24 recent interactive surfaces honor the 48dp target floor', () => {
 });
 
 test('approved release metadata stays aligned with the current release runbook', () => {
-  assert.equal(packageJson.version, '2.1.2');
-  assert.equal(versionJson.versionName, '2.1.2');
-  assert.equal(versionJson.versionCode, 12);
+  assert.equal(packageJson.version, '2.1.3');
+  assert.equal(versionJson.versionName, '2.1.3');
+  assert.equal(versionJson.versionCode, 13);
   assert.equal(packageJson.scripts['test:wp24'], 'tsx --test tests/wp24-integration-hardening.test.ts');
 
   const release = read('docs/RELEASE.md');
-  assert.match(release, /"versionName": "2\.1\.2"/);
-  assert.match(release, /"versionCode": 12/);
+  assert.match(release, /"versionName": "2\.1\.3"/);
+  assert.match(release, /"versionCode": 13/);
 });
 test('WP24 is wired into Android CI immediately after WP23', () => {
   const wp23 = workflow.indexOf('Run WP23 Settings regression tests');

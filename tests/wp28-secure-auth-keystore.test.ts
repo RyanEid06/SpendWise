@@ -317,7 +317,12 @@ test('WP28 native source uses strong biometric/device credential, versioned Keys
 
   assert.match(native, /BIOMETRIC_STRONG/);
   assert.match(native, /DEVICE_CREDENTIAL/);
-  assert.match(native, /setDeviceCredentialAllowed\(true\)/);
+  // biometric1.1.0 rejects credential-only before API30 and strong+credential
+  // on API28–29. The legacy OS confirmation activity authorizes timed keys.
+  assert.match(native, /createConfirmDeviceCredentialIntent\(title, reason\)/);
+  assert.match(native, /Build\.VERSION\.SDK_INT >= Build\.VERSION_CODES\.R[\s\S]*startBiometricAuthentication\(token, title, reason, true\)/);
+  assert.match(native, /setAllowedAuthenticators\(BiometricManager\.Authenticators\.DEVICE_CREDENTIAL\)/);
+  assert.doesNotMatch(native, /setDeviceCredentialAllowed\(true\)/);
   assert.match(native, /AndroidKeyStore/);
   assert.match(native, /spendwise\.local-kek\.v/);
   assert.match(native, /AES\/GCM\/NoPadding/);
@@ -372,9 +377,9 @@ test('WP28 legacy migration contract no longer silently disables App Lock and CI
   );
   assert.ok(workflow.indexOf('npm run test:wp27') < workflow.indexOf('npm run test:wp28'));
   assert.equal(packageJson.scripts['test:wp28'], 'tsx --test tests/wp28-secure-auth-keystore.test.ts');
-  assert.equal(packageJson.version, '2.1.2');
-  assert.equal(versionJson.versionName, '2.1.2');
-  assert.equal(versionJson.versionCode, 12);
+  assert.equal(packageJson.version, '2.1.3');
+  assert.equal(versionJson.versionName, '2.1.3');
+  assert.equal(versionJson.versionCode, 13);
 });
 
 test('WP28 security state contains no plaintext PIN field or secret key material', () => {

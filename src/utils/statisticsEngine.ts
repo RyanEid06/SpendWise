@@ -1,5 +1,6 @@
 import {
   CategoryTrend,
+  Language,
   Expense,
   MonthlyBudget,
   MonthlySpendingStat,
@@ -16,8 +17,7 @@ import {
   currentMonthYear,
 } from './date';
 import { getCategoryInfo, normalizeCategoryName } from './categories';
-import { formatCurrency } from './currency';
-import { getLocalizedCategoryName } from './translations';
+import { buildVerifiedTrendFacts } from '../features/statistics/verifiedFacts';
 
 export class StatisticsEngine {
   /**
@@ -117,7 +117,8 @@ export class StatisticsEngine {
         isBudgetSet,
         remainingMoney,
         transactionCount: monthExpenses.length,
-        isPartialMonth: k === currentCalendarKey,
+        isPartialMonth: k >= currentCalendarKey,
+        dataAvailability: monthExpenses.length > 0 || isBudgetSet ? 'recorded' : 'missing',
         largestExpense,
       };
     });
@@ -188,12 +189,19 @@ export class StatisticsEngine {
         let trendDirection: 'UP' | 'DOWN' | 'STABLE' = 'STABLE';
         let trendPercent = 0;
         let hasComparableHistory = false;
-        const completeMonths = monthlyData.filter((m) => m.monthKey !== currentCalendarKey);
+        const completeMonths = monthlyData.filter((m) => {
+          const record = monthlyStats.find(month => month.monthKey === m.monthKey);
+          return record && !record.isPartialMonth && record.dataAvailability === 'recorded';
+        });
         if (completeMonths.length >= 2) {
-          const previous = completeMonths[completeMonths.length - 2].amount;
-          const latest = completeMonths[completeMonths.length - 1].amount;
+          const previousMonthRecord = completeMonths[completeMonths.length - 2];
+          const latestMonthRecord = completeMonths[completeMonths.length - 1];
+          const ordinal = (key: string) => Number(key.slice(0, 4)) * 12 + Number(key.slice(5, 7));
+          const adjacent = ordinal(latestMonthRecord.monthKey) - ordinal(previousMonthRecord.monthKey) === 1;
+          const previous = previousMonthRecord.amount;
+          const latest = latestMonthRecord.amount;
 
-          if (previous > 0) {
+          if (adjacent && previous > 0) {
             hasComparableHistory = true;
             trendPercent = ((latest - previous) / previous) * 100;
             if (trendPercent > 10) trendDirection = 'UP';
@@ -243,139 +251,23 @@ export class StatisticsEngine {
     return result;
   }
 
-  /**
-   * Build clean prompt for Gemini to explain historical trends with verified numbers
-   */
+  /** Legacy caller helper: only verified IDs are eligible for selection. */
   static buildTrendExplanationPrompt(stats: StatisticsOverview, currencyCode: string): string {
-    const parts: string[] = [];
-    parts.push(
-      "You are a helpful personal finance advisor explaining verified spending statistics and trends to a user.\n"
-    );
-    parts.push("CRITICAL INTEGRITY RULES:\n");
-    parts.push(
-      "- All numbers you cite MUST be identical to the exact calculated statistics provided below. NEVER invent or hallucinate amounts, percentages, or transaction counts.\n"
-    );
-    parts.push(
-      "- Clearly distinguish positive habits, neutral baseline shifts, and notable spending increases.\n"
-    );
-    parts.push("- Be objective, concise, and actionable without being preachy.\n\n");
-
-    parts.push(`ANALYSIS SCOPE: ${stats.periodLabel} (${stats.monthlyStats.length} months)\n`);
-    parts.push(`- Total Spent: ${formatCurrency(stats.totalSpent, currencyCode)}\n`);
-    parts.push(`- Total Transactions: ${stats.totalTransactions}\n`);
-    parts.push(
-      `- Average Transaction: ${formatCurrency(stats.averageTransactionAmount, currencyCode)}\n`
-    );
-    if (stats.overallLargestExpense) {
-      parts.push(
-        `- Largest Overall Expense: "${stats.overallLargestExpense.description}" (${formatCurrency(
-          stats.overallLargestExpense.amount,
-          currencyCode
-        )} in ${stats.overallLargestExpense.category})\n`
-      );
-    }
-
-    parts.push('\nMONTHLY SPENDING BREAKDOWN:\n');
-    for (const m of stats.monthlyStats) {
-      parts.push(
-        `- ${m.monthDisplayName}: Spent ${formatCurrency(m.totalSpent, currencyCode)} (${
-          m.transactionCount
-        } txns)${m.isBudgetSet ? `, Remaining: ${formatCurrency(m.remainingMoney, currencyCode)}` : ''}\n`
-      );
-    }
-
-    parts.push('\nTOP CATEGORY TRENDS:\n');
-    for (const c of stats.categoryTrends.slice(0, 5)) {
-      parts.push(
-        `- ${c.category}: Total ${formatCurrency(c.totalSpent, currencyCode)} (${c.percentageOfPeriod.toFixed(
-          1
-        )}% of period), Trend: ${c.trendDirection} (${Math.round(c.trendPercent)}%)\n`
-      );
-      const monthlySequence = c.monthlyData.map(
-        (m) => `${m.monthDisplayName.split(' ')[0]}: ${formatCurrency(m.amount, currencyCode)}`
-      );
-      parts.push(`  Monthly: ${monthlySequence.join(' -> ')}\n`);
-    }
-
-    parts.push('\nOUTPUT FORMAT:\n');
-    parts.push('Respond with pure JSON conforming to this schema:\n');
-    parts.push('{\n');
-    parts.push('  "summary": "1-2 sentence overall summary of how spending developed across this period.",\n');
-    parts.push('  "keyObservations": ["Observation 1 highlighting monthly or category trajectory", "Observation 2"],\n');
-    parts.push('  "categoryHighlights": ["Notable shift in category A", "Notable shift in category B"],\n');
-    parts.push('  "recommendation": "1 actionable financial tip based on these exact numbers."\n');
-    parts.push('}\n');
-
-    return parts.join('');
+    const facts = buildVerifiedTrendFacts(stats, currencyCode, 'en');
+    return 'Select at most 3 IDs total; return only observationIds and categoryIds. Never author prose.\n' +
+      JSON.stringify({ observations: facts.observations, categories: facts.categories });
   }
 
-  /**
-   * Deterministic local fallback generator for trend explanations
-   */
-  static generateLocalTrendExplanation(stats: StatisticsOverview, currencyCode: string) {
-    const topCategory = stats.categoryPercentages[0];
-    const summary = `Over the ${stats.periodLabel.toLowerCase()}, you spent ${formatCurrency(
-      stats.totalSpent,
-      currencyCode
-    )} across ${stats.totalTransactions} transactions with an average of ${formatCurrency(
-      stats.averageTransactionAmount,
-      currencyCode
-    )} per expense.`;
-
-    const keyObservations: string[] = [];
-    if (stats.monthlyStats.length >= 2) {
-      const firstMonth = stats.monthlyStats[0];
-      const lastMonth = stats.monthlyStats[stats.monthlyStats.length - 1];
-      const diff = lastMonth.totalSpent - firstMonth.totalSpent;
-      if (Math.abs(diff) > 20) {
-        keyObservations.push(
-          `Monthly spending shifted from ${formatCurrency(firstMonth.totalSpent, currencyCode)} in ${
-            firstMonth.monthDisplayName
-          } to ${formatCurrency(lastMonth.totalSpent, currencyCode)} in ${lastMonth.monthDisplayName}.`
-        );
-      }
-    }
-
-    if (stats.overallLargestExpense) {
-      keyObservations.push(
-        `Your largest single expense was "${stats.overallLargestExpense.description}" for ${formatCurrency(
-          stats.overallLargestExpense.amount,
-          currencyCode
-        )} in ${getLocalizedCategoryName(stats.overallLargestExpense.category, 'en')}.`
-      );
-    }
-
-    const categoryHighlights: string[] = [];
-    if (topCategory) {
-      categoryHighlights.push(
-        `${getLocalizedCategoryName(topCategory.category, 'en')} represents the largest share of spending at ${topCategory.percentage.toFixed(
-          1
-        )}% (${formatCurrency(topCategory.amount, currencyCode)}).`
-      );
-    }
-
-    const increasingCat = stats.categoryTrends.find((c) => c.trendDirection === 'UP' && c.trendPercent > 15);
-    if (increasingCat) {
-      categoryHighlights.push(
-        `${getLocalizedCategoryName(increasingCat.category, 'en')} spending increased by ${Math.round(
-          increasingCat.trendPercent
-        )}% across this period.`
-      );
-    }
-
-    const recommendation = topCategory
-      ? `Reviewing your ${getLocalizedCategoryName(topCategory.category, 'en')} expenses could offer the highest potential impact since it accounts for over ${Math.round(
-          topCategory.percentage
-        )}% of your overall outflow.`
-      : 'Maintain consistent monthly budget tracking to keep your financial goals aligned.';
-
+  /** Local fallback uses the same deterministic, localized complete-month catalog as the server. */
+  static generateLocalTrendExplanation(stats: StatisticsOverview, currencyCode: string, language: Language = 'en') {
+    const facts = buildVerifiedTrendFacts(stats, currencyCode, language);
+    const selectedCategories = facts.categories.filter(f => f.id.startsWith('driver-')).slice(0, 2);
+    if (!selectedCategories.length && facts.categories.length) selectedCategories.push(facts.categories[0]);
+    const keyObservations = facts.observations.slice(0, 3 - selectedCategories.length).map(f => f.text);
     return {
-      timestamp: Date.now(),
-      periodLabel: stats.periodLabel,
-      summary,
-      keyObservations: keyObservations.length > 0 ? keyObservations : ['Spending remained relatively stable.'],
-      categoryHighlights: categoryHighlights.length > 0 ? categoryHighlights : ['Categories reflect typical distributions.'],
-      recommendation,
+      timestamp: Date.now(), periodLabel: stats.periodLabel, summary: facts.summary, keyObservations,
+      categoryHighlights: selectedCategories.map(f => f.text),
+      recommendation: selectedCategories.some(f => f.id === 'driver-increase') ? facts.recommendation : '',
     };
   }
 }

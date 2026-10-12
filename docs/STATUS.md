@@ -2,8 +2,19 @@
 
 Updated **2026-10-12** after owner acceptance on **2026-10-11**: all work delivered through **WP36 is working and green**.
 The owner tested the private **2.1.2 / Android code12** APK and confirmed
-“all works nice”, then requested this documentation sign-off. WP37 is next;
-its specification has not been supplied and implementation has not started.
+“all works nice”, then requested this documentation sign-off. WP37 is now being
+implemented and validated on `fix/wp37-localization-native-auth-ux` from
+`269ddfaa7c9707c2d95739be5e3ddfc6fb726fc1`. Its [approved scope](WP37_SPEC.md)
+and [progress ledger](WP37_PROGRESS.md) preserve the separate checkpoint;
+the WP36 green evidence below remains historical acceptance, not WP37 proof.
+
+The owner selected **WP37 2.1.3 / Android code13**, advancing the delivered
+private 2.1.2 build. Local version checks and production verification pass;
+final exact-source CI, main integration, private APK and deployment receipts
+remain pending. The owner authorized merging through integration to main after
+review and required CI, then building the private APK from that exact main SHA
+and restoring Render auto-deploy from main. WP37 physical/OEM/TalkBack checks
+remain unverified and are not a merge gate.
 
 | Gate | Status | Evidence |
 | --- | --- | --- |

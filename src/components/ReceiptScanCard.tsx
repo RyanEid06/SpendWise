@@ -390,6 +390,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
       </div>
 
       <AiProgressPanel progress={isPreparing ? { stage: 'preparing', active: true } : progress}
+        tone="purple" errorMessage={error}
         language={language} onCancel={isPreparing ? resetSelection : cancelAnalysis}
         onRetry={retryAllowed && !disabled ? () => void analyze() : undefined} />
 
@@ -417,7 +418,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
 
 
 
-      {error && (
+      {error && progress.stage !== 'error' && (
         <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-900 dark:text-rose-200 text-xs flex items-start gap-2.5 border border-rose-200 dark:border-rose-800">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
           <span>{error}</span>
@@ -439,7 +440,7 @@ export const ReceiptScanCard: React.FC<ReceiptScanCardProps> = ({
           <div className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-3 text-xs">
             <div className="min-w-0">
               <span className="text-slate-500 dark:text-slate-400">{t(language, 'merchantLabel')}</span>
-              <p className="font-semibold text-slate-900 dark:text-white break-words">
+              <p dir="auto" className="user-content font-semibold text-slate-900 dark:text-white break-words">
                 {result.merchant || t(language, 'uncertainLabel')}
               </p>
             </div>

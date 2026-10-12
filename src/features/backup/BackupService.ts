@@ -1,8 +1,9 @@
-import { ImportSummary, SpendWiseBackup } from '../../types';
+import { SpendWiseBackup } from '../../types';
 import { BackupV2Preview, BackupV2RestoreSummary } from '../../utils/backupV2';
 import { BackupV3Preview, BackupV3RestoreSummary } from '../../utils/backupV3';
 import { StorageManager } from '../../utils/storage';
 import { measureDiagnostic } from '../../services/diagnostics/diagnostics';
+import type { BackupRestoreOptions, LegacyBackupRestoreSummary } from '../../utils/backupRestore';
 
 export interface BackupServiceContract {
   validateLegacy(input: unknown): SpendWiseBackup;
@@ -12,9 +13,9 @@ export interface BackupServiceContract {
   isV3(file: Blob): Promise<boolean>;
   previewV2(file: Blob): Promise<BackupV2Preview>;
   previewV3(file: Blob, passphrase: string): Promise<BackupV3Preview>;
-  restoreLegacy(input: SpendWiseBackup, replaceExisting: boolean): Promise<ImportSummary>;
-  restoreV2(file: Blob, replaceExisting: boolean): Promise<BackupV2RestoreSummary>;
-  restoreV3(file: Blob, passphrase: string, replaceExisting: boolean): Promise<BackupV3RestoreSummary>;
+  restoreLegacy(input: SpendWiseBackup, replaceExisting: boolean, options?: BackupRestoreOptions): Promise<LegacyBackupRestoreSummary>;
+  restoreV2(file: Blob, replaceExisting: boolean, options?: BackupRestoreOptions): Promise<BackupV2RestoreSummary>;
+  restoreV3(file: Blob, passphrase: string, replaceExisting: boolean, options?: BackupRestoreOptions): Promise<BackupV3RestoreSummary>;
   createCsv(): string;
 }
 
@@ -40,14 +41,14 @@ export class BackupService implements BackupServiceContract {
   previewV3(file: Blob, passphrase: string): Promise<BackupV3Preview> {
     return measureDiagnostic('backup.preview', () => StorageManager.previewBackupV3(file, passphrase));
   }
-  restoreLegacy(input: SpendWiseBackup, replaceExisting: boolean): Promise<ImportSummary> {
-    return StorageManager.restoreBackup(input, replaceExisting);
+  restoreLegacy(input: SpendWiseBackup, replaceExisting: boolean, options?: BackupRestoreOptions): Promise<LegacyBackupRestoreSummary> {
+    return StorageManager.restoreBackup(input, replaceExisting, options);
   }
-  restoreV2(file: Blob, replaceExisting: boolean): Promise<BackupV2RestoreSummary> {
-    return StorageManager.restoreBackupV2(file, replaceExisting);
+  restoreV2(file: Blob, replaceExisting: boolean, options?: BackupRestoreOptions): Promise<BackupV2RestoreSummary> {
+    return StorageManager.restoreBackupV2(file, replaceExisting, options);
   }
-  restoreV3(file: Blob, passphrase: string, replaceExisting: boolean): Promise<BackupV3RestoreSummary> {
-    return measureDiagnostic('backup.restore', () => StorageManager.restoreBackupV3(file, passphrase, replaceExisting));
+  restoreV3(file: Blob, passphrase: string, replaceExisting: boolean, options?: BackupRestoreOptions): Promise<BackupV3RestoreSummary> {
+    return measureDiagnostic('backup.restore', () => StorageManager.restoreBackupV3(file, passphrase, replaceExisting, options));
   }
   createCsv(): string {
     return StorageManager.createCsvExport();
