@@ -2,10 +2,19 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-.ai-progress-track { height: 3px; overflow: hidden; border-radius: 999px; background: #d1fae5; }
-.ai-progress-bar { height: 100%; width: 35%; background: #059669; animation: ai-progress 1.8s ease-in-out infinite alternate; }
+.user-content { unicode-bidi: plaintext; text-align: start; }
+.ai-progress { --ai-accent: #4f46e5; --ai-track: #c7d2fe; }
+.ai-progress[data-ai-tone="cyan"] { --ai-accent: #0891b2; --ai-track: #a5f3fc; }
+.ai-progress[data-ai-tone="purple"] { --ai-accent: #9333ea; --ai-track: #e9d5ff; }
+.dark .ai-progress { --ai-accent: #a5b4fc; --ai-track: #312e81; }
+.dark .ai-progress[data-ai-tone="cyan"] { --ai-accent: #67e8f9; --ai-track: #164e63; }
+.dark .ai-progress[data-ai-tone="purple"] { --ai-accent: #d8b4fe; --ai-track: #581c87; }
+.ai-progress-track { height: 3px; overflow: hidden; border-radius: 999px; background: var(--ai-track); }
+.ai-progress-bar { height: 100%; width: 35%; background: var(--ai-accent); animation: ai-progress 1.8s ease-in-out infinite alternate; }
+.ai-progress:dir(rtl) .ai-progress-bar { animation-name: ai-progress-rtl; }
 @keyframes ai-progress { from { transform: translateX(-100%); } to { transform: translateX(285%); } }
-@media (prefers-reduced-motion: reduce) { .ai-progress-bar { animation: none; transform: none; } }
+@keyframes ai-progress-rtl { from { transform: translateX(100%); } to { transform: translateX(-285%); } }
+@media (prefers-reduced-motion: reduce) { .ai-progress .ai-progress-bar, .ai-progress:dir(rtl) .ai-progress-bar { animation: none; transform: none; } }
 
 /* Capacitor SystemBars provides zero when native padding consumed the inset.
    Choose the injected value OR env(), never add both. IME stays with visualViewport. */

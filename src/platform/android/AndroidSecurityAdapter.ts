@@ -1,6 +1,12 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
+import {
+  authenticationPrompt, currentAuthenticationLanguage,
+  type AuthenticationAction, type AuthenticationMethod,
+} from '../../security/authenticationCopy';
 
 export type NativeAuthenticationStatus = 'success' | 'cancelled' | 'unavailable' | 'error';
+export type NativeBiometricCondition = 'available' | 'temporary-lockout' | 'permanent-lockout' | 'unavailable';
+export type NativeAuthenticationCapability = 'biometric-and-credential' | 'biometric-only' | 'credential-only' | 'unavailable' | 'temporary-lockout' | 'permanent-lockout';
 export type NativeKeyStatus =
   | 'present'
   | 'missing'
@@ -15,6 +21,8 @@ export interface NativeAuthenticationResult {
   message?: string;
   postAuthKeyVerifyDurationMs?: number;
   authSucceededAtElapsedRealtimeMs?: number;
+  recoveryAvailable?: boolean;
+  biometricCondition?: NativeBiometricCondition;
 }
 
 export interface NativeKeyResult {
@@ -22,6 +30,7 @@ export interface NativeKeyResult {
   alias: string;
   keyVersion: number;
   authenticationRequired: boolean;
+  created?: boolean;
   code?: string;
   message?: string;
 }
@@ -32,6 +41,27 @@ export interface NativeSecurityCapabilities {
   biometricStrongAvailable: boolean;
   deviceCredentialAvailable: boolean;
   combinedAuthenticatorsSupported: boolean;
+  credentialOnlySupported?: boolean;
+  biometricState?: 'available' | 'none-enrolled' | 'no-hardware' | 'hardware-unavailable' | 'unsupported' | 'unknown';
+  apiLevel?: number;
+}
+
+export function classifyNativeAuthenticationCapabilities(
+  capabilities: NativeSecurityCapabilities,
+  condition?: NativeBiometricCondition
+): NativeAuthenticationCapability {
+  if (condition === 'temporary-lockout' || condition === 'permanent-lockout') return condition;
+  if (capabilities.biometricStrongAvailable) return capabilities.deviceCredentialAvailable ? 'biometric-and-credential' : 'biometric-only';
+  return capabilities.deviceCredentialAvailable ? 'credential-only' : 'unavailable';
+}
+
+interface NativePromptOptions {
+  title: string;
+  reason: string;
+  credentialButton: string;
+  cancelButton: string;
+  method: AuthenticationMethod;
+  lockTimeoutSeconds: number;
 }
 
 export interface NativeWrappedSecret {
@@ -53,15 +83,13 @@ export interface NativeInstallationSignature {
 }
 
 interface SpendWiseSecurityPlugin {
-  getCapabilities(): Promise<NativeSecurityCapabilities>;
+  getCapabilities(options?: { lockTimeoutSeconds: number }): Promise<NativeSecurityCapabilities>;
   elapsedSinceAuthentication(options: {
     authSucceededAtElapsedRealtimeMs: number;
   }): Promise<{ durationMs: number }>;
-  authenticate(options: {
-    title: string;
-    subtitle?: string;
-    reason: string;
-  }): Promise<NativeAuthenticationResult>;
+  authenticate(options: NativePromptOptions): Promise<NativeAuthenticationResult>;
+  cancelAuthentication(): Promise<{ cancelled: boolean }>;
+  getAuthenticationLifecycle(): Promise<{ systemCredentialActive: boolean }>;
   ensureKey(options: {
     keyVersion: number;
     authenticationRequired: boolean;
@@ -70,13 +98,13 @@ interface SpendWiseSecurityPlugin {
     keyVersion: number;
     authenticationRequired: boolean;
   }): Promise<NativeKeyResult>;
-  verifyKey(options: {
+  verifyKey(options: NativePromptOptions & {
     keyVersion: number;
     authenticationRequired: boolean;
     title: string;
     reason: string;
   }): Promise<NativeAuthenticationResult & { keyStatus?: NativeKeyStatus }>;
-  generateWrappedSecret(options: {
+  generateWrappedSecret(options: NativePromptOptions & {
     keyVersion: number;
     authenticationRequired: boolean;
     purpose: string;
@@ -90,7 +118,7 @@ interface SpendWiseSecurityPlugin {
       keyStatus?: NativeKeyStatus;
     }
   >;
-  wrapSecret(options: {
+  wrapSecret(options: NativePromptOptions & {
     keyVersion: number;
     authenticationRequired: boolean;
     purpose: string;
@@ -104,7 +132,7 @@ interface SpendWiseSecurityPlugin {
       keyStatus?: NativeKeyStatus;
     }
   >;
-  unwrapSecret(options: {
+  unwrapSecret(options: NativePromptOptions & {
     wrapped: NativeWrappedSecret;
     authenticationRequired: boolean;
     title: string;
@@ -131,6 +159,8 @@ export function isNativeAndroidSecurity(): boolean {
 }
 
 export class AndroidSecurityAdapter {
+  constructor(private readonly securityPlugin: SpendWiseSecurityPlugin = NativeSecurity) {}
+
   isAvailable(): boolean {
     return isNativeAndroidSecurity();
   }
@@ -145,15 +175,36 @@ export class AndroidSecurityAdapter {
         combinedAuthenticatorsSupported: false,
       };
     }
-    return NativeSecurity.getCapabilities();
+    return this.securityPlugin.getCapabilities({ lockTimeoutSeconds: this.prompt('unlock').lockTimeoutSeconds });
   }
 
-  authenticate(title: string, reason: string): Promise<NativeAuthenticationResult> {
-    return NativeSecurity.authenticate({ title, reason });
+  private prompt(action: AuthenticationAction, method: AuthenticationMethod = 'primary'): NativePromptOptions {
+    // Unknown legacy callers receive safe copy; identifiers are never prettified into UI.
+    let copy;
+    try { copy = authenticationPrompt(action, currentAuthenticationLanguage()); }
+    catch { copy = authenticationPrompt('unlock', currentAuthenticationLanguage()); }
+    let lockTimeoutSeconds = 300;
+    try {
+      const stored = Number(localStorage.getItem('spendwise_lock_timeout_seconds') ?? '300');
+      if ([0, 60, 300, 900].includes(stored)) lockTimeoutSeconds = stored;
+    } catch { /* Use the established default. */ }
+    return { title: copy.title, reason: copy.reason, credentialButton: copy.credentialButton, cancelButton: copy.cancelButton, method, lockTimeoutSeconds };
+  }
+
+  authenticate(action: AuthenticationAction, method?: AuthenticationMethod): Promise<NativeAuthenticationResult> {
+    return this.securityPlugin.authenticate(this.prompt(action, method));
+  }
+
+  cancelAuthentication(): Promise<{ cancelled: boolean }> {
+    return this.securityPlugin.cancelAuthentication();
+  }
+
+  getAuthenticationLifecycle(): Promise<{ systemCredentialActive: boolean }> {
+    return this.securityPlugin.getAuthenticationLifecycle();
   }
 
   async elapsedSinceAuthentication(authSucceededAtElapsedRealtimeMs: number): Promise<number> {
-    const result = await NativeSecurity.elapsedSinceAuthentication({ authSucceededAtElapsedRealtimeMs });
+    const result = await this.securityPlugin.elapsedSinceAuthentication({ authSucceededAtElapsedRealtimeMs });
     return result.durationMs;
   }
 
@@ -161,27 +212,26 @@ export class AndroidSecurityAdapter {
     keyVersion: number,
     authenticationRequired: boolean
   ): Promise<NativeKeyResult> {
-    return NativeSecurity.ensureKey({ keyVersion, authenticationRequired });
+    return this.securityPlugin.ensureKey({ keyVersion, authenticationRequired });
   }
 
   getKeyStatus(
     keyVersion: number,
     authenticationRequired: boolean
   ): Promise<NativeKeyResult> {
-    return NativeSecurity.getKeyStatus({ keyVersion, authenticationRequired });
+    return this.securityPlugin.getKeyStatus({ keyVersion, authenticationRequired });
   }
 
   verifyKey(
     keyVersion: number,
     authenticationRequired: boolean,
-    title: string,
-    reason: string
+    action: AuthenticationAction,
+    method?: AuthenticationMethod
   ): Promise<NativeAuthenticationResult & { keyStatus?: NativeKeyStatus }> {
-    return NativeSecurity.verifyKey({
+    return this.securityPlugin.verifyKey({
       keyVersion,
       authenticationRequired,
-      title,
-      reason,
+      ...this.prompt(action, method),
     });
   }
 
@@ -190,11 +240,12 @@ export class AndroidSecurityAdapter {
     authenticationRequired: boolean;
     purpose: string;
     byteLength: number;
-    title: string;
-    reason: string;
+    action: AuthenticationAction;
+    method?: AuthenticationMethod;
     authenticate?: boolean;
   }) {
-    return NativeSecurity.generateWrappedSecret(options);
+    const { action, method, ...operation } = options;
+    return this.securityPlugin.generateWrappedSecret({ ...operation, ...this.prompt(action, method) });
   }
 
   wrapSecret(options: {
@@ -202,40 +253,42 @@ export class AndroidSecurityAdapter {
     authenticationRequired: boolean;
     purpose: string;
     secretBase64: string;
-    title: string;
-    reason: string;
+    action: AuthenticationAction;
+    method?: AuthenticationMethod;
     authenticate?: boolean;
   }) {
-    return NativeSecurity.wrapSecret(options);
+    const { action, method, ...operation } = options;
+    return this.securityPlugin.wrapSecret({ ...operation, ...this.prompt(action, method) });
   }
 
   unwrapSecret(options: {
     wrapped: NativeWrappedSecret;
     authenticationRequired: boolean;
-    title: string;
-    reason: string;
+    action: AuthenticationAction;
+    method?: AuthenticationMethod;
     authenticate?: boolean;
   }) {
-    return NativeSecurity.unwrapSecret(options);
+    const { action, method, ...operation } = options;
+    return this.securityPlugin.unwrapSecret({ ...operation, ...this.prompt(action, method) });
   }
 
   deleteKey(keyVersion: number): Promise<{ deleted: boolean }> {
-    return NativeSecurity.deleteKey({ keyVersion });
+    return this.securityPlugin.deleteKey({ keyVersion });
   }
 
   ensureInstallationIdentity(): Promise<NativeInstallationIdentity> {
-    return NativeSecurity.ensureInstallationIdentity();
+    return this.securityPlugin.ensureInstallationIdentity();
   }
 
   signInstallationPayload(
     payload: string
   ): Promise<NativeInstallationSignature> {
-    return NativeSecurity.signInstallationPayload({ payload });
+    return this.securityPlugin.signInstallationPayload({ payload });
   }
 
   async setPrivacyShield(enabled: boolean): Promise<boolean> {
     if (!this.isAvailable()) return false;
-    const result = await NativeSecurity.setPrivacyShield({ enabled });
+    const result = await this.securityPlugin.setPrivacyShield({ enabled });
     return result.enabled;
   }
 }

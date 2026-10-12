@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArchiveRestore, Image as ImageIcon, X } from 'lucide-react';
 import type { Language } from '../types';
 import type { BackupV2Preview } from '../utils/backupV2';
 import { ViewportPortal } from './ViewportPortal';
 import { useModalFocus } from './useModalFocus';
+import { RestorePreferencesControl } from './RestorePreferencesControl';
+import type { BackupRestoreOptions } from '../utils/backupRestore';
 
 const labels = {
   en: { title: 'Backup restore', data: 'Data only', media: 'Data + photos', expenses: 'Expenses', budgets: 'Budgets', photos: 'Photos', size: 'Photo size', mode: 'Mode', merge: 'Merge', replace: 'Replace', cancel: 'Cancel', warning: 'Replace fully validates and stages the backup before changing your current ledger.' },
@@ -19,16 +21,22 @@ export const BackupV2ImportModal: React.FC<{
   preview: BackupV2Preview | Omit<BackupV2Preview, 'schemaVersion'> & { schemaVersion: 3 };
   version?: 2 | 3;
   language: Language;
-  onConfirm: (replace: boolean) => void;
+  onConfirm: (replace: boolean, options?: BackupRestoreOptions) => void;
   onClose: () => void;
 }> = ({ preview, language, onConfirm, onClose }) => {
   const text = labels[language];
   const [replace, setReplace] = useState(false);
+  const [restoreAppPreferences, setRestoreAppPreferences] = useState(false);
+  useEffect(() => {
+    setReplace(false);
+    setRestoreAppPreferences(false);
+  }, [preview]);
+  useEffect(() => { if (!replace) setRestoreAppPreferences(false); }, [replace]);
   const dialogRef = useModalFocus();
   return (
     <ViewportPortal>
     <div ref={dialogRef} tabIndex={-1} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs p-4 flex items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="backup-restore-title">
-      <div className="w-full max-w-md rounded-3xl bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-800 overflow-hidden">
+      <div className="w-full max-w-md max-h-[calc(100dvh-2rem)] rounded-3xl bg-white dark:bg-[#111928] border border-slate-200 dark:border-slate-800 overflow-y-auto">
         <div className="p-4 flex justify-between items-center border-b border-slate-200 dark:border-slate-800">
           <div id="backup-restore-title" className="flex items-center gap-2 font-bold"><ArchiveRestore className="w-5 h-5" />{text.title}</div>
           <button type="button" onClick={onClose} className="min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label={text.cancel}><X className="w-5 h-5" /></button>
@@ -46,10 +54,11 @@ export const BackupV2ImportModal: React.FC<{
             <button type="button" onClick={() => setReplace(true)} className={`min-h-[48px] rounded-2xl border font-bold text-xs ${replace ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300' : 'border-slate-200 dark:border-slate-800'}`}>{text.replace}</button>
           </div>
           {replace && <div className="text-xs p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 text-rose-800 dark:text-rose-200">{text.warning}</div>}
+          <RestorePreferencesControl language={language} replace={replace} checked={restoreAppPreferences} onChange={setRestoreAppPreferences} />
         </div>
         <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
           <button type="button" onClick={onClose} className="min-h-[48px] px-4 rounded-xl text-sm font-bold">{text.cancel}</button>
-          <button type="button" onClick={() => onConfirm(replace)} className={`min-h-[48px] px-5 rounded-xl text-sm font-extrabold ${replace ? 'bg-rose-600 text-white' : 'bg-emerald-500 text-slate-950'}`}>{replace ? text.replace : text.merge}</button>
+          <button type="button" onClick={() => onConfirm(replace, { restoreAppPreferences: replace && restoreAppPreferences })} className={`min-h-[48px] px-5 rounded-xl text-sm font-extrabold ${replace ? 'bg-rose-600 text-white' : 'bg-emerald-500 text-slate-950'}`}>{replace ? text.replace : text.merge}</button>
         </div>
       </div>
     </div>

@@ -194,7 +194,7 @@ export const ExpenseDetailModal: React.FC<{
                   <Tag className="w-3.5 h-3.5" />
                   {copy.description}
                 </div>
-                <p className="mt-1.5 text-sm font-bold text-slate-900 dark:text-white break-words leading-relaxed">
+                <p dir="auto" className="user-content mt-1.5 text-sm font-bold text-slate-900 dark:text-white break-words leading-relaxed">
                   {expense.description}
                 </p>
               </div>
@@ -205,7 +205,7 @@ export const ExpenseDetailModal: React.FC<{
                     <FileText className="w-3.5 h-3.5" />
                     {copy.note}
                   </div>
-                  <p className="mt-1.5 text-sm text-slate-700 dark:text-slate-300 break-words whitespace-pre-wrap leading-relaxed">
+                  <p dir="auto" className="user-content mt-1.5 text-sm text-slate-700 dark:text-slate-300 break-words whitespace-pre-wrap leading-relaxed">
                     {expense.note}
                   </p>
                 </div>

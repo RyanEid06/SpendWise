@@ -376,6 +376,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
       </div>
 
       <AiProgressPanel progress={isPreparing ? { stage: 'preparing', active: true } : progress}
+        tone="cyan" errorMessage={error}
         language={language} onCancel={isPreparing ? resetSelection : cancelAnalysis}
         onRetry={retryAllowed && !disabled ? () => void analyze() : undefined} />
 
@@ -401,7 +402,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
         </>
       )}
 
-      {error && (
+      {error && progress.stage !== 'error' && (
         <div className="rounded-xl border border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/40 p-3 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           <span>{error}</span>
@@ -418,7 +419,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
           <div className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-3 text-xs">
             <div className="min-w-0">
               <span className="text-slate-500 dark:text-slate-400">{t(language, 'descriptionLabel')}</span>
-              <p className="font-semibold text-slate-900 dark:text-white break-words">
+              <p dir="auto" className="user-content font-semibold text-slate-900 dark:text-white break-words">
                 {result.description || t(language, 'uncertainLabel')}
               </p>
             </div>

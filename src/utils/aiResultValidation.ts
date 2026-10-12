@@ -18,6 +18,16 @@ export function parseAnalysisResult(value: unknown, monthKey: string): AiAnalysi
 export function parseTrendResult(value: unknown): AiTrendExplanationResult | null {
   if (!object(value) || !Number.isFinite(value.timestamp) || !text(value.periodLabel, 200) ||
     !text(value.summary, 4000) || !value.summary.trim() || !strings(value.keyObservations) || !strings(value.categoryHighlights) ||
-    !text(value.recommendation, 2000)) return null;
-  return value as unknown as AiTrendExplanationResult;
+    (value.recommendation != null && !text(value.recommendation, 2000))) return null;
+  // Retain the WP36 response shape while accepting an omitted optional takeaway.
+  // Old backends can return six facts; the new presentation uses one global cap.
+  const keyObservations = [...new Set(value.keyObservations)].slice(0, 3);
+  const categoryHighlights = [...new Set(value.categoryHighlights)].filter(item => !keyObservations.includes(item)).slice(0, 3-keyObservations.length);
+  const generic = new Set([
+    'Review your expenses and budget before deciding on changes.',
+    'Consultez vos dépenses et votre budget avant de décider de changements.',
+    'راجع مصروفاتك وميزانيتك قبل اتخاذ قرار بالتغيير.',
+  ]);
+  const recommendation = typeof value.recommendation==='string' && !generic.has(value.recommendation) ? value.recommendation : '';
+  return {...value, keyObservations, categoryHighlights, recommendation} as unknown as AiTrendExplanationResult;
 }

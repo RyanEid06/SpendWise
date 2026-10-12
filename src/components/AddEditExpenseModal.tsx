@@ -405,6 +405,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
               <input
                 type="text"
                 ref={descriptionRef}
+                dir="auto"
                 aria-label={t(language, 'descriptionLabel')}
                 aria-describedby="expense-description-help"
                 placeholder={t(language, 'descriptionPlaceholder')}
@@ -472,6 +473,7 @@ export const AddEditExpenseModal: React.FC<AddEditExpenseModalProps> = ({
               <textarea
                 rows={3}
                 aria-label={t(language, 'optionalNoteLabel')}
+                dir="auto"
                 placeholder={t(language, 'notePlaceholder')}
                 value={noteText}
                 onChange={(e) => setNoteText(e.target.value)}

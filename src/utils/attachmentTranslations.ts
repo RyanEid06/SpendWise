@@ -1,7 +1,7 @@
 import { Language } from '../types';
 import { PhotoAcquisitionError } from './imageAcquisition';
 
-const ATTACHMENT_TRANSLATIONS = {
+export const ATTACHMENT_TRANSLATIONS = {
   en: {
     attachmentsTitle: 'Photos',
     attachmentsSub: 'Local only. Adding a photo does not send it to AI.',

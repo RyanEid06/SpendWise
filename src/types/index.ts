@@ -211,6 +211,7 @@ export interface MonthlySpendingStat {
   remainingMoney: number;
   transactionCount: number;
   isPartialMonth: boolean;
+  dataAvailability?: 'recorded' | 'missing';
   largestExpense: Expense | null;
 }
 

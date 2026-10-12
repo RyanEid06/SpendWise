@@ -51,7 +51,8 @@ test('client logging sites never print raw errors and bootstrap has diagnostics 
   const undo = readFileSync('src/app/hooks/useExpenseDeleteUndo.ts', 'utf8');
   assert.doesNotMatch(undo, /console\.(error|warn)\([^\n]*error\b/);
   assert.match(undo, /DELETE_COMMIT_FAILED/);
-  const bootstrap = readFileSync('src/main.tsx', 'utf8'); assert.match(bootstrap, /TechnicalDiagnostics/); assert.match(bootstrap, /measureDiagnostic\('security.init'/);
+  const bootstrap = readFileSync('src/main.tsx', 'utf8'); assert.match(bootstrap, /StorageFailureScreen/); assert.match(bootstrap, /measureDiagnostic\('security.init'/);
+  assert.match(readFileSync('src/screens/StorageFailureScreen.tsx', 'utf8'), /TechnicalDiagnostics/);
   const settings = readFileSync('src/screens/SettingsScreen.tsx', 'utf8'); assert.doesNotMatch(settings, /TechnicalDiagnostics/);
   const overview = readFileSync('src/features/settings/SettingsOverview.tsx', 'utf8'); assert.doesNotMatch(overview, /technicalDiagnostics/);
 });

@@ -1,7 +1,14 @@
 package com.spendwise.app;
 
 import android.app.KeyguardManager;
+import android.app.Activity;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyPermanentlyInvalidatedException;
@@ -12,6 +19,7 @@ import android.view.WindowManager;
 
 import androidx.biometric.BiometricManager;
 import androidx.biometric.BiometricPrompt;
+import androidx.activity.result.ActivityResult;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
 
@@ -20,6 +28,7 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import com.getcapacitor.annotation.ActivityCallback;
 
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
@@ -48,6 +57,108 @@ public class SpendWiseSecurityPlugin extends Plugin {
         "spendwise.installation-identity.v1";
     private static final int GCM_TAG_BITS = 128;
     private static final int AUTH_VALIDITY_SECONDS = 5;
+    private final NativeAuthenticationGate authenticationGate = new NativeAuthenticationGate();
+    private final Handler authenticationHandler = new Handler(Looper.getMainLooper());
+    private BiometricPrompt activePrompt;
+    private PluginCall activeAuthCall;
+    private AuthSuccess activeAuthSuccess;
+    private long activeAuthToken;
+    private long promptAttempt;
+    private boolean systemCredentialActive;
+    private PluginCall pendingCredentialCall;
+    private long pendingCredentialToken;
+    private long cancellingPromptAttempt;
+    private BroadcastReceiver authenticationDepartureReceiver;
+
+    @Override public void load() {
+        authenticationDepartureReceiver = new BroadcastReceiver() {
+            @Override public void onReceive(Context context, Intent intent) {
+                String action = intent.getAction();
+                String reason = intent.getStringExtra("reason");
+                if (Intent.ACTION_SCREEN_OFF.equals(action)
+                    || (Intent.ACTION_CLOSE_SYSTEM_DIALOGS.equals(action)
+                        && ("homekey".equals(reason) || "recentapps".equals(reason)))) {
+                    cancelActiveAuthentication("AUTHENTICATION_BACKGROUND");
+                }
+            }
+        };
+        IntentFilter filter = new IntentFilter(Intent.ACTION_SCREEN_OFF);
+        filter.addAction(Intent.ACTION_CLOSE_SYSTEM_DIALOGS);
+        // These protected broadcasts come from the system, including while its
+        // credential confirmation activity covers our own activity.
+        ContextCompat.registerReceiver(getContext(), authenticationDepartureReceiver,
+            filter, ContextCompat.RECEIVER_EXPORTED);
+    }
+
+    @Override protected void handleOnStop() {
+        if (activeAuthCall == null) return;
+        long token = activeAuthToken;
+        authenticationGate.background(SystemClock.elapsedRealtime());
+        int timeout = authenticationTimeout(activeAuthCall);
+        authenticationHandler.postDelayed(() -> {
+            if (activeAuthToken == token && !authenticationGate.current(token, SystemClock.elapsedRealtime())) {
+                cancelActiveAuthentication("AUTHENTICATION_BACKGROUND_TIMEOUT");
+            }
+        }, timeout * 1000L);
+    }
+
+    @Override protected void handleOnResume() {
+        if (activeAuthCall != null && !authenticationGate.current(activeAuthToken, SystemClock.elapsedRealtime())) {
+            cancelActiveAuthentication("AUTHENTICATION_BACKGROUND_TIMEOUT");
+        }
+        authenticationGate.foreground();
+    }
+
+    @Override protected void handleOnDestroy() {
+        cancelActiveAuthentication("AUTHENTICATION_DESTROYED");
+        if (authenticationDepartureReceiver != null) {
+            getContext().unregisterReceiver(authenticationDepartureReceiver);
+            authenticationDepartureReceiver = null;
+        }
+    }
+
+    private int authenticationTimeout(PluginCall call) {
+        Integer seconds = call.getInt("lockTimeoutSeconds", 300);
+        return seconds != null && (seconds == 0 || seconds == 60 || seconds == 300 || seconds == 900) ? seconds : 300;
+    }
+
+    private void clearAuthentication() {
+        activeAuthCall = null;
+        activeAuthSuccess = null;
+        activePrompt = null;
+        systemCredentialActive = false;
+        activeAuthToken = 0;
+        promptAttempt++;
+    }
+
+    private void cancelActiveAuthentication(String code) {
+        if (activeAuthCall == null) return;
+        PluginCall call = activeAuthCall;
+        BiometricPrompt prompt = activePrompt;
+        if (prompt != null) cancellingPromptAttempt = promptAttempt;
+        authenticationGate.cancel();
+        clearAuthentication();
+        if (prompt != null) prompt.cancelAuthentication();
+        call.resolve(authResult("cancelled", code, null));
+    }
+
+    @PluginMethod public void cancelAuthentication(PluginCall call) {
+        getActivity().runOnUiThread(() -> {
+            boolean hadSession = activeAuthCall != null;
+            cancelActiveAuthentication("AUTHENTICATION_CANCELLED");
+            JSObject result = new JSObject();
+            result.put("cancelled", hadSession);
+            call.resolve(result);
+        });
+    }
+
+    @PluginMethod public void getAuthenticationLifecycle(PluginCall call) {
+        getActivity().runOnUiThread(() -> {
+            JSObject result = new JSObject();
+            result.put("systemCredentialActive", systemCredentialActive && activeAuthCall != null);
+            call.resolve(result);
+        });
+    }
 
     private interface AuthSuccess {
         void run(long authSucceededAtElapsedRealtimeMs);
@@ -133,6 +244,11 @@ public class SpendWiseSecurityPlugin extends Plugin {
         return manager != null && manager.isDeviceSecure();
     }
 
+    private boolean credentialRecoverySupported(PluginCall call) {
+        return deviceCredentialAvailable()
+            && (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R || authenticationTimeout(call) > 0);
+    }
+
     private boolean strongBiometricAvailable() {
         try {
             return BiometricManager.from(getContext()).canAuthenticate(
@@ -141,6 +257,18 @@ public class SpendWiseSecurityPlugin extends Plugin {
         } catch (Exception ignored) {
             return false;
         }
+    }
+
+    private String biometricState() {
+        try {
+            int status = BiometricManager.from(getContext()).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG);
+            if (status == BiometricManager.BIOMETRIC_SUCCESS) return "available";
+            if (status == BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED) return "none-enrolled";
+            if (status == BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE) return "no-hardware";
+            if (status == BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE) return "hardware-unavailable";
+            if (status == BiometricManager.BIOMETRIC_ERROR_UNSUPPORTED) return "unsupported";
+        } catch (Exception ignored) { }
+        return "unknown";
     }
 
     private boolean canAuthenticate() {
@@ -161,9 +289,13 @@ public class SpendWiseSecurityPlugin extends Plugin {
     public void getCapabilities(PluginCall call) {
         JSObject result = new JSObject();
         result.put("platform", "android");
-        result.put("canAuthenticate", canAuthenticate());
         result.put("biometricStrongAvailable", strongBiometricAvailable());
         result.put("deviceCredentialAvailable", deviceCredentialAvailable());
+        boolean credentialSupported = credentialRecoverySupported(call);
+        result.put("credentialOnlySupported", credentialSupported);
+        result.put("canAuthenticate", strongBiometricAvailable() || credentialSupported);
+        result.put("biometricState", biometricState());
+        result.put("apiLevel", Build.VERSION.SDK_INT);
         result.put(
             "combinedAuthenticatorsSupported",
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
@@ -177,81 +309,173 @@ public class SpendWiseSecurityPlugin extends Plugin {
         String reason,
         AuthSuccess success
     ) {
-        if (!canAuthenticate()) {
-            call.resolve(
-                authResult(
-                    "unavailable",
-                    "SECURE_DEVICE_CREDENTIAL_UNAVAILABLE",
-                    "Set a secure Android screen lock or strong biometric and try again."
-                )
-            );
+        getActivity().runOnUiThread(() -> {
+            if (activeAuthCall != null || pendingCredentialCall != null || cancellingPromptAttempt != 0) {
+                call.resolve(authResult("cancelled", "AUTHENTICATION_BUSY", null));
+                return;
+            }
+            if (!canAuthenticate()) {
+                call.resolve(authResult("unavailable", "SECURE_DEVICE_CREDENTIAL_UNAVAILABLE", null));
+                return;
+            }
+            long token = authenticationGate.begin(authenticationTimeout(call) * 1000L);
+            if (token == 0) {
+                call.resolve(authResult("cancelled", "AUTHENTICATION_BUSY", null));
+                return;
+            }
+            activeAuthCall = call;
+            activeAuthSuccess = success;
+            activeAuthToken = token;
+            boolean credential = "device-credential".equals(call.getString("method")) || !strongBiometricAvailable();
+            if (credential) startCredentialAuthentication(token, title, reason);
+            else startBiometricAuthentication(token, title, reason, false);
+        });
+    }
+
+    private boolean currentAuthentication(long token, long attempt) {
+        return activeAuthCall != null && activeAuthToken == token && promptAttempt == attempt
+            && authenticationGate.current(token, SystemClock.elapsedRealtime());
+    }
+
+    private void finishAuthentication(long token, JSObject result) {
+        if (activeAuthCall == null || activeAuthToken != token) return;
+        PluginCall call = activeAuthCall;
+        authenticationGate.finish(token);
+        clearAuthentication();
+        call.resolve(result);
+    }
+
+    private void authenticated(long token) {
+        if (activeAuthCall == null || activeAuthToken != token) return;
+        if (!authenticationGate.current(token, SystemClock.elapsedRealtime())) {
+            cancelActiveAuthentication("AUTHENTICATION_STALE");
             return;
         }
+        AuthSuccess success = activeAuthSuccess;
+        try {
+            // Key verification/wrap/unwrap executes synchronously before this
+            // session is released. A UI callback alone never opens storage.
+            success.run(SystemClock.elapsedRealtime());
+        } finally {
+            authenticationGate.finish(token);
+            clearAuthentication();
+        }
+    }
 
-        getActivity().runOnUiThread(() -> {
-            Executor executor = ContextCompat.getMainExecutor(getContext());
-            BiometricPrompt prompt = new BiometricPrompt(
-                (FragmentActivity) getActivity(),
-                executor,
-                new BiometricPrompt.AuthenticationCallback() {
-                    @Override
-                    public void onAuthenticationError(
-                        int errorCode,
-                        CharSequence errorString
-                    ) {
-                        super.onAuthenticationError(errorCode, errorString);
-                        boolean cancelled =
-                            errorCode == BiometricPrompt.ERROR_USER_CANCELED
-                                || errorCode == BiometricPrompt.ERROR_CANCELED
-                                || errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON;
-                        call.resolve(
-                            authResult(
-                                cancelled ? "cancelled" : "error",
-                                "BIOMETRIC_" + errorCode,
-                                errorString == null ? null : errorString.toString()
-                            )
-                        );
+    private void startBiometricAuthentication(long token, String title, String reason, boolean credentialOnly) {
+        PluginCall call = activeAuthCall;
+        long attempt = ++promptAttempt;
+        // API30+ credential BiometricPrompt is not a legacy external activity.
+        systemCredentialActive = false;
+        Executor executor = ContextCompat.getMainExecutor(getContext());
+        activePrompt = new BiometricPrompt((FragmentActivity) getActivity(), executor,
+            new BiometricPrompt.AuthenticationCallback() {
+                @Override public void onAuthenticationError(int errorCode, CharSequence errorString) {
+                    if (cancellingPromptAttempt == attempt) {
+                        cancellingPromptAttempt = 0;
+                        return;
                     }
-
-                    @Override
-                    public void onAuthenticationSucceeded(
-                        BiometricPrompt.AuthenticationResult result
-                    ) {
-                        long authSucceededAtElapsedRealtimeMs = SystemClock.elapsedRealtime();
-                        super.onAuthenticationSucceeded(result);
-                        success.run(authSucceededAtElapsedRealtimeMs);
+                    if (!currentAuthentication(token, attempt)) return;
+                    // This button explicitly requests the OS credential flow.
+                    // Back, Cancel and all other errors never launch it automatically.
+                    if (errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON && !credentialOnly && credentialRecoverySupported(call)) {
+                        activePrompt = null;
+                        startCredentialAuthentication(token, title, reason);
+                        return;
                     }
-
-                    @Override
-                    public void onAuthenticationFailed() {
-                        super.onAuthenticationFailed();
-                        // The system prompt remains open. Do not resolve the call or count
-                        // a transient biometric mismatch as an application-level unlock.
-                    }
+                    boolean cancelled = errorCode == BiometricPrompt.ERROR_USER_CANCELED
+                        || errorCode == BiometricPrompt.ERROR_CANCELED
+                        || errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON;
+                    JSObject result = authResult(cancelled ? "cancelled" : "error", "BIOMETRIC_" + errorCode, null);
+                    result.put("recoveryAvailable", credentialRecoverySupported(call));
+                    result.put("biometricCondition", errorCode == BiometricPrompt.ERROR_LOCKOUT ? "temporary-lockout"
+                        : errorCode == BiometricPrompt.ERROR_LOCKOUT_PERMANENT ? "permanent-lockout" : "unavailable");
+                    finishAuthentication(token, result);
                 }
-            );
-
-            BiometricPrompt.PromptInfo.Builder builder =
-                new BiometricPrompt.PromptInfo.Builder()
-                    .setTitle(title == null || title.isEmpty() ? "SpendWise" : title)
-                    .setSubtitle(
-                        reason == null || reason.isEmpty()
-                            ? "Authenticate to continue"
-                            : reason
-                    )
-                    .setConfirmationRequired(false);
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                builder.setAllowedAuthenticators(
-                    BiometricManager.Authenticators.BIOMETRIC_STRONG
-                        | BiometricManager.Authenticators.DEVICE_CREDENTIAL
-                );
+                @Override public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
+                    if (cancellingPromptAttempt == attempt) {
+                        cancellingPromptAttempt = 0;
+                        return;
+                    }
+                    if (currentAuthentication(token, attempt)) authenticated(token);
+                }
+                @Override public void onAuthenticationFailed() {
+                    // Ordinary scan mismatch is nonterminal. Android controls retries.
+                }
+            });
+        try {
+            BiometricPrompt.PromptInfo.Builder builder = new BiometricPrompt.PromptInfo.Builder()
+                .setTitle(title == null || title.isEmpty() ? "SpendWise" : title)
+                .setSubtitle(reason == null || reason.isEmpty() ? "Confirm your identity to continue." : reason)
+                .setConfirmationRequired(false);
+            if (credentialOnly) {
+                // DEVICE_CREDENTIAL alone is supported only on API30+ in biometric1.1.0.
+                builder.setAllowedAuthenticators(BiometricManager.Authenticators.DEVICE_CREDENTIAL);
             } else {
-                builder.setDeviceCredentialAllowed(true);
+                builder.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG);
+                builder.setNegativeButtonText(credentialRecoverySupported(call)
+                    ? call.getString("credentialButton", "Use phone screen lock")
+                    : call.getString("cancelButton", "Cancel"));
             }
+            activePrompt.authenticate(builder.build());
+        } catch (Exception error) {
+            finishAuthentication(token, authResult("error", "AUTHENTICATION_PROMPT_FAILED", null));
+        }
+    }
 
-            prompt.authenticate(builder.build());
-        });
+    @SuppressWarnings("deprecation")
+    private void startCredentialAuthentication(long token, String title, String reason) {
+        if (!deviceCredentialAvailable()) {
+            finishAuthentication(token, authResult("unavailable", "SECURE_DEVICE_CREDENTIAL_UNAVAILABLE", null));
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            startBiometricAuthentication(token, title, reason, true);
+            return;
+        }
+        if (authenticationTimeout(activeAuthCall) == 0) {
+            // Public API24–29 cannot distinguish Home while the external
+            // confirmation activity covers us. Never bypass immediate lock.
+            finishAuthentication(token, authResult("unavailable", "CREDENTIAL_IMMEDIATE_LOCK_UNSUPPORTED", null));
+            return;
+        }
+        // Never request unsupported credential-only or strong+credential AndroidX
+        // combinations on API24–29. The platform confirmation activity authorizes
+        // timed Keystore keys and owns all PIN/pattern/password input.
+        KeyguardManager manager = (KeyguardManager) getContext().getSystemService(Context.KEYGUARD_SERVICE);
+        Intent intent = manager == null ? null : manager.createConfirmDeviceCredentialIntent(title, reason);
+        if (intent == null) {
+            finishAuthentication(token, authResult("unavailable", "SECURE_DEVICE_CREDENTIAL_UNAVAILABLE", null));
+            return;
+        }
+        systemCredentialActive = true;
+        ++promptAttempt;
+        try {
+            pendingCredentialCall = activeAuthCall;
+            pendingCredentialToken = token;
+            startActivityForResult(activeAuthCall, intent, "credentialAuthenticationResult");
+        } catch (Exception error) {
+            pendingCredentialCall = null;
+            pendingCredentialToken = 0;
+            finishAuthentication(token, authResult("error", "CREDENTIAL_PROMPT_FAILED", null));
+        }
+    }
+
+    @ActivityCallback
+    private void credentialAuthenticationResult(PluginCall call, ActivityResult result) {
+        PluginCall expectedCall = pendingCredentialCall;
+        long expectedToken = pendingCredentialToken;
+        pendingCredentialCall = null;
+        pendingCredentialToken = 0;
+        if (expectedCall != null && (expectedCall != call || activeAuthToken != expectedToken)) return;
+        if (activeAuthCall == null || activeAuthCall != call || !systemCredentialActive) {
+            // Process/activity recreation cannot restore an authentication capability.
+            if (expectedCall == null && call != null && activeAuthCall == null) call.resolve(authResult("cancelled", "AUTHENTICATION_STALE", null));
+            return;
+        }
+        long token = activeAuthToken;
+        if (result.getResultCode() == Activity.RESULT_OK) authenticated(token);
+        else finishAuthentication(token, authResult("cancelled", "CREDENTIAL_CANCELLED", null));
     }
 
     @PluginMethod
@@ -341,9 +565,9 @@ public class SpendWiseSecurityPlugin extends Plugin {
 
             generator.init(builder.build());
             generator.generateKey();
-            call.resolve(
-                keyResult("present", alias, version, requireAuthentication, null)
-            );
+            JSObject result = keyResult("present", alias, version, requireAuthentication, null);
+            result.put("created", true);
+            call.resolve(result);
         } catch (Exception error) {
             call.resolve(
                 keyResult(

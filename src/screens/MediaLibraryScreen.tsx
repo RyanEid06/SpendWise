@@ -164,7 +164,7 @@ export const MediaLibraryScreen: React.FC<{ language: Language; onClose: () => v
             className="text-left rtl:text-right rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111928] active:scale-[0.99]">
             <LazyAttachmentImage item={item} className="aspect-square" />
             <div className="p-2.5 space-y-1">
-              <div className="text-xs font-bold truncate">{expense?.description || text.unknown}</div>
+              <div dir="auto" className="user-content text-xs font-bold truncate">{expense?.description || text.unknown}</div>
               <div className="text-[10px] text-slate-500 dark:text-slate-400 flex justify-between gap-1">
                 <span>{text[item.kind]}</span><span>{humanBytes(item.byteSize)}</span>
               </div>
@@ -315,12 +315,12 @@ export const MediaLibraryScreen: React.FC<{ language: Language; onClose: () => v
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" role="dialog" aria-modal="true">
           <div className="w-full max-w-md rounded-3xl bg-white dark:bg-[#111928] overflow-hidden border border-slate-200 dark:border-slate-800">
             <div className="flex justify-between items-center p-3 border-b border-slate-200 dark:border-slate-800">
-              <div className="font-bold text-sm">{selectedExpense?.description || text.unknown}</div>
+              <div dir="auto" className="user-content font-bold text-sm">{selectedExpense?.description || text.unknown}</div>
               <button type="button" onClick={() => setSelected(null)} className="min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label={text.close}><X className="w-5 h-5" /></button>
             </div>
             <LazyAttachmentImage item={selected} className="aspect-square" />
             <div className="p-4 space-y-2 text-xs">
-              <div className="flex justify-between"><span className="text-slate-500">{text.linked}</span><span>{selectedExpense?.description || text.unknown}</span></div>
+              <div className="flex justify-between gap-2"><span className="text-slate-500">{text.linked}</span><span dir="auto" className="user-content min-w-0 break-words">{selectedExpense?.description || text.unknown}</span></div>
               {selectedExpense && <div className="flex justify-between gap-4"><span className="text-slate-500 dark:text-slate-400">{text.date}</span><span className="text-end">{formatMediaDate(selectedExpense.date, language) || text.unknownDate}</span></div>}
               <div className="flex justify-between gap-4"><span className="text-slate-500 dark:text-slate-400">{text.created}</span><span className="text-end">{formatMediaDate(selected.createdAt, language) || text.unknownDate}</span></div>
               <div className="flex justify-between"><span className="text-slate-500">{text.size}</span><span>{humanBytes(selected.byteSize)}</span></div>

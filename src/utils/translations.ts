@@ -172,6 +172,7 @@ export const TRANSLATIONS = {
     badgeReview: 'Review',
     badgePattern: 'Pattern',
     noExpensesForAi: 'No expenses recorded for {month}. Switch to a month with recorded expenses to run analysis.',
+    noExpensesYetForAi: 'No expenses recorded yet. Please add some expenses before analyzing your spending.',
 
     // Statistics Screen
     statsTitle: 'Statistics & Trends',
@@ -482,6 +483,7 @@ export const TRANSLATIONS = {
     badgeReview: 'À examiner',
     badgePattern: 'Tendance',
     noExpensesForAi: 'Aucune dépense enregistrée pour {month}. Passez à un mois avec des dépenses pour lancer l\'analyse.',
+    noExpensesYetForAi: 'Aucune dépense enregistrée pour le moment. Ajoutez des dépenses avant d’analyser vos habitudes.',
 
     // Statistics Screen
     statsTitle: 'Statistiques et tendances',
@@ -792,6 +794,7 @@ export const TRANSLATIONS = {
     badgeReview: 'مراجعة',
     badgePattern: 'نمط متكرر',
     noExpensesForAi: 'لا توجد مصاريف مسجلة لشهر {month}. انتقل إلى شهر يحتوي على مصاريف لبدء التحليل.',
+    noExpensesYetForAi: 'لا توجد مصاريف مسجلة بعد. أضف بعض المصاريف قبل تحليل إنفاقك.',
 
     // Statistics Screen
     statsTitle: 'الإحصائيات والاتجاهات',

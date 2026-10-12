@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
+import type { AuthenticationMethod } from '../../security/authenticationCopy';
 import {
   SecureSessionActionResult,
   SensitiveAuthenticationReason,
   secureSessionService,
   shouldLockAfterTimeout,
 } from '../../security/SecureSessionService';
-import { useAppLifecycle } from '../lifecycle/useAppLifecycle';
+import { securityLifecycle, startSecurityLifecycle } from '../../security/SecurityLifecycleCoordinator';
 
 export { shouldLockAfterTimeout };
 
@@ -34,26 +35,25 @@ export function useAppLockLifecycle({
     };
   }, []);
 
-  const handleBackground = useCallback(() => {
-    onBackground();
-    secureSessionService.onBackground();
-  }, [onBackground]);
-
-  const handleForeground = useCallback(() => {
-    const locked = secureSessionService.onForeground();
-    if (locked) onLock();
-    refresh();
-  }, [onLock, refresh]);
-
-  useAppLifecycle({
-    enabled: true,
-    onBackground: handleBackground,
-    onForeground: handleForeground,
-  });
+  useEffect(() => {
+    const unsubscribe = securityLifecycle.subscribe({
+      onBackground,
+      onChange: locked => {
+        if (locked) onLock();
+        refresh();
+      },
+    });
+    void startSecurityLifecycle().catch(() => {
+      secureSessionService.lock();
+      onLock();
+      refresh();
+    });
+    return unsubscribe;
+  }, [onBackground, onLock, refresh]);
 
   const unlock = useCallback(
-    async (credential?: string): Promise<SecureSessionActionResult> => {
-      const result = await secureSessionService.unlock(credential);
+    async (credential?: string, method?: AuthenticationMethod): Promise<SecureSessionActionResult> => {
+      const result = await secureSessionService.unlock(credential, method);
       refresh();
       return result;
     },

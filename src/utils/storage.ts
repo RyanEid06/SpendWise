@@ -1,7 +1,6 @@
 import {
   AiAnalysisResult,
   Expense,
-  ImportSummary,
   Language,
   MonthlyBudget,
   SpendWiseBackup,
@@ -23,6 +22,7 @@ import { LocalDataStore } from './localDataStore';
 import { cleanupNativeAcquisitionFiles } from './imageAcquisition';
 import { diagnostics, measureDiagnostic } from '../services/diagnostics/diagnostics';
 import { SetupState } from './setupState';
+import { BackupRecoveryIncompleteError, commitBackupRestore, type BackupRestoreOptions, type LegacyBackupRestoreSummary } from './backupRestore';
 import {
   BackupV2Preview,
   BackupV2RestoreSummary,
@@ -79,6 +79,22 @@ const EMPTY_ATTACHMENT_CHANGES: AttachmentEditPayload = {
 
 export class StorageManager {
   private static initialized = false;
+  private static uncertainFinancialAnalysis = false;
+  private static freshAnalysisMonths = new Set<string>();
+
+  private static async restoreWithCacheInvalidation<T>(restore: () => Promise<T>): Promise<T> {
+    try {
+      return await restore();
+    } catch (error) {
+      if (error instanceof BackupRecoveryIncompleteError && !error.financialRecovered) {
+        // Reconciliation must not reload claims computed for the prior ledger.
+        // Suppress old reads even if disposable-cache cleanup cannot persist.
+        this.uncertainFinancialAnalysis = true;
+        this.clearAnalysisCache();
+      }
+      throw error;
+    }
+  }
 
   static async init(): Promise<void> {
     if (this.initialized || typeof window === 'undefined') return;
@@ -233,6 +249,7 @@ export class StorageManager {
   }
 
   static invalidateAnalysis(monthKey: string): void {
+    this.freshAnalysisMonths.delete(monthKey);
     try {
       localStorage.removeItem(`${STORAGE_KEYS.AI_CACHE}_${monthKey}`);
     } catch {
@@ -241,6 +258,7 @@ export class StorageManager {
   }
 
   static clearAnalysisCache(): void {
+    this.freshAnalysisMonths.clear();
     try {
       const keys: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
@@ -306,6 +324,7 @@ export class StorageManager {
   }
 
   static getCachedAnalysis(monthKey: string): AiAnalysisResult | null {
+    if (this.uncertainFinancialAnalysis && !this.freshAnalysisMonths.has(monthKey)) return null;
     try {
       const data = localStorage.getItem(`${STORAGE_KEYS.AI_CACHE}_${monthKey}`);
       return data ? JSON.parse(data) : null;
@@ -317,6 +336,7 @@ export class StorageManager {
   static cacheAnalysis(result: AiAnalysisResult): void {
     try {
       localStorage.setItem(`${STORAGE_KEYS.AI_CACHE}_${result.analyzedMonthKey}`, JSON.stringify(result));
+      this.freshAnalysisMonths.add(result.analyzedMonthKey);
     } catch {}
   }
 
@@ -458,8 +478,8 @@ export class StorageManager {
     return previewBackupV3Envelope(file, passphrase);
   }
 
-  static async restoreBackupV2(file: Blob, replaceExisting: boolean): Promise<BackupV2RestoreSummary> {
-    const summary = await restoreBackupV2WithAdapters(file, replaceExisting, {
+  static async restoreBackupV2(file: Blob, replaceExisting: boolean, options?: BackupRestoreOptions): Promise<BackupV2RestoreSummary> {
+    const summary = await this.restoreWithCacheInvalidation(() => restoreBackupV2WithAdapters(file, replaceExisting, {
       getState: () => LocalDataStore.snapshot(),
       getSettings: () => ({
         currencyCode: this.getCurrencyCode(),
@@ -474,7 +494,7 @@ export class StorageManager {
       stageMedia: (source, targetExpenseId, blob) =>
         AttachmentStorage.stageBackupMedia(source, targetExpenseId, blob),
       deleteFiles: (items) => AttachmentStorage.deleteDetachedFiles(items),
-    });
+    }, options));
     this.clearAnalysisCache();
     return summary;
   }
@@ -482,9 +502,10 @@ export class StorageManager {
   static async restoreBackupV3(
     file: Blob,
     passphrase: string,
-    replaceExisting: boolean
+    replaceExisting: boolean,
+    options?: BackupRestoreOptions,
   ): Promise<BackupV3RestoreSummary> {
-    const summary = await restoreBackupV3WithAdapters(file, passphrase, replaceExisting, {
+    const summary = await this.restoreWithCacheInvalidation(() => restoreBackupV3WithAdapters(file, passphrase, replaceExisting, {
       getState: () => LocalDataStore.snapshot(),
       getSettings: () => ({
         currencyCode: this.getCurrencyCode(),
@@ -499,7 +520,7 @@ export class StorageManager {
       stageMedia: (source, targetExpenseId, blob) =>
         AttachmentStorage.stageBackupMedia(source, targetExpenseId, blob),
       deleteFiles: (items) => AttachmentStorage.deleteDetachedFiles(items),
-    });
+    }, options));
     this.clearAnalysisCache();
     return summary;
   }
@@ -515,7 +536,7 @@ export class StorageManager {
     return '\uFEFF' + lines.join('\r\n');
   }
 
-  static async restoreBackup(input: SpendWiseBackup, replaceExisting: boolean): Promise<ImportSummary> {
+  static async restoreBackup(input: SpendWiseBackup, replaceExisting: boolean, options?: BackupRestoreOptions): Promise<LegacyBackupRestoreSummary> {
     const backup = this.validateBackup(input);
     const oldState = LocalDataStore.snapshot();
     const oldTheme = this.getThemeMode();
@@ -577,26 +598,28 @@ export class StorageManager {
       currencyCode: adoptBackupCurrency ? backup.settings.currencyCode : oldState.currencyCode,
     };
 
-    try {
-      await LocalDataStore.replaceState(nextState);
-      if (replaceExisting) {
-        this.setThemeMode(backup.settings.themeMode as ThemeMode);
-        this.setLanguage(backup.settings.language as Language);
-      }
-      this.clearAnalysisCache();
-    } catch (error) {
-      try { await LocalDataStore.replaceState(oldState); } catch {}
-      try { this.setThemeMode(oldTheme); } catch {}
-      try { this.setLanguage(oldLanguage); } catch {}
-      throw error;
-    }
+    await this.restoreWithCacheInvalidation(() => commitBackupRestore({
+      getState: () => LocalDataStore.snapshot(),
+      getSettings: () => ({ currencyCode: this.getCurrencyCode(), themeMode: this.getThemeMode(), language: this.getLanguage() }),
+      replaceState: (state) => LocalDataStore.replaceState(state),
+      setSettings: async (settings) => {
+        this.setThemeMode(settings.themeMode);
+        this.setLanguage(settings.language);
+      },
+    }, oldState, nextState, { currencyCode: oldState.currencyCode, themeMode: oldTheme, language: oldLanguage }, backup.settings, replaceExisting, options));
+    this.clearAnalysisCache();
 
-    if (replaceExisting) await AttachmentStorage.deleteDetachedFiles(oldState.attachments);
+    const warnings: string[] = [];
+    if (replaceExisting && oldState.attachments.length > 0) {
+      try { await AttachmentStorage.deleteDetachedFiles(oldState.attachments); }
+      catch { warnings.push('POST_COMMIT_MEDIA_CLEANUP_FAILED'); }
+    }
     return {
       expensesImported: importedExpenses.length,
       budgetsImported,
       currencyUpdated: adoptBackupCurrency ? backup.settings.currencyCode : null,
       wasReplaced: replaceExisting,
+      warnings,
     };
   }
 

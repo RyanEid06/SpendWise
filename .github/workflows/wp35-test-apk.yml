@@ -1,4 +1,4 @@
-name: WP36 Private Signed Test APK
+name: WP36 / WP37 Private Signed Test APK
 
 on:
   workflow_call:
@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       expected_source:
-        description: 'Exact reviewed integration commit for the private 2.1.2/code12 test'
+        description: 'Exact reviewed source commit for the private 2.1.2/code12 test'
         required: true
         type: string
 
@@ -18,11 +18,12 @@ permissions:
 
 jobs:
   signed-test-apk:
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/wp35-integration'
+    if: github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/codex/wp35-integration' || github.ref == 'refs/heads/fix/wp37-localization-native-auth-ux')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
       VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+      VALIDATION_PACKET: ${{ github.ref == 'refs/heads/fix/wp37-localization-native-auth-ux' && 'WP37' || 'WP36' }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -57,7 +58,7 @@ jobs:
         run: |
           node <<'NODE'
           const fs=require('node:fs');
-          fs.writeFileSync('dist/wp35-build.json',JSON.stringify({source:process.env.GITHUB_SHA,runId:process.env.GITHUB_RUN_ID,versionName:'2.1.2',versionCode:12,variant:'private-wp36-test'},null,2)+'\n');
+          fs.writeFileSync('dist/wp35-build.json',JSON.stringify({source:process.env.GITHUB_SHA,runId:process.env.GITHUB_RUN_ID,versionName:'2.1.2',versionCode:12,variant:`private-${process.env.VALIDATION_PACKET.toLowerCase()}-test`},null,2)+'\n');
           NODE
       - name: Sync native application
         run: npm run android:sync
@@ -83,7 +84,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p release
-          apk="release/SpendWise-WP36-v2.1.2-test.apk"
+          apk="release/SpendWise-${VALIDATION_PACKET}-v2.1.2-test.apk"
           cp android/app/build/outputs/apk/release/app-release.apk "$apk"
           sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
           tools_dir="$(find "$sdk_root/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)"
@@ -92,14 +93,14 @@ jobs:
           "$tools_dir/aapt" dump badging "$apk" > release/apk-badging.txt
           node <<'NODE'
           const fs=require('node:fs'),crypto=require('node:crypto');
-          const file='SpendWise-WP36-v2.1.2-test.apk';
+          const file=`SpendWise-${process.env.VALIDATION_PACKET}-v2.1.2-test.apk`;
           const metadata=fs.readFileSync('release/apk-badging.txt','utf8').match(/^package: name='([^']+)' versionCode='([^']+)' versionName='([^']+)'/m);
           if(!metadata||metadata[1]!=='com.spendwise.app'||metadata[2]!=='12'||metadata[3]!=='2.1.2') throw Error('Packaged identity mismatch');
           const signers=[...fs.readFileSync('release/signature.txt','utf8').matchAll(/^(?:Signer #\d+ |V\d+ Signer: )certificate SHA-256 digest: ([a-fA-F0-9]+)\r?$/gm)].map(m=>m[1].toLowerCase());
           const cert='e279124cd9d2cd6d4c191e2644fd71063993e42d13441a46759fa922f16d5965';
           if(!signers.length||signers.some(s=>s!==cert)) throw Error('Permanent signing identity mismatch');
           const sha256=crypto.createHash('sha256').update(fs.readFileSync('release/'+file)).digest('hex');
-          const receipt={package:metadata[1],versionName:metadata[3],versionCode:Number(metadata[2]),source:process.env.GITHUB_SHA,runId:process.env.GITHUB_RUN_ID,variant:'private-wp36-test',apkSha256:sha256,signingCertificateSha256:cert,apiBaseUrl:process.env.VITE_API_BASE_URL};
+          const receipt={package:metadata[1],versionName:metadata[3],versionCode:Number(metadata[2]),source:process.env.GITHUB_SHA,runId:process.env.GITHUB_RUN_ID,variant:`private-${process.env.VALIDATION_PACKET.toLowerCase()}-test`,apkSha256:sha256,signingCertificateSha256:cert,apiBaseUrl:process.env.VITE_API_BASE_URL};
           fs.writeFileSync('release/build-receipt.json',JSON.stringify(receipt,null,2)+'\n');
           fs.writeFileSync('release/SHA256SUMS',sha256+'  '+file+'\n');
           NODE
@@ -107,7 +108,7 @@ jobs:
       - name: Upload private test artifact only
         uses: actions/upload-artifact@v7
         with:
-          name: SpendWise-WP36-test-${{ github.sha }}
+          name: SpendWise-${{ env.VALIDATION_PACKET }}-test-${{ github.sha }}
           path: release/
           retention-days: 30
           if-no-files-found: error

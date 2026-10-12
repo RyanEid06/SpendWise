@@ -3,6 +3,7 @@ import {
   NativeAuthenticationResult,
   NativeKeyStatus,
   NativeWrappedSecret,
+  NativeBiometricCondition,
   androidSecurityAdapter,
 } from '../platform/android/AndroidSecurityAdapter';
 import {
@@ -11,6 +12,7 @@ import {
   securityStateStore,
 } from './SecurityStateStore';
 import { diagnostics } from '../services/diagnostics/diagnostics';
+import type { AuthenticationAction, AuthenticationMethod } from './authenticationCopy';
 
 export type SecureKeyFailureKind =
   | 'cancelled'
@@ -23,17 +25,18 @@ export type SecureKeyFailureKind =
 
 export type SecureKeyResult<T = undefined> =
   | { ok: true; value: T; authSucceededAtElapsedRealtimeMs?: number }
-  | { ok: false; kind: SecureKeyFailureKind; code?: string; message?: string };
+  | { ok: false; kind: SecureKeyFailureKind; code?: string; message?: string; recoveryAvailable?: boolean; biometricCondition?: NativeBiometricCondition };
 
 export interface SecureKeyService {
   getActiveKey(): ActiveKeyMetadata | null;
   hasProtectedSecrets(): boolean;
   hasWrappedSecret(purpose: string): boolean;
-  establish(authenticationRequired: boolean, reason: string): Promise<SecureKeyResult<ActiveKeyMetadata>>;
-  verifyActiveKey(reason: string): Promise<SecureKeyResult<ActiveKeyMetadata>>;
+  establish(authenticationRequired: boolean, action: AuthenticationAction, method?: AuthenticationMethod): Promise<SecureKeyResult<ActiveKeyMetadata>>;
+  verifyActiveKey(action: AuthenticationAction, method?: AuthenticationMethod): Promise<SecureKeyResult<ActiveKeyMetadata>>;
   rotateAuthenticationPolicy(
     authenticationRequired: boolean,
-    reason: string
+    action: AuthenticationAction,
+    method?: AuthenticationMethod
   ): Promise<SecureKeyResult<ActiveKeyMetadata>>;
   ensureWrappedSecret(
     purpose: string,
@@ -50,11 +53,15 @@ function keyFailure(
   status: NativeKeyStatus | undefined,
   result?: NativeAuthenticationResult
 ): SecureKeyResult<never> {
+  const recovery = {
+    ...(result?.recoveryAvailable === undefined ? {} : { recoveryAvailable: result.recoveryAvailable }),
+    ...(result?.biometricCondition === undefined ? {} : { biometricCondition: result.biometricCondition }),
+  };
   if (result?.status === 'cancelled') {
-    return { ok: false, kind: 'cancelled', code: result.code, message: result.message };
+    return { ok: false, kind: 'cancelled', code: result.code, message: result.message, ...recovery };
   }
   if (result?.status === 'unavailable') {
-    return { ok: false, kind: 'unavailable', code: result.code, message: result.message };
+    return { ok: false, kind: 'unavailable', code: result.code, message: result.message, ...recovery };
   }
   if (status === 'missing') return { ok: false, kind: 'missing', code: result?.code };
   if (status === 'invalidated') return { ok: false, kind: 'invalidated', code: result?.code };
@@ -63,7 +70,7 @@ function keyFailure(
   if (result?.code === 'USER_NOT_AUTHENTICATED') {
     return { ok: false, kind: 'not_authenticated', code: result.code };
   }
-  return { ok: false, kind: 'error', code: result?.code, message: result?.message };
+  return { ok: false, kind: 'error', code: result?.code, message: result?.message, ...recovery };
 }
 
 function decodeBase64(value: string): Uint8Array {
@@ -93,6 +100,7 @@ function authenticationTiming(result: NativeAuthenticationResult): {
 export class AndroidSecureKeyService implements SecureKeyService {
   private readonly sessionSecrets = new Map<string, Uint8Array>();
   private lastVerifiedAt = 0;
+  private secretGeneration = 0;
 
   constructor(
     private readonly adapter: AndroidSecurityAdapter = androidSecurityAdapter,
@@ -117,21 +125,27 @@ export class AndroidSecureKeyService implements SecureKeyService {
   private async createAndVerify(
     keyVersion: number,
     authenticationRequired: boolean,
-    reason: string
+    action: AuthenticationAction,
+    method: AuthenticationMethod = 'primary'
   ): Promise<SecureKeyResult<ActiveKeyMetadata>> {
+    const generation = this.secretGeneration;
+    let createdHere = false;
     try {
       const ensured = await this.adapter.ensureKey(keyVersion, authenticationRequired);
+      createdHere = ensured.created === true;
       if (ensured.status !== 'present') return keyFailure(ensured.status);
+      if (generation !== this.secretGeneration) return this.staleOperation();
 
       const verified = await this.adapter.verifyKey(
         keyVersion,
         authenticationRequired,
-        'Unlock SpendWise',
-        reason
+        action,
+        method
       );
       recordPostAuthKeyTiming(verified);
-      if (verified.status !== 'success') {
-        await this.adapter.deleteKey(keyVersion).catch(() => ({ deleted: false }));
+      if (verified.status !== 'success' || generation !== this.secretGeneration) {
+        if (createdHere) await this.adapter.deleteKey(keyVersion).catch(() => ({ deleted: false }));
+        if (generation !== this.secretGeneration) return this.staleOperation();
         return keyFailure(verified.keyStatus, verified);
       }
 
@@ -142,14 +156,15 @@ export class AndroidSecureKeyService implements SecureKeyService {
         ...authenticationTiming(verified),
       };
     } catch {
-      await this.adapter.deleteKey(keyVersion).catch(() => ({ deleted: false }));
+      if (createdHere) await this.adapter.deleteKey(keyVersion).catch(() => ({ deleted: false }));
       return { ok: false, kind: 'error', code: 'KEY_SETUP_FAILED' };
     }
   }
 
   async establish(
     authenticationRequired: boolean,
-    reason: string
+    action: AuthenticationAction,
+    method: AuthenticationMethod = 'primary'
   ): Promise<SecureKeyResult<ActiveKeyMetadata>> {
     if (!this.adapter.isAvailable()) {
       return { ok: false, kind: 'unavailable', code: 'NATIVE_SECURITY_UNAVAILABLE' };
@@ -157,16 +172,16 @@ export class AndroidSecureKeyService implements SecureKeyService {
 
     const current = this.stateStore.getActiveKey();
     if (!current) {
-      if (this.stateStore.hasWrappedSecrets()) {
+      if (this.stateStore.hasWrappedSecrets() || this.stateStore.getNativeMigration()?.status === 'complete') {
         return { ok: false, kind: 'unrecoverable', code: 'ACTIVE_KEY_METADATA_MISSING' };
       }
-      const created = await this.createAndVerify(1, authenticationRequired, reason);
+      const created = await this.createAndVerify(1, authenticationRequired, action, method);
       if (created.ok) this.stateStore.setActiveKey(created.value);
       return created;
     }
 
     if (current.authenticationRequired !== authenticationRequired) {
-      return this.rotateAuthenticationPolicy(authenticationRequired, reason);
+      return this.rotateAuthenticationPolicy(authenticationRequired, action, method);
     }
 
     let status;
@@ -179,31 +194,23 @@ export class AndroidSecureKeyService implements SecureKeyService {
       return { ok: false, kind: 'error', code: 'KEY_STATUS_FAILED' };
     }
 
-    if (status.status === 'present') return this.verifyActiveKey(reason);
-
-    if (this.stateStore.hasWrappedSecrets()) {
-      return keyFailure(status.status);
-    }
-
-    const nextVersion = current.keyVersion + 1;
-    const recreated = await this.createAndVerify(nextVersion, authenticationRequired, reason);
-    if (!recreated.ok) return recreated;
-    this.stateStore.setActiveKey(recreated.value);
-    await this.adapter.deleteKey(current.keyVersion).catch(() => ({ deleted: false }));
-    return recreated;
+    if (status.status === 'present') return this.verifyActiveKey(action, method);
+    // Existing metadata is evidence of a previous key, even if a registry is damaged.
+    // Recovery must be explicit; never infer that encrypted data can be discarded.
+    return keyFailure(status.status);
   }
 
   private async primeSessionSecrets(
     current: ActiveKeyMetadata
   ): Promise<SecureKeyResult<void>> {
+    const generation = this.secretGeneration;
     const wrappedSecrets = this.stateStore.getWrappedSecrets();
     for (const [purpose, wrapped] of Object.entries(wrappedSecrets)) {
       if (this.sessionSecrets.has(purpose)) continue;
       const result = await this.adapter.unwrapSecret({
         wrapped,
         authenticationRequired: current.authenticationRequired,
-        title: 'Unlock SpendWise',
-        reason: 'Open protected local data',
+        action: 'open-protected-data',
         authenticate: false,
       });
       if (result.status !== 'success' || !result.secretBase64) {
@@ -211,12 +218,17 @@ export class AndroidSecureKeyService implements SecureKeyService {
       }
       const secret = decodeBase64(result.secretBase64);
       result.secretBase64 = undefined;
+      if (generation !== this.secretGeneration) {
+        secret.fill(0);
+        return { ok: false, kind: 'cancelled', code: 'AUTHENTICATION_STALE' };
+      }
       this.sessionSecrets.set(purpose, secret);
     }
     return { ok: true, value: undefined };
   }
 
-  async verifyActiveKey(reason: string): Promise<SecureKeyResult<ActiveKeyMetadata>> {
+  async verifyActiveKey(action: AuthenticationAction, method: AuthenticationMethod = 'primary'): Promise<SecureKeyResult<ActiveKeyMetadata>> {
+    const generation = this.secretGeneration;
     const current = this.stateStore.getActiveKey();
     if (!current) return { ok: false, kind: 'missing', code: 'ACTIVE_KEY_MISSING' };
 
@@ -226,15 +238,17 @@ export class AndroidSecureKeyService implements SecureKeyService {
         current.authenticationRequired
       );
       if (status.status !== 'present') return keyFailure(status.status);
+      if (generation !== this.secretGeneration) return this.staleOperation();
 
       const verified = await this.adapter.verifyKey(
         current.keyVersion,
         current.authenticationRequired,
-        'Unlock SpendWise',
-        reason
+        action,
+        method
       );
       recordPostAuthKeyTiming(verified);
       if (verified.status !== 'success') return keyFailure(verified.keyStatus, verified);
+      if (generation !== this.secretGeneration) return this.staleOperation();
       this.lastVerifiedAt = Date.now();
       const primeStartedAt = performance.now();
       const primed = await this.primeSessionSecrets(current);
@@ -253,6 +267,7 @@ export class AndroidSecureKeyService implements SecureKeyService {
             }
       );
       if (!primed.ok) return primed;
+      if (generation !== this.secretGeneration) return this.staleOperation();
       return { ok: true, value: current, ...authenticationTiming(verified) };
     } catch {
       return { ok: false, kind: 'error', code: 'KEY_VERIFY_FAILED' };
@@ -261,33 +276,45 @@ export class AndroidSecureKeyService implements SecureKeyService {
 
   async rotateAuthenticationPolicy(
     authenticationRequired: boolean,
-    reason: string
+    action: AuthenticationAction,
+    method: AuthenticationMethod = 'primary'
   ): Promise<SecureKeyResult<ActiveKeyMetadata>> {
     this.releaseSessionSecrets();
+    const generation = this.secretGeneration;
     const current = this.stateStore.getActiveKey();
-    if (!current) return this.establish(authenticationRequired, reason);
+    if (!current) return this.establish(authenticationRequired, action, method);
     if (current.authenticationRequired === authenticationRequired) {
-      return this.verifyActiveKey(reason);
+      return this.verifyActiveKey(action, method);
+    }
+
+    try {
+      const status = await this.adapter.getKeyStatus(current.keyVersion, current.authenticationRequired);
+      if (status.status !== 'present') return keyFailure(status.status);
+      if (generation !== this.secretGeneration) return this.staleOperation();
+    } catch {
+      return { ok: false, kind: 'error', code: 'KEY_STATUS_FAILED' };
     }
 
     const oldSecrets = this.stateStore.getWrappedSecrets();
     if (Object.keys(oldSecrets).length > 0) {
-      const oldVerified = await this.verifyActiveKey('Authorize secure key rotation');
+      const oldVerified = await this.verifyActiveKey('secure-key-rotation', method);
       if (!oldVerified.ok) return oldVerified;
+      if (generation !== this.secretGeneration) return this.staleOperation();
     }
 
     const nextVersion = current.keyVersion + 1;
-    const next = await this.createAndVerify(nextVersion, authenticationRequired, reason);
+    const next = await this.createAndVerify(nextVersion, authenticationRequired, action, method);
     if (!next.ok) return next;
+    if (generation !== this.secretGeneration) return this.staleOperation();
 
     const staged: Record<string, NativeWrappedSecret> = {};
     try {
       for (const [purpose, wrapped] of Object.entries(oldSecrets)) {
+        if (generation !== this.secretGeneration) return this.staleOperation();
         const unwrapped = await this.adapter.unwrapSecret({
           wrapped,
           authenticationRequired: current.authenticationRequired,
-          title: 'Authorize SpendWise security update',
-          reason: 'Rotate protected key material',
+          action: 'secure-key-rotation',
           authenticate: false,
         });
         if (unwrapped.status !== 'success' || !unwrapped.secretBase64) {
@@ -296,19 +323,20 @@ export class AndroidSecureKeyService implements SecureKeyService {
         }
 
         try {
+          if (generation !== this.secretGeneration) return this.staleOperation();
           const rewrapped = await this.adapter.wrapSecret({
             keyVersion: nextVersion,
             authenticationRequired,
             purpose,
             secretBase64: unwrapped.secretBase64,
-            title: 'Authorize SpendWise security update',
-            reason: 'Rotate protected key material',
+            action: 'secure-key-rotation',
             authenticate: false,
           });
           if (rewrapped.status !== 'success' || !rewrapped.wrapped) {
             await this.adapter.deleteKey(nextVersion).catch(() => ({ deleted: false }));
             return keyFailure(rewrapped.keyStatus, rewrapped);
           }
+          if (generation !== this.secretGeneration) return this.staleOperation();
           staged[purpose] = rewrapped.wrapped;
         } finally {
           // The native bridge does not persist the unwrapped base64 value. Dropping the
@@ -317,8 +345,11 @@ export class AndroidSecureKeyService implements SecureKeyService {
         }
       }
 
+      if (generation !== this.secretGeneration) return this.staleOperation();
       this.stateStore.replaceKeyring(next.value, staged);
-      await this.adapter.deleteKey(current.keyVersion).catch(() => ({ deleted: false }));
+      // Do not yield after activating a policy and before the session service
+      // synchronously saves the corresponding App Lock preference.
+      void this.adapter.deleteKey(current.keyVersion).catch(() => ({ deleted: false }));
       return next;
     } catch {
       await this.adapter.deleteKey(nextVersion).catch(() => ({ deleted: false }));
@@ -330,6 +361,7 @@ export class AndroidSecureKeyService implements SecureKeyService {
     purpose: string,
     byteLength = 32
   ): Promise<SecureKeyResult<NativeWrappedSecret>> {
+    const generation = this.secretGeneration;
     const existing = this.stateStore.getWrappedSecrets()[purpose];
     if (existing) return { ok: true, value: existing };
 
@@ -351,13 +383,13 @@ export class AndroidSecureKeyService implements SecureKeyService {
         authenticationRequired: current.authenticationRequired,
         purpose,
         byteLength,
-        title: 'Unlock SpendWise',
-        reason: 'Protect local SpendWise data',
+        action: 'protect-local-data',
         authenticate: !canReuseFreshAuthentication,
       });
       if (result.status !== 'success' || !result.wrapped) {
         return keyFailure(result.keyStatus, result);
       }
+      if (generation !== this.secretGeneration) return this.staleOperation();
       this.stateStore.setWrappedSecret(purpose, result.wrapped);
 
       // The generating authentication also authorizes the Keystore key briefly.
@@ -365,13 +397,16 @@ export class AndroidSecureKeyService implements SecureKeyService {
       const primed = await this.adapter.unwrapSecret({
         wrapped: result.wrapped,
         authenticationRequired: current.authenticationRequired,
-        title: 'Unlock SpendWise',
-        reason: 'Open protected local data',
+        action: 'open-protected-data',
         authenticate: false,
       });
       if (primed.status === 'success' && primed.secretBase64) {
         const secret = decodeBase64(primed.secretBase64);
         primed.secretBase64 = undefined;
+        if (generation !== this.secretGeneration) {
+          secret.fill(0);
+          return this.staleOperation();
+        }
         this.sessionSecrets.set(purpose, secret);
       }
       return { ok: true, value: result.wrapped };
@@ -384,6 +419,7 @@ export class AndroidSecureKeyService implements SecureKeyService {
     purpose: string,
     consumer: (secret: Uint8Array) => Promise<T> | T
   ): Promise<SecureKeyResult<T>> {
+    const generation = this.secretGeneration;
     const current = this.stateStore.getActiveKey();
     const wrapped = this.stateStore.getWrappedSecrets()[purpose];
     if (!current || !wrapped) {
@@ -406,8 +442,7 @@ export class AndroidSecureKeyService implements SecureKeyService {
       const result = await this.adapter.unwrapSecret({
         wrapped,
         authenticationRequired: current.authenticationRequired,
-        title: 'Unlock SpendWise',
-        reason: 'Open protected local data',
+        action: 'open-protected-data',
         authenticate: false,
       });
       if (result.status !== 'success' || !result.secretBase64) {
@@ -416,6 +451,10 @@ export class AndroidSecureKeyService implements SecureKeyService {
 
       const secret = decodeBase64(result.secretBase64);
       result.secretBase64 = undefined;
+      if (generation !== this.secretGeneration) {
+        secret.fill(0);
+        return this.staleOperation();
+      }
       this.sessionSecrets.set(purpose, secret);
       return useSessionCopy(secret);
     } catch {
@@ -424,9 +463,14 @@ export class AndroidSecureKeyService implements SecureKeyService {
   }
 
   releaseSessionSecrets(): void {
+    this.secretGeneration += 1;
     for (const secret of this.sessionSecrets.values()) secret.fill(0);
     this.sessionSecrets.clear();
     this.lastVerifiedAt = 0;
+  }
+
+  private staleOperation(): SecureKeyResult<never> {
+    return { ok: false, kind: 'cancelled', code: 'AUTHENTICATION_STALE' };
   }
 }
 

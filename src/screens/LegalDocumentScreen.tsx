@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { ArrowLeft, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import type { Language } from '../types';
 import { getLegalDocument, type LegalDocumentKind } from '../utils/legalDocuments';
 
@@ -31,7 +31,7 @@ export const LegalDocumentScreen: React.FC<Props> = ({ language, kind, onClose }
             className="min-h-[48px] min-w-[48px] rounded-2xl flex items-center justify-center border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111928]"
             aria-label={language === 'ar' ? 'رجوع' : language === 'fr' ? 'Retour' : 'Back'}
           >
-            {language === 'ar' ? <X className="w-5 h-5" /> : <ArrowLeft className="w-5 h-5" />}
+            {language === 'ar' ? <ArrowRight className="w-5 h-5" /> : <ArrowLeft className="w-5 h-5" />}
           </button>
           <div className="min-w-0 flex-1">
             <h1 className="font-extrabold text-lg truncate">{documentCopy.title}</h1>

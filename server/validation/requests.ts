@@ -386,6 +386,13 @@ export function sanitizeHistoricalSummary(value: unknown) {
 export function sanitizeStatistics(value: unknown) {
   const obj = asObject(value);
   if (!obj) return null;
+  // Keep accepted All-Time histories intact. Oversized inputs fail explicitly;
+  // truncation would make window comparisons contradict full-period totals.
+  if (Array.isArray(obj.monthlyStats) && obj.monthlyStats.length > 600 ||
+      Array.isArray(obj.categoryTrends) && (obj.categoryTrends.length > 40 || obj.categoryTrends.some(entry => {
+        const category = asObject(entry);
+        return Array.isArray(category?.monthlyData) && category.monthlyData.length > 600;
+      }))) return null;
 
   const periodLabel = requiredString(obj.periodLabel, 100);
   const totalSpent = finiteNumber(obj.totalSpent, {
@@ -413,7 +420,7 @@ export function sanitizeStatistics(value: unknown) {
   const overallLargestExpense = sanitizeExpense(obj.overallLargestExpense);
 
   const monthlyStats = Array.isArray(obj.monthlyStats)
-    ? obj.monthlyStats.slice(0, 120).flatMap((entry) => {
+    ? obj.monthlyStats.flatMap((entry) => {
         const item = asObject(entry);
         if (!item) return [];
 
@@ -458,6 +465,7 @@ export function sanitizeStatistics(value: unknown) {
             remainingMoney,
             isBudgetSet: item.isBudgetSet === true,
             isPartialMonth: item.isPartialMonth !== false,
+            dataAvailability: item.dataAvailability === 'missing' ? 'missing' as const : 'recorded' as const,
             largestExpense: sanitizeExpense(item.largestExpense),
           },
         ];
@@ -465,7 +473,7 @@ export function sanitizeStatistics(value: unknown) {
     : [];
 
   const categoryTrends = Array.isArray(obj.categoryTrends)
-    ? obj.categoryTrends.slice(0, 40).flatMap((entry) => {
+    ? obj.categoryTrends.flatMap((entry) => {
         const item = asObject(entry);
         if (!item) return [];
 
@@ -499,7 +507,7 @@ export function sanitizeStatistics(value: unknown) {
         }
 
         const monthlyData = Array.isArray(item.monthlyData)
-          ? item.monthlyData.slice(0, 120).flatMap((monthEntry) => {
+          ? item.monthlyData.flatMap((monthEntry) => {
               const month = asObject(monthEntry);
               if (!month) return [];
 
@@ -537,6 +545,8 @@ export function sanitizeStatistics(value: unknown) {
     : [];
 
   return {
+    period: ['CURRENT_MONTH', 'LAST_3_MONTHS', 'LAST_6_MONTHS', 'LAST_12_MONTHS', 'ALL_TIME'].includes(String(obj.period))
+      ? obj.period as import('../../src/types').TimePeriod : undefined,
     periodLabel,
     totalSpent,
     totalTransactions,

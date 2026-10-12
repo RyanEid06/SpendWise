@@ -317,7 +317,12 @@ test('WP28 native source uses strong biometric/device credential, versioned Keys
 
   assert.match(native, /BIOMETRIC_STRONG/);
   assert.match(native, /DEVICE_CREDENTIAL/);
-  assert.match(native, /setDeviceCredentialAllowed\(true\)/);
+  // biometric1.1.0 rejects credential-only before API30 and strong+credential
+  // on API28–29. The legacy OS confirmation activity authorizes timed keys.
+  assert.match(native, /createConfirmDeviceCredentialIntent\(title, reason\)/);
+  assert.match(native, /Build\.VERSION\.SDK_INT >= Build\.VERSION_CODES\.R[\s\S]*startBiometricAuthentication\(token, title, reason, true\)/);
+  assert.match(native, /setAllowedAuthenticators\(BiometricManager\.Authenticators\.DEVICE_CREDENTIAL\)/);
+  assert.doesNotMatch(native, /setDeviceCredentialAllowed\(true\)/);
   assert.match(native, /AndroidKeyStore/);
   assert.match(native, /spendwise\.local-kek\.v/);
   assert.match(native, /AES\/GCM\/NoPadding/);
