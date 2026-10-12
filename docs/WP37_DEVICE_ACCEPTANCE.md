@@ -1,6 +1,6 @@
 # WP37 device acceptance — not yet verified
 
-Use the exact private WP37 APK and receipt, not the accepted WP36 APK with the same 2.1.2/code12 metadata. Back up existing financial data before destructive restore scenarios. Automated checks do not establish physical/OEM acceptance.
+Use the exact private WP37 **2.1.3/code13** APK and receipt, keeping the accepted WP36 **2.1.2/code12** receipt as historical evidence. Back up existing financial data before destructive restore scenarios. Automated checks do not establish physical/OEM acceptance.
 
 Record device model, Android/API level, biometric capability, selected SpendWise language, OS language, timeout and APK source. Exercise API24–27, API28–29 and API30+ when available, including both reported phones. Unsupported combinations must be reported, not inferred green.
 

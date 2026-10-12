@@ -4,9 +4,9 @@ Date: 2026-10-12. Approved scope: [original prompt](WP37_ORIGINAL_PROMPT.md) plu
 
 ## Identity and boundaries
 
-Baseline: clean `codex/wp35-integration` at `269ddfaa7c9707c2d95739be5e3ddfc6fb726fc1`, containing approved WP36 merge `13b4a93`. Implementation branch: `fix/wp37-localization-native-auth-ux`. Initial tested application commit: **`4547b7e63814e9350f37c094a3aafec82ce9f962`**. Foreground-auth correction: **`d837c35bf0f9edeb89eee163df27c369b2aa81b3`**; documentation follows separately. [PR47](https://github.com/RyanEid06/SpendWise/pull/47) targets integration. Required overall CI/private APK receipts remain pending. Version remains **2.1.2 / Android code12**, package `com.spendwise.app`.
+Baseline: clean `codex/wp35-integration` at `269ddfaa7c9707c2d95739be5e3ddfc6fb726fc1`, containing approved WP36 merge `13b4a93`. Implementation branch: `fix/wp37-localization-native-auth-ux`. Initial tested application commit: **`4547b7e63814e9350f37c094a3aafec82ce9f962`**. Foreground-auth correction: **`d837c35bf0f9edeb89eee163df27c369b2aa81b3`**; documentation follows separately. [PR47](https://github.com/RyanEid06/SpendWise/pull/47) targets integration. Required overall CI/private APK receipts remain pending. Owner-selected WP37 version is **2.1.3 / Android code13**, package `com.spendwise.app`.
 
-Original scope stopped at review. The owner subsequently authorized merging through integration to main and restoring Render auto-deploy from main, explicitly stating "Automated checks are enough". The latest instruction **"build the apk after you merge to main"** supersedes the earlier APK-before-merge gate: review and required CI gate the merge, followed by private signed APK verification from the exact main commit. Those conditional actions have not yet been performed. Physical acceptance remains unverified. Public release/tag, version/signing identity change, branch deletion, data reset and unrelated configuration changes remain unauthorized.
+Original scope stopped at review. The owner subsequently authorized merging through integration to main and restoring Render auto-deploy from main, explicitly stating "Automated checks are enough". The latest instruction **"build the apk after you merge to main"** supersedes the earlier APK-before-merge gate: review and required CI gate the merge, followed by private signed APK verification from the exact main commit. Those conditional actions have not yet been performed. Physical acceptance remains unverified. Public release/tag, additional version/signing identity change, branch deletion, data reset and unrelated configuration changes remain unauthorized.
 
 ## Original Part60 findings and resulting behavior
 
@@ -29,7 +29,7 @@ Original scope stopped at review. The owner subsequently authorized merging thro
 | 29 All-Time | Detail cards start with latest6, show all/collapse and reset on period change. Full totals, categories, rankings, chart and AI input remain intact; 36-month browser fixture verifies this. Oversized server histories fail explicitly rather than silently truncating; accepted histories retained whole up to600 months/40categories. |
 | 30 Duplicate Statistics UI | Baseline already had one page heading and one monthly section icon. No duplicate deletion necessary. |
 | 31 Translation parity | Main dictionaries have279keys each after adding the missing empty-ledger analysis message. Eleven main/feature dictionaries have executable EN/FR/AR key and interpolation parity; startup SSR works in3locales when localStorage access throws. |
-| 32 Files | Changes are limited to native/security/lifecycle, backup policy and modals/Settings, Statistics deterministic facts/validation/UI, bidi/progress/startup surfaces, corresponding tests/docs and precise private-APK branch/packet validation plumbing. Dependency lock, version metadata, routing/executor/network/auth middleware and database schemas unchanged. Final Git diff is authoritative. |
+| 32 Files | Changes are limited to native/security/lifecycle, backup policy and modals/Settings, Statistics deterministic facts/validation/UI, bidi/progress/startup surfaces, corresponding tests/docs and precise private-APK branch/packet validation plumbing. The owner-selected2.1.3/code13 metadata changes package/root lock versions only; dependency entries, routing/executor/network/auth middleware and database schemas remain unchanged. Final Git diff is authoritative. |
 | 33 Tests | New WP37 auth/startup lifecycle, backup persistence/reopen/faults, Statistics period/fact/compatibility, localization/startup SSR, locale/RTL/progress/backup/Statistics browser regressions. Existing source-shape assertions updated at moved boundaries without relaxing intended security/behavior. |
 | 34–35 Local/CI | Final full Node646pass/0fail/1DBskip and TypeScript/production build passed. Browser86/86 passed after lifecycle integration; final copy/cache paths have component coverage. Components75passed/3navigation failures, unchanged exact retry3/3passed. Immutable review/native CI pending. |
 | 36 Device acceptance | WP36 owner sign-off remains historical. WP37 physical phones, OEM native prompts/Keystore flows, TalkBack and manual visual/backup/Statistics acceptance are **NOT YET VERIFIED**. |
@@ -67,6 +67,14 @@ Foreground-auth follow-up `d837c35`: the real background-mounted LockScreen sequ
 Old clients/new backend retain optional metadata and original response fields/fact IDs. New clients/old backend accept and compact the existing shape, but the old backend's raw-total wording and120-month truncation remain until deployment. Preferred future order is backend, then client. No deployment was performed. Backups retain V1/V2/V3 formats; runtime restore options are not serialized and never include security fields.
 
 ## Verdicts
+
+Owner-selected version correction **`89c4ca32ffbf8dbbb39af8ff32c10c106f726668`**
+advances only candidate metadata, exact private APK version checks/filenames and
+matching existing assertions to **2.1.3/code13**; root lockfile versions change
+without dependency changes. Independent GPT6 Luna High immutable review found no
+actionable findings. Local Node649:648 passed,0 failed,1 PostgreSQL skip;
+TypeScript/production build passed. Final exact-head CI is still required and
+previous green2.1.2 application receipts are not relabeled as2.1.3 success.
 
 **CODE: LOCAL CHECKS / INDEPENDENT REVIEW PASSED.** Final immutable application commit is recorded above; the component navigation failures and exact retries remain explicit.
 

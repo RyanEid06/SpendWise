@@ -1,6 +1,16 @@
 # SpendWise 2.1 automated verification
 
-## Current 2.1.2 / WP36 checkpoint — GREEN
+## WP37 2.1.3 / code13 — final verification pending
+
+The owner selected 2.1.3/code13 after the delivered private WP36 2.1.2/code12.
+The version correction passed local Node checks (648 passed, one PostgreSQL
+test skipped, zero failures), TypeScript and the production build. Final
+exact-head CI is pending. After review and required CI, the authorized order is
+integration to main, private permanent-signed APK from exact main, and Render
+auto-deploy verification. No WP37 APK, main merge or deployment receipt is
+claimed here yet. Physical/OEM/TalkBack checks remain unverified.
+
+## Historical 2.1.2 / WP36 checkpoint — GREEN
 
 As of 2026-10-11, code/CI, backend deployment, signed APK delivery and owner
 phone acceptance are green. The owner confirmed “all works nice”.

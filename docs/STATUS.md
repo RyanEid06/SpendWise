@@ -8,6 +8,14 @@ implemented and validated on `fix/wp37-localization-native-auth-ux` from
 and [progress ledger](WP37_PROGRESS.md) preserve the separate checkpoint;
 the WP36 green evidence below remains historical acceptance, not WP37 proof.
 
+The owner selected **WP37 2.1.3 / Android code13**, advancing the delivered
+private 2.1.2 build. Local version checks and production verification pass;
+final exact-source CI, main integration, private APK and deployment receipts
+remain pending. The owner authorized merging through integration to main after
+review and required CI, then building the private APK from that exact main SHA
+and restoring Render auto-deploy from main. WP37 physical/OEM/TalkBack checks
+remain unverified and are not a merge gate.
+
 | Gate | Status | Evidence |
 | --- | --- | --- |
 | Code, review and automated CI | GREEN | [PR46](https://github.com/RyanEid06/SpendWise/pull/46), [combined CI](https://github.com/RyanEid06/SpendWise/actions/runs/38164832712), [Android Build](https://github.com/RyanEid06/SpendWise/actions/runs/38164841401) |

@@ -2,6 +2,12 @@
 
 Spec: `docs/WP37_SPEC.md`; original full prompt: `docs/WP37_ORIGINAL_PROMPT.md`; plan: `docs/superpowers/plans/2026-10-12-wp37.md`.
 
+**Current owner instructions supersede historical entries below:** WP37 is
+**2.1.3/code13**. Review and required exact-head CI gate integration/main merges;
+then build the private APK from exact main and verify Render auto-deploy from
+main. Automated checks are enough; physical/OEM/TalkBack remains unverified.
+No public release, tag, further version increment or branch deletion is authorized.
+
 ## Baseline and authorization
 
 - 2026-10-12: owner authorized executing original WP37 with review refinements1-7, saving durable context and using GPT6.1 Sol High or GPT6 Luna High subagents. No merge/deploy/public release/version bump authorization.
@@ -153,3 +159,13 @@ Task agents will save `docs/WP37_AUTH_REPORT.md`, `docs/WP37_BACKUP_REPORT.md`, 
 - Apply existing explicit `-Dorg.gradle.jvmargs=-Xmx2g --max-workers=2` only to that full-acceptance historical fixture Gradle invocation, retaining stacktrace/fixture commit/assertions and all native/security behavior. Independent review owns final workflow delta before commit/push. Preserve healthy sibling jobs; no cancellation or blind retry.
 - Immutable workflow correction **`512d950bd1bcd7d5f55feca45cde79be144f1bae`** rechecked independently by **GPT6 Luna High** after Sol's immutable recheck hit model capacity: **no required actionable findings**, source guard/signing/fixture diagnosis verified and diff check passed. Earlier Sol provisional review also found no required defect. No application/native/tests changed; final exact-head CI must establish the fixture build succeeds.
 - Updated this existing heartbeat and PR47 body to the latest owner order. Older automated prompts stating APK-before-merge are stale and superseded. Final checkpoint remains review/required CI -> integration/main -> private APK from exact main -> Render verification and consistent release/status documentation. No physical acceptance is implied.
+- Pushed documentation-only child **`261c5a9fc13eab60ed020c5d9c98e87d8e49cbca`**, remote SHA verified. Required [combined38282236223](https://github.com/RyanEid06/SpendWise/actions/runs/38282236223) is active on that exact head. Prior plumbing run38259775046 finished with web/API36/recovery green and historical fixture packaging failure only. No private build/merge/deployment yet; this receipt remains uncommitted while healthy CI runs.
+
+### Owner-selected WP37 version correction
+
+- Owner clarified the prior private build was already2.1.2 and WP37 should be2.1.3. Use **2.1.3 / Android code13**, retaining package `com.spendwise.app` and the permanent certificate. This supersedes earlier no-version-bump/2.1.2-code12 instructions for this specific correction. It does not authorize a tag/public release or another version increment.
+- Update `version.json`, package/root lock versions, exact private workflow metadata/packaged-identity guards, filenames and retained version assertions together. Dependency entries and historical WP36/artifact/upgrade-fixture receipts remain unchanged. Android and client display consume `version.json` already.
+- Updated existing metadata expectations reproduced8version-mismatch failures; a ninth HTTP test failed with sandbox `fetch failed`, separately classified from those RED cases. Normal-context verification follows. Required CI must validate the new metadata head; preserve active prior run38282236223 and its completed green jobs. Latest order remains checked main merge first, then private2.1.3/code13 APK from exact main.
+- Normal-context verification completed: **649 tests,648 passed,0 failed,1 PostgreSQL integration skipped**, exit0 (`.superpowers/wp37/version-213-node.log`); TypeScript and production build passed, exit0 (`version-213-build.log`). Existing bundle-size warning remains. CI supplies isolated PostgreSQL.
+- Immutable version correction **`89c4ca32ffbf8dbbb39af8ff32c10c106f726668`** independently reviewed by **GPT6 Luna High**: no actionable findings. Lockfile changes are only the two root version fields; dependencies, signing identity and historical receipts remain intact. Current status/spec/release/checklist documentation reconciled separately.
+- Existing run38282236223 at261c5a9 has web/API36/recovery green and full API34 still active; its historical fixture now builds successfully with the bounded heap fix. Preserve that run. Its 2.1.2 source is not final2.1.3 verification; new exact-head CI follows this correction.
