@@ -70,6 +70,8 @@ Old clients/new backend retain optional metadata and original response fields/fa
 
 **CODE: LOCAL CHECKS / INDEPENDENT REVIEW PASSED.** Final immutable application commit is recorded above; the component navigation failures and exact retries remain explicit.
 
-**CODE / CI: RED LIGHT — required native/combined CI and private artifact gates pending.**
+**APPLICATION / CI: GREEN at `5d1842a31756b46a9850cc6f036ea339fe2ec625`.** Combined38252958940 and Android Build38253054001 passed, including full API34 background-cancel/retry, API36 navigation and encrypted draft recovery. Corrected native JUnit5gate+2acquisition passed; web649Node/81components plus retained browser/accessibility/visual/performance gates passed.
+
+**OVERALL AUTOMATED CHECKPOINT: PENDING — private artifact and required checks on the signing-entry correction remain.** Direct standalone signing dispatch returned404 because the workflow is not registered on main. Historical WP36 private run used registered combined workflow; its parent guard omitted this WP37 branch despite the child allowlist. Reviewed plumbing-only `7ced66346962211ad7ea0a6afcb6ce60f95d36bc` permits only integration OR this exact WP37 branch with explicit manual signed-build input. Immutable independent review found no required actionable findings. Application/tests and child source/signature/version/API/signing guards are unchanged. New head CI and private provenance verification must pass before merging.
 
 **DEVICE / AUTH / RTL / VISUAL / BACKUP / STATISTICS: NOT YET VERIFIED.** Automated browser checks are evidence for tested synthetic scenarios, not physical-device certification.

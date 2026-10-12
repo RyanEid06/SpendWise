@@ -115,3 +115,30 @@ Task agents will save `docs/WP37_AUTH_REPORT.md`, `docs/WP37_BACKUP_REPORT.md`, 
 - Independent GPT6.1 Sol High reviewer rechecked immutable `d837c35` against parent `185ccc8`: **no required actionable findings**, source/test diff check passed. Report preserves absent launch-interval native logs and does not claim patched Android prompt/recovery proof.
 - Old-source API36 isolated CI is now GREEN; API34 full acceptance is still running and preserved. Old-source encrypted recovery remains failed. New exact-head CI/native build is required before private APK, integration/main merge or Render settings changes.
 - Documentation receipts and updated owner authorization follow separately before the next push, so the next CI source has a single clear head. Existing ten-minute heartbeat remains active; no duplicate monitor.
+
+### Corrected-source remote checkpoint
+
+- Reviewed application `d837c35` plus documentation-only child **`5d1842a31756b46a9850cc6f036ea339fe2ec625`** pushed; remote ref matches. [Combined CI38252958940](https://github.com/RyanEid06/SpendWise/actions/runs/38252958940) and [Android Build38253054001](https://github.com/RyanEid06/SpendWise/actions/runs/38253054001) validate that exact head. Android live-provider smoke remains disabled.
+- Existing heartbeat updated with corrected source/run handoff and expanded main/Render authorization. Current exact receipts are in `.superpowers/wp37/ci-checkpoint.json`; this ledger addendum remains uncommitted to avoid restarting healthy CI solely for documentation.
+- Next: inspect these runs sparsely, preserve old-source receipts and healthy jobs. Do not dispatch private APK until corrected-source required checks pass. Then complete signed private APK/provenance, authorized integration/main checks/merge and existing Render main auto-deploy verification. Physical acceptance remains unverified.
+
+### CI checkpoint2026-10-12T13:16Z
+
+- Corrected exact head `5d1842a`: Android Build38253054001 **GREEN**; combined web job114823640914 **GREEN** with649/649 Node including PostgreSQL,81/81components,75browser+3accessibility+8visual,10performance datasets and173retained checks. Log `.superpowers/wp37/web-corrected-green.log`. Android live smoke/public signing skipped as intended.
+- Corrected native report artifact11749322452 retained at `artifacts/wp37/ci-38252958940-native`: **5/5NativeAuthenticationGate+2/2Acquisition JUnit**,0failures/errors. This proves native compilation/unit execution, not prompt/recovery acceptance. Corrected API36 isolated, API34 acceptance and encrypted recovery jobs remain active; preserve them.
+- Initial-source run38249951357 completed **FAILED**. Its previously healthy API34 job114813356331 reached `app-lock-configure-timeout` successfully, then `app-lock-background-cancel-retry` failed waiting for SystemUI `lockPassword`. Log `.superpowers/wp37/acceptance-initial-failed.log`; failure artifact11748599925 retained at `artifacts/wp37/ci-38249951357-acceptance`. This is another old-source background-lock prompt failure; no corrected-source failure or confirmed identical native causal trace is asserted.
+- Continue the existing heartbeat, with no rerun or APK/merge/deploy while corrected native gates remain pending.
+
+### CI checkpoint2026-10-12T13:26Z
+
+- Corrected exact head `5d1842a`: API36 isolated job114823641245 and encrypted recovery job114823641432 are **GREEN**. Recovery log verifies native PIN challenges, background/redacted lock probes, process-death Add/Edit/photo recovery and final `WP05_ENCRYPTED_AT_REST_PASSED` / `WP05_NATIVE_RECOVERY_PASSED`; no runner assertion or timeout was relaxed. This supplies corrected-source emulator evidence for the previously failing recovery route, not physical/OEM certification.
+- Logs `.superpowers/wp37/recovery-corrected-green.log`, `isolated-corrected-green.log`; recovery artifact11750166585 saved under `artifacts/wp37/ci-38252958940-recovery`; API36 artifact11750105252 remains available. Existing web/Android build/native unit successes retain their separate receipts above.
+- Full API34 acceptance job114823641403 remains active. Do not dispatch private APK or merge before this remaining required CI gate passes. Existing heartbeat continues; no reruns or source changes.
+
+### All application CI green / private APK entry correction
+
+- Exact reviewed head `5d1842a31756b46a9850cc6f036ea339fe2ec625`: combined38252958940 **SUCCESS**, all four required jobs passed; full API34 acceptance completed2026-10-12T13:47:44Z, including the formerly failing `app-lock-background-cancel-retry` and final `hardened-verify`. Android Build38253054001 also passed. Acceptance log `.superpowers/wp37/acceptance-corrected-green.log`.
+- Direct `gh workflow run wp35-test-apk.yml` returned404 because that workflow is not registered on the default branch. Historical successful WP36 private run38168712767 confirms dispatch through registered `wp35-integration.yml`, which calls the unchanged permanent-signing workflow.
+- Found a missed entry guard: the reusable child allowed WP37, but the combined parent's signed job still allowed integration only. Correct only that parent branch condition to integration OR this exact WP37 branch, retaining explicit manual dispatch/input, immutable source/metadata/endpoint/certificate guards and all signing steps. Independent review and new exact-head CI follow; application source is unchanged. Do not merge while private provenance or new required checks are pending.
+- Dispatch private APK via registered `wp35-integration.yml --ref fix/wp37-localization-native-auth-ux -f signed_test_apk=true -f expected_source=EXACT_PUSHED_HEAD` after required exact-head gates pass. Do not repeat the unavailable standalone endpoint.
+- Immutable plumbing commit **`7ced66346962211ad7ea0a6afcb6ce60f95d36bc`** changes exactly one branch condition; independent GPT6.1 Sol High review found **no required actionable findings**, diff check passed. Application source/tests and child permanent-signing workflow are unchanged from green `5d1842a`. Documentation follows separately; exact new-head required checks precede signed build.
