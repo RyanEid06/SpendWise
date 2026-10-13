@@ -80,7 +80,7 @@ Not completed locally: the sandbox first denied access to the Gradle wrapper cac
 
 ## Remaining native/device acceptance
 
-CODE automated verdict: focused Node/TypeScript/JVM checks pass. Android build/CI verdict: pending coordinator. DEVICE/OEM verdict: **PENDING**, including the explicitly unsupported legacy immediate-credential combination.
+At the domain handoff, focused Node/TypeScript/JVM checks passed and Android build/CI were pending coordinator. Final required CI, main and private APK verification have since passed; see [current status](STATUS.md). The owner reported manual WP37 checks green on2026-10-12. Exhaustive API/OEM matrix and TalkBack coverage remain unverified; the unsupported legacy immediate-credential combination remains documented below.
 
 - Run API24–27, API28–29 and API30+ builds/tests with the pinned AndroidX biometric1.1.0 and actual platform activities.
 - On two physical phones where available, verify distinct localized EN/FR/AR native title/reason and native OS-owned labels; verify biometric retry remains open after one mismatch.

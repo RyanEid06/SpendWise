@@ -8,7 +8,7 @@ Scope: current source against WP36 baseline `269ddfaa7c9707c2d95739be5e3ddfc6fb7
 | Surface | Finding and disposition | Automated evidence |
 | --- | --- | --- |
 | Dictionaries | Main EN/FR/AR keys already agree; preserve working wording. Add key/interpolation parity for eleven main/feature objects, including native recovery and API limitations. | `tests/wp37-localization.test.ts` |
-| Native prompt | Duplicated English unlock title/reason replaced with semantic actions mapped to distinct EN/FR/AR copy. OEM strings remain platform controlled. | WP37 auth and native gate tests; device acceptance pending |
+| Native prompt | Duplicated English unlock title/reason replaced with semantic actions mapped to distinct EN/FR/AR copy. OEM strings remain platform controlled. | WP37 auth and native gate tests; owner manual checks green; exhaustive OEM/API/TalkBack coverage unverified |
 | Startup failure | Hardcoded English replaced with standalone localized screen independent of storage initialization. | `tests/wp37-startup.test.ts` |
 | Statistics accessibility | Time Period tablist label localized. Other inspected labels/placeholders use main or feature copy; numeric placeholders and empty decorative image alt retained. | WP37 Statistics browser and existing accessibility suites |
 | AI Insights empty analysis | Independent review found baseline hardcoded English empty-ledger/month errors. Both now use localized copy; month interpolation follows the selected app language. | Real screen/hook browser regression: FR/AR4 meaningful RED, EN2 retained passes, final6/6 GREEN without provider requests |
