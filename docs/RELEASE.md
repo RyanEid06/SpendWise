@@ -6,12 +6,15 @@ The permanent signing identity is retained. Review and required CI gate merging
 through integration to main; then build the private APK from the exact merged main SHA.
 No2.1.3 tag or public release is authorized.
 
-**Current checkpoint: GREEN through WP36, owner phone acceptance confirmed
-2026-10-11.** Backend deployment and signed APK delivery passed.
-See [status](STATUS.md), [APK receipt](WP36_PRIVATE_APK.md) and [roadmap](ROADMAP.md).
-WP37 implementation and validation are in progress under the [approved scope](WP37_SPEC.md);
-The owner authorized the WP37 main merge after automated checks, followed by the
-private main APK and restoring Render auto-deploy from main. These steps remain pending.
+**WP37 code/required application CI and main integration passed (2026-10-12).**
+[PR48](https://github.com/RyanEid06/SpendWise/pull/48) merged main9045c699;
+[private exact-main build38297255401](https://github.com/RyanEid06/SpendWise/actions/runs/38297255401) passed and was independently verified in the
+[WP37 receipt](WP37_PRIVATE_APK.md). Owner screenshots confirm existing Render
+main / After CI Checks Pass; live health matches main9045c699346f, installation
+auth and two bounded synthetic compatibility checks passed. The owner Deploys screenshot confirms Auto-Deploy/main9045c69/Live in1m12s;
+a deployment ID was not displayed.
+Owner reported WP37 manual testing green on2026-10-12; exhaustive OEM/API/TalkBack coverage remains unverified; historical WP36 owner acceptance
+and [private2.1.2 receipt](WP36_PRIVATE_APK.md) remain distinct. See [status](STATUS.md).
 `version.json` is authoritative; package and lockfile root versions must match.
 The current authoritative values are:
 
@@ -59,8 +62,10 @@ WP35's combined full native/recovery/API36 gates have separate green receipts.
 Historical WP36 Render verification used manually selected integration commit
 `d89063b8630c74355074544d1e5dfe215c66aab2`, with main branch label and auto-deploy disabled.
 Its health/authenticated synthetic analysis and owner's phone test passed then.
-WP37 requires fresh exact-main deployment/health/compatibility receipts before claiming
-the new backend is verified. Preserve the owner's installed app and data.
+WP37 live HTTP200 health matches main9045c699346f; synthetic installation auth
+and legacy/new144month Statistics compatibility passed. The [WP37 receipt](WP37_PRIVATE_APK.md)
+records scope and the owner Auto-Deploy/main9045c69/Live screenshot (deployment ID not displayed). Preserve
+the owner's installed app and data.
 
 ## Certification and publication
 

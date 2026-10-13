@@ -22,4 +22,5 @@ Render health/version and the installation-authenticated synthetic analysis
 smoke passed before owner testing. No credentials were exposed.
 
 This supersedes the WP35 2.1.1 private trial. It is not a public release:
-main remains unchanged until after WP37, and public v2.1.0 remains available.
+main was unchanged at this historical WP36 checkpoint. The later WP37 integration
+is recorded in [current status](STATUS.md); public v2.1.0 remains available.

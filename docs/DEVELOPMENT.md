@@ -1,10 +1,10 @@
 # Development and maintenance
 
-**Working and green through WP36, 2026-10-11.** Current private version:
-2.1.2/code12; CI, backend and owner phone acceptance passed. See
-[status](STATUS.md) and [roadmap](ROADMAP.md). WP37 is in implementation and validation
-under its [approved scope](WP37_SPEC.md);
-keep main untouched until after WP37.
+**WP37 2.1.3/code13: code/required CI passed and main merged, 2026-10-12.**
+The independently verified private APK and live-main runtime checks are tracked in
+[status](STATUS.md), [artifact receipt](WP37_PRIVATE_APK.md) and
+[roadmap](ROADMAP.md). Owner reported WP37 manual testing green on2026-10-12; exhaustive OEM/API/TalkBack coverage remains unverified; the owner
+accepted WP36 2.1.2/code12 historically. Keep source-specific evidence separate.
 
 ## Product constraints
 

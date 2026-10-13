@@ -1,7 +1,8 @@
 # Security, storage and recovery
 
-Current checkpoint: **GREEN through WP36**, including automated security
-regressions and owner phone acceptance (2026-10-11). See [status](STATUS.md).
+Current checkpoint: **WP37 automated application/security gates passed; main merged
+(2026-10-12)**. Owner reported WP37 manual testing green on2026-10-12; exhaustive OEM/API/TalkBack coverage remains unverified; the WP36 owner phone
+acceptance is historical (2026-10-11). See [status](STATUS.md).
 This sign-off does not expand the threat model or waive the safeguards below.
 
 This records implemented boundaries and release checks. It does not establish

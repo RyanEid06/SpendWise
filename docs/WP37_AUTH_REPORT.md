@@ -1,5 +1,8 @@
 # WP37 native authentication and lifecycle report
 
+> Historical domain implementation evidence. Final required CI, main deployment, private2.1.3/code13 delivery and owner-reported manual acceptance are recorded in [current status](STATUS.md) and [WP37 review](WP37_REVIEW.md).
+
+
 Source stable on 2026-10-12. Branch: `fix/wp37-localization-native-auth-ux`. This report covers Task 1 and the coordinator-authorized bootstrap/lifecycle integration in `src/main.tsx` and `useAppLockLifecycle.ts`. Version/signing/deployment settings were not changed. No commit was created by the auth agent.
 
 ## Confirmed causes and preserved behavior
@@ -77,7 +80,7 @@ Not completed locally: the sandbox first denied access to the Gradle wrapper cac
 
 ## Remaining native/device acceptance
 
-CODE automated verdict: focused Node/TypeScript/JVM checks pass. Android build/CI verdict: pending coordinator. DEVICE/OEM verdict: **PENDING**, including the explicitly unsupported legacy immediate-credential combination.
+At the domain handoff, focused Node/TypeScript/JVM checks passed and Android build/CI were pending coordinator. Final required CI, main and private APK verification have since passed; see [current status](STATUS.md). The owner reported manual WP37 checks green on2026-10-12. Exhaustive API/OEM matrix and TalkBack coverage remain unverified; the unsupported legacy immediate-credential combination remains documented below.
 
 - Run API24–27, API28–29 and API30+ builds/tests with the pinned AndroidX biometric1.1.0 and actual platform activities.
 - On two physical phones where available, verify distinct localized EN/FR/AR native title/reason and native OS-owned labels; verify biometric retry remains open after one mismatch.

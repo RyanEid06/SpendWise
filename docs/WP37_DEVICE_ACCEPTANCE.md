@@ -1,4 +1,6 @@
-# WP37 device acceptance — not yet verified
+# WP37 manual acceptance — owner reported green
+
+**Owner sign-off2026-10-12:** “manual test done all green” after receiving the private2.1.3/code13 APK. This is practical owner-reported acceptance; no row-by-row device/OS measurements, exhaustive OEM/API matrix or TalkBack transcript was supplied. The checklist below remains reusable and does not imply those missing measurements.
 
 Use the exact private WP37 **2.1.3/code13** APK and receipt, keeping the accepted WP36 **2.1.2/code12** receipt as historical evidence. Back up existing financial data before destructive restore scenarios. Automated checks do not establish physical/OEM acceptance.
 
@@ -20,4 +22,4 @@ Record device model, Android/API level, biometric capability, selected SpendWise
 | Statistics | Sparse/zero/partial/tied histories, 3/6/12 months and All Time. Compare displayed deterministic ranges/amounts against source data. Confirm category attribution is observational and output concise. All-Time shows latest6, expands all36 and resets; totals/chart/AI still use all36. |
 | Accessibility | TalkBack names, reading order and announcements, font scaling, 320px/small-height dialogs, Settings/History/form/swipe/FAB navigation and focus after restore. |
 
-No live backend deployment is part of WP37 execution. The existing backend can still return WP36 wording and truncate histories beyond120 months until a separately approved backend deployment. Preferred future order: backend, then client.
+The owner authorized WP37 main integration and restoring Render auto-deploy from main. Live HTTP200 health now matches main9045c699346f; synthetic installation auth and legacy/new144month Statistics compatibility passed. [Current status](STATUS.md) records the scoped proof and owner screenshot confirming Auto-Deploy/main9045c69/Live; the Render deployment ID was not displayed. The verified new backend is available before installing the new private client. No physical/OEM/TalkBack acceptance is implied by automated or deployment receipts.

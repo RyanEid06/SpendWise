@@ -3,17 +3,14 @@
 SpendWise **2.1.3**, Android build **13**, is a local-first expense tracker and
 monthly budget planner for Android and the web. Package: `com.spendwise.app`.
 
-**Working and green through WP36 (2026-10-11).** Automated checks passed,
-the compatible WP36 backend is live, and the owner confirmed successful phone
-testing: “all works nice”. WP37 hardening is now in implementation and validation;
-its [approved scope](docs/WP37_SPEC.md) and [progress ledger](docs/WP37_PROGRESS.md)
-track the separate review checkpoint.
-See [current status and evidence](docs/STATUS.md) and [roadmap](docs/ROADMAP.md).
-
-The previously delivered WP36 APK is private2.1.2/code12. WP37 targets2.1.3/code13;
-its private signed build follows the checked main merge and is not yet delivered.
-The latest public release remains [2.1.0 and its verification assets](https://github.com/RyanEid06/SpendWise/releases/tag/v2.1.0).
-Main stays untouched until after WP37.
+**WP37 automated application checks passed; merged to main (2026-10-12).** Historical WP36 phone acceptance remains recorded separately.
+WP37 **2.1.3/code13** code review and all required automated application gates passed;
+[PR48](https://github.com/RyanEid06/SpendWise/pull/48) merged to main as
+`9045c699346f44f7867cf9d1238c6558ca17e841`. The [private APK receipt](docs/WP37_PRIVATE_APK.md)
+and [current status](docs/STATUS.md) track artifact and deployment verification.
+Owner reported WP37 manual testing green on2026-10-12; exhaustive OEM/API/TalkBack coverage remains unverified.
+The latest public release remains [2.1.0](https://github.com/RyanEid06/SpendWise/releases/tag/v2.1.0);
+WP37 has no public tag or release. See the [roadmap](docs/ROADMAP.md).
 
 Financial records stay on the device. Optional AI analysis, Smart Capture and
 receipt scanning send selected data to the backend/Gemini when invoked.
@@ -33,7 +30,7 @@ receipt scanning send selected data to the backend/Gemini when invoked.
   Conversion defaults are dated suggestions, not a live exchange-rate feed.
 
 Home, History, AI Insights and Statistics are the four primary destinations.
-Settings opens from the top app bar. The owner accepted the current phone build;
+Settings opens from the top app bar. The owner accepted the historical WP36 phone build;
 automated and owner-reported evidence is recorded in [verification](docs/VERIFICATION.md).
 The reusable [manual checklist](docs/MANUAL_ACCEPTANCE.md) remains available for future regressions.
 

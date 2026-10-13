@@ -1,14 +1,26 @@
 # SpendWise 2.1 automated verification
 
-## WP37 2.1.3 / code13 — final verification pending
+## WP37 2.1.3 / code13 — code, CI and main integration passed
 
-The owner selected 2.1.3/code13 after the delivered private WP36 2.1.2/code12.
-The version correction passed local Node checks (648 passed, one PostgreSQL
-test skipped, zero failures), TypeScript and the production build. Final
-exact-head CI is pending. After review and required CI, the authorized order is
-integration to main, private permanent-signed APK from exact main, and Render
-auto-deploy verification. No WP37 APK, main merge or deployment receipt is
-claimed here yet. Physical/OEM/TalkBack checks remain unverified.
+[Combined38286074724 attempt2](https://github.com/RyanEid06/SpendWise/actions/runs/38286074724) passed web/PostgreSQL, API36 isolated
+editor/continuity, full API34 acceptance and encrypted draft recovery on
+`99278cebbc1b46e80b8e6b434e33f727954c5927`. One unchanged acceptance-only
+retry passed; initial media navigation failure and artifacts remain retained.
+Main PR [Android Build38296180292](https://github.com/RyanEid06/SpendWise/actions/runs/38296180292) passed on integrationfa1dae.
+[PR48](https://github.com/RyanEid06/SpendWise/pull/48) merged exact same file tree
+to main `9045c699346f44f7867cf9d1238c6558ca17e841`. Independent immutable reviews found no required findings.
+Local version checks:648passed,0failed,1PostgreSQL skip; TypeScript/build passed.
+
+[Private exact-main build38297255401](https://github.com/RyanEid06/SpendWise/actions/runs/38297255401) passed and was independently verified: hash, permanent
+V2 signer, compiled package/version, embedded source/run and HTTPS endpoint.
+[WP37 artifact receipt](WP37_PRIVATE_APK.md) records exact values. Post-merge
+[main Android Build38297213552](https://github.com/RyanEid06/SpendWise/actions/runs/38297213552) passed too.
+Owner screenshots verify Render main / After CI Checks Pass. Public HTTP200
+health reports matching main9045c699346f and auth-store readiness; synthetic
+installation auth plus legacy-periodless/new144month trends requests passed
+deterministic summary and client-shape checks. Owner Deploys screenshot confirms Auto-Deploy/main9045c69/Live in1m12s;
+deployment ID was not displayed. [Current status](STATUS.md) records the scoped proof.
+Owner reported WP37 manual testing green on2026-10-12; exhaustive OEM/API/TalkBack coverage remains unverified. No public release.
 
 ## Historical 2.1.2 / WP36 checkpoint — GREEN
 
@@ -18,10 +30,10 @@ phone acceptance are green. The owner confirmed “all works nice”.
 [combined CI38164832712](https://github.com/RyanEid06/SpendWise/actions/runs/38164832712),
 [Android Build38164841401](https://github.com/RyanEid06/SpendWise/actions/runs/38164841401)
 and [signed APK38168712767](https://github.com/RyanEid06/SpendWise/actions/runs/38168712767).
-See the [2.1.2 artifact receipt](WP36_PRIVATE_APK.md). WP37 is in implementation
-and validation under its [approved scope](WP37_SPEC.md); its independent evidence
-is tracked in the [progress ledger](WP37_PROGRESS.md). This WP36 receipt does not certify WP37;
-main and the public 2.1.0 release remain unchanged.
+See the [2.1.2 artifact receipt](WP36_PRIVATE_APK.md). Subsequent WP37 delivery
+under its [approved scope](WP37_SPEC.md) has independent evidence
+in the [progress ledger](WP37_PROGRESS.md). This WP36 receipt does not certify WP37;
+main was unchanged at that historical checkpoint; the public2.1.0 release remains unchanged.
 
 ## Historical published 2.1.0 verification
 

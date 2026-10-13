@@ -1,6 +1,16 @@
 # Owner phone acceptance
 
-Status: **GREEN — owner accepted the current 2.1.2/code12 phone build on
+## WP37 2.1.3/code13 — GREEN, owner reported2026-10-12
+
+After receiving the verified Desktop APK, the owner reported “manual test done all green”
+for WP37. [Current status](STATUS.md), [artifact receipt](WP37_PRIVATE_APK.md) and
+[WP37 checklist](WP37_DEVICE_ACCEPTANCE.md) distinguish automated proof from this
+practical phone sign-off. No per-scenario device/OS measurements, exhaustive
+OEM/API matrix or TalkBack transcript was supplied.
+
+## Historical WP36 owner phone acceptance
+
+Status: **GREEN — owner accepted the historical WP36 2.1.2/code12 phone build on
 2026-10-11**, reporting “all works nice”. This closes the WP36 practical phone
 acceptance checkpoint. See [status and evidence](STATUS.md) and [APK receipt](WP36_PRIVATE_APK.md).
 The owner did not supply a row-by-row checklist, device/OS measurements or a

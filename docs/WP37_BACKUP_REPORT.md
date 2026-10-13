@@ -1,5 +1,8 @@
 # WP37 backup policy and recovery report
 
+> Historical domain implementation evidence. Final required CI, main deployment, private2.1.3/code13 delivery and owner-reported manual acceptance are recorded in [current status](STATUS.md) and [WP37 review](WP37_REVIEW.md).
+
+
 Date: 2026-10-12. Scope: approved WP37 Parts 27–31 and 50, specification refinement 5, implementation-plan Task 2. Branch: `fix/wp37-localization-native-auth-ux`. No commits, provider/configuration/deployment changes, version changes, releases, merges or branch deletions were performed by this domain agent.
 
 ## Confirmed causes and existing behavior
