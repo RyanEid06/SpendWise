@@ -8,7 +8,7 @@ WP37 **2.1.3/code13** code review and all required automated application gates p
 [PR48](https://github.com/RyanEid06/SpendWise/pull/48) merged to main as
 `9045c699346f44f7867cf9d1238c6558ca17e841`. The [private APK receipt](docs/WP37_PRIVATE_APK.md)
 and [current status](docs/STATUS.md) track artifact and deployment verification.
-WP37 physical/OEM/TalkBack acceptance remains unverified.
+Owner reported WP37 manual testing green on2026-10-12; exhaustive OEM/API/TalkBack coverage remains unverified.
 The latest public release remains [2.1.0](https://github.com/RyanEid06/SpendWise/releases/tag/v2.1.0);
 WP37 has no public tag or release. See the [roadmap](docs/ROADMAP.md).
 

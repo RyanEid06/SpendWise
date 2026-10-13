@@ -2,7 +2,7 @@
 
 Approved by the owner on 2026-10-12: execute `WP37_ORIGINAL_PROMPT.md` with the seven review refinements below. The original 60-part prompt remains the full requirements reference. This file takes precedence where its refinements conflict with original wording. The user has finished and committed the prior documentation changes.
 
-Baseline: `269ddfaa7c9707c2d95739be5e3ddfc6fb726fc1`, `codex/wp35-integration`, clean checkout; contains WP36 at `13b4a93`. Implementation branch: `fix/wp37-localization-native-auth-ux`. Owner-selected WP37 version is **2.1.3/code13**, advancing the previously delivered private2.1.2/code12 build. Original authorization stopped at the PR/review checkpoint. **Latest2026-10-12 owner authorization supersedes that stop and the earlier APK-before-merge sequence:** after review and required CI are green, merge through integration to `main`; then build and verify the private signed APK from the exact main commit. Restore Render auto-deploy from `main` and verify deployment. The owner explicitly answered **"Automated checks are enough"** and subsequently said **"build the apk after you merge to main"**. Physical phone acceptance is not a merge prerequisite and remains unverified. The owner later corrected the WP37 version to2.1.3/code13. No tag/public release/additional version bump/branch deletion/destructive data operation or unrelated environment change is authorized.
+Baseline: `269ddfaa7c9707c2d95739be5e3ddfc6fb726fc1`, `codex/wp35-integration`, clean checkout; contains WP36 at `13b4a93`. Implementation branch: `fix/wp37-localization-native-auth-ux`. Owner-selected WP37 version is **2.1.3/code13**, advancing the previously delivered private2.1.2/code12 build. Original authorization stopped at the PR/review checkpoint. **Latest2026-10-12 owner authorization supersedes that stop and the earlier APK-before-merge sequence:** after review and required CI are green, merge through integration to `main`; then build and verify the private signed APK from the exact main commit. Restore Render auto-deploy from `main` and verify deployment. The owner explicitly answered **"Automated checks are enough"** and subsequently said **"build the apk after you merge to main"**. Physical phone acceptance was not a merge prerequisite; the owner subsequently reported manual WP37 testing green on2026-10-12. Exhaustive OEM/API/TalkBack coverage remains unverified. The owner later corrected the WP37 version to2.1.3/code13. No tag/public release/additional version bump/destructive data operation or unrelated environment change is authorized. Later explicit owner authorization permits audited completed-branch and temporary-file cleanup.
 
 ## Current checkpoint — 2026-10-12
 
@@ -11,8 +11,8 @@ gates; main PR Android Build38296180292 passed. PR47/PR48 merged to main
 `9045c699346f44f7867cf9d1238c6558ca17e841`, identical to tested feature tree. Private exact-main build38297255401
 passed and was independently verified; Render screenshots confirm main / After CI
 Checks Pass. Public health matches main9045c699346f; synthetic installation auth
-and two legacy/new144month trends compatibility checks passed. Render deployment
-ID/trigger receipt was not captured. See [current status](STATUS.md).
+and two legacy/new144month trends compatibility checks passed. Owner Deploys screenshot confirms Auto-Deploy/main9045c69/Live in1m12s; the deployment
+ID was not displayed. See [current status](STATUS.md).
 
 ## Binding refinements
 

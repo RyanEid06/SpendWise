@@ -1,7 +1,8 @@
 # WP37 private signed APK — independently verified
 
-Verified **2026-10-12** after the authorized main merge. Physical/OEM/TalkBack
-acceptance remains unverified. This is private testing, with no tag/public release.
+Verified **2026-10-12** after the authorized main merge. The owner subsequently
+reported “manual test done all green” on2026-10-12. Exhaustive OEM/API/TalkBack
+coverage remains unverified. This is private testing, with no tag/public release.
 
 | Identity | Value |
 | --- | --- |

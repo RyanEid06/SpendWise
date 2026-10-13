@@ -1,4 +1,6 @@
-# WP37 device acceptance — not yet verified
+# WP37 manual acceptance — owner reported green
+
+**Owner sign-off2026-10-12:** “manual test done all green” after receiving the private2.1.3/code13 APK. This is practical owner-reported acceptance; no row-by-row device/OS measurements, exhaustive OEM/API matrix or TalkBack transcript was supplied. The checklist below remains reusable and does not imply those missing measurements.
 
 Use the exact private WP37 **2.1.3/code13** APK and receipt, keeping the accepted WP36 **2.1.2/code12** receipt as historical evidence. Back up existing financial data before destructive restore scenarios. Automated checks do not establish physical/OEM acceptance.
 

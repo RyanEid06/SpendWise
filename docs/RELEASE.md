@@ -13,7 +13,7 @@ No2.1.3 tag or public release is authorized.
 main / After CI Checks Pass; live health matches main9045c699346f, installation
 auth and two bounded synthetic compatibility checks passed. The owner Deploys screenshot confirms Auto-Deploy/main9045c69/Live in1m12s;
 a deployment ID was not displayed.
-WP37 physical/OEM/TalkBack remains unverified; historical WP36 owner acceptance
+Owner reported WP37 manual testing green on2026-10-12; exhaustive OEM/API/TalkBack coverage remains unverified; historical WP36 owner acceptance
 and [private2.1.2 receipt](WP36_PRIVATE_APK.md) remain distinct. See [status](STATUS.md).
 `version.json` is authoritative; package and lockfile root versions must match.
 The current authoritative values are:

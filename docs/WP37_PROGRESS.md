@@ -5,7 +5,8 @@ Spec: `docs/WP37_SPEC.md`; original full prompt: `docs/WP37_ORIGINAL_PROMPT.md`;
 **Current owner instructions supersede historical entries below:** WP37 is
 **2.1.3/code13**. Review and required exact-head CI gate integration/main merges;
 then build the private APK from exact main and verify Render auto-deploy from
-main. Automated checks are enough; physical/OEM/TalkBack remains unverified.
+main. Automated checks are enough; the owner subsequently reported manual WP37
+testing green on2026-10-12. Exhaustive OEM/API/TalkBack coverage remains unverified.
 No public release, tag or further version increment is authorized. Later owner authorization permits the audited completed-branch cleanup recorded below.
 
 ## Baseline and authorization
@@ -208,3 +209,32 @@ Run `npm ci` before future local development; builds regenerate the other output
 Useful unique CI/runtime/review evidence, signed APKs, source and secrets remain.
 The independently hash-verified delivery copy is
 `C:\Users\Administrator\Desktop\SpendWise-v2.1.3-test.apk`.
+
+## Historical artifact compaction and owner acceptance — 2026-10-13
+
+Owner manual WP37 sign-off2026-10-12: **“manual test done all green”** on the
+delivered2.1.3/code13. No detailed device/OS/API/OEM/TalkBack certification was supplied.
+
+The historical artifact tree was compacted after a read-only path-consumer audit.
+Preserved **7794files /1263509984bytes** in
+`artifacts/history-2026-10-12.zip` (**581189507bytes**).
+Archive SHA256: `f36b4a04e45674b42845db5deb5dbee4ec111586f84099a6df9bb8fd8f6e46ff`.
+Every source relative path, size and SHA256 was verified against the ZIP and
+rechecked against the original before removing loose originals. Full local index:
+`artifacts/history-manifest.json`. Unique recordings/logs were preserved; no
+claim is made that an unexamined recording establishes physical-device acceptance.
+
+Current`artifacts/wp37` and operational`android-e2e`, `wp33`, `wp35`,
+`wp35-live` inputs remain loose. Historical paths mentioned by dated reports
+are now ZIP-relative paths; extract the archive **into artifacts/** if needed.
+The artifact root now has seven items instead of372. Together with regenerated
+dependency/build cleanup, about965MB was reclaimed, while source, secrets,
+current signed APKs, Git history and useful evidence were preserved.
+
+Final documentation-only PR49 records these receipts separately from application,
+APK and live backend source9045c699. Its Android Build38301124879 passed at212b356.
+An extra historical isolated-import job114984033851 failed at packageDebug before
+emulator execution; no precise underlying cause appeared in its log. This duplicate
+packaging result is not counted as passing application proof and no assertion was
+weakened. The required application gates and exact-main delivery remain separately
+verified above. Current final documentation changes affect Markdown only.

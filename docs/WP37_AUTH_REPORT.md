@@ -1,5 +1,8 @@
 # WP37 native authentication and lifecycle report
 
+> Historical domain implementation evidence. Final required CI, main deployment, private2.1.3/code13 delivery and owner-reported manual acceptance are recorded in [current status](STATUS.md) and [WP37 review](WP37_REVIEW.md).
+
+
 Source stable on 2026-10-12. Branch: `fix/wp37-localization-native-auth-ux`. This report covers Task 1 and the coordinator-authorized bootstrap/lifecycle integration in `src/main.tsx` and `useAppLockLifecycle.ts`. Version/signing/deployment settings were not changed. No commit was created by the auth agent.
 
 ## Confirmed causes and preserved behavior

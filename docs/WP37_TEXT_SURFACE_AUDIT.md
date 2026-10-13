@@ -1,5 +1,8 @@
 # WP37 targeted text, RTL and accessibility audit
 
+> Historical domain implementation evidence. Final required CI, main deployment, private2.1.3/code13 delivery and owner-reported manual acceptance are recorded in [current status](STATUS.md) and [WP37 review](WP37_REVIEW.md).
+
+
 Scope: current source against WP36 baseline `269ddfaa7c9707c2d95739be5e3ddfc6fb726fc1`. Findings were inspected before changes.
 
 | Surface | Finding and disposition | Automated evidence |

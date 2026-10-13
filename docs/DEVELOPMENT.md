@@ -3,7 +3,7 @@
 **WP37 2.1.3/code13: code/required CI passed and main merged, 2026-10-12.**
 The independently verified private APK and live-main runtime checks are tracked in
 [status](STATUS.md), [artifact receipt](WP37_PRIVATE_APK.md) and
-[roadmap](ROADMAP.md). WP37 physical/OEM/TalkBack remains unverified; the owner
+[roadmap](ROADMAP.md). Owner reported WP37 manual testing green on2026-10-12; exhaustive OEM/API/TalkBack coverage remains unverified; the owner
 accepted WP36 2.1.2/code12 historically. Keep source-specific evidence separate.
 
 ## Product constraints

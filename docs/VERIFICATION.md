@@ -20,7 +20,7 @@ health reports matching main9045c699346f and auth-store readiness; synthetic
 installation auth plus legacy-periodless/new144month trends requests passed
 deterministic summary and client-shape checks. Owner Deploys screenshot confirms Auto-Deploy/main9045c69/Live in1m12s;
 deployment ID was not displayed. [Current status](STATUS.md) records the scoped proof.
-WP37 physical/OEM/TalkBack remains unverified. No public release.
+Owner reported WP37 manual testing green on2026-10-12; exhaustive OEM/API/TalkBack coverage remains unverified. No public release.
 
 ## Historical 2.1.2 / WP36 checkpoint — GREEN
 

@@ -1,7 +1,7 @@
 # Security, storage and recovery
 
 Current checkpoint: **WP37 automated application/security gates passed; main merged
-(2026-10-12)**. WP37 physical/OEM/TalkBack remains unverified; the WP36 owner phone
+(2026-10-12)**. Owner reported WP37 manual testing green on2026-10-12; exhaustive OEM/API/TalkBack coverage remains unverified; the WP36 owner phone
 acceptance is historical (2026-10-11). See [status](STATUS.md).
 This sign-off does not expand the threat model or waive the safeguards below.
 

@@ -1,5 +1,8 @@
 # WP37 Statistics implementation report
 
+> Historical domain implementation evidence. Final required CI, main deployment, private2.1.3/code13 delivery and owner-reported manual acceptance are recorded in [current status](STATUS.md) and [WP37 review](WP37_REVIEW.md).
+
+
 Date: 2026-10-12. Implementation remains on the shared `fix/wp37-localization-native-auth-ux` branch. No commit, provider call, backend deployment, configuration change, version change, merge or release was performed by this domain agent.
 
 ## Confirmed baseline findings

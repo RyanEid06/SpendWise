@@ -1,12 +1,12 @@
 # WP37 review checkpoint
 
-Date: 2026-10-12. Approved scope: [original prompt](WP37_ORIGINAL_PROMPT.md) plus [refinements1–7](WP37_SPEC.md). Code/required application CI passed, main merged, private artifact independently verified and live-main runtime/compatibility checks passed. Physical acceptance remains unverified. Owner Deploys screenshot confirms Auto-Deploy/main9045c69/Live in1m12s; deployment ID was not displayed. Dated entries below retain their original source-specific observations.
+Date: 2026-10-12. Approved scope: [original prompt](WP37_ORIGINAL_PROMPT.md) plus [refinements1–7](WP37_SPEC.md). Code/required application CI passed, main merged, private artifact independently verified and live-main runtime/compatibility checks passed. Owner reported manual WP37 testing green on2026-10-12; exhaustive OEM/API/TalkBack coverage remains unverified. Owner Deploys screenshot confirms Auto-Deploy/main9045c69/Live in1m12s; deployment ID was not displayed. Dated entries below retain their original source-specific observations.
 
 ## Identity and boundaries
 
 Baseline: clean `codex/wp35-integration` at `269ddfaa7c9707c2d95739be5e3ddfc6fb726fc1`, containing approved WP36 merge `13b4a93`. Implementation branch: `fix/wp37-localization-native-auth-ux`. Initial application `4547b7e63814e9350f37c094a3aafec82ce9f962`, foreground-auth correction `d837c35bf0f9edeb89eee163df27c369b2aa81b3`, workflow correction `512d950bd1bcd7d5f55feca45cde79be144f1bae` and version correction `89c4ca32ffbf8dbbb39af8ff32c10c106f726668` received independent immutable review. Final tested feature head: `99278cebbc1b46e80b8e6b434e33f727954c5927`. [PR47](https://github.com/RyanEid06/SpendWise/pull/47) and [PR48](https://github.com/RyanEid06/SpendWise/pull/48) merged to main **`9045c699346f44f7867cf9d1238c6558ca17e841`**, with identical file tree. Version **2.1.3 / Android code13**, package `com.spendwise.app`.
 
-Original scope stopped at review. The owner subsequently authorized merging through integration to main and restoring Render auto-deploy from main, explicitly stating "Automated checks are enough". The latest instruction **"build the apk after you merge to main"** superseded the earlier APK-before-merge gate. Main merged after required application CI and main PR Android Build passed; private exact-main build38297255401 passed afterward, with independent artifact verification tracked in [its receipt](WP37_PRIVATE_APK.md). Owner screenshots confirm existing Render main / After CI Checks Pass; public live health matched main9045c699346f and two authenticated synthetic compatibility checks passed. Owner Deploys screenshot confirms Auto-Deploy / main9045c69 / Live,1m12s; deployment ID not displayed. Physical acceptance remains unverified. Public release/tag, additional version/signing identity change, branch deletion, data reset and unrelated configuration changes remain unauthorized.
+Original scope stopped at review. The owner subsequently authorized merging through integration to main and restoring Render auto-deploy from main, explicitly stating "Automated checks are enough". The latest instruction **"build the apk after you merge to main"** superseded the earlier APK-before-merge gate. Main merged after required application CI and main PR Android Build passed; private exact-main build38297255401 passed afterward, with independent artifact verification tracked in [its receipt](WP37_PRIVATE_APK.md). Owner screenshots confirm existing Render main / After CI Checks Pass; public live health matched main9045c699346f and two authenticated synthetic compatibility checks passed. Owner Deploys screenshot confirms Auto-Deploy / main9045c69 / Live,1m12s; deployment ID not displayed. Owner reported manual WP37 testing green on2026-10-12; exhaustive OEM/API/TalkBack coverage remains unverified. Public release/tag, additional version/signing identity change, data reset and unrelated configuration changes remain unauthorized. Completed-branch cleanup was explicitly authorized later.
 
 ## Original Part60 findings and resulting behavior
 
@@ -32,7 +32,7 @@ Original scope stopped at review. The owner subsequently authorized merging thro
 | 32 Files | Changes are limited to native/security/lifecycle, backup policy and modals/Settings, Statistics deterministic facts/validation/UI, bidi/progress/startup surfaces, corresponding tests/docs and precise private-APK branch/packet validation plumbing. The owner-selected2.1.3/code13 metadata changes package/root lock versions only; dependency entries, routing/executor/network/auth middleware and database schemas remain unchanged. Final Git diff is authoritative. |
 | 33 Tests | New WP37 auth/startup lifecycle, backup persistence/reopen/faults, Statistics period/fact/compatibility, localization/startup SSR, locale/RTL/progress/backup/Statistics browser regressions. Existing source-shape assertions updated at moved boundaries without relaxing intended security/behavior. |
 | 34–35 Local/CI | Final version Node648pass/0fail/1DBskip and TypeScript/production build passed. Exact-version combined38286074724 attempt2 passed all four required gates, including PostgreSQL and full native acceptance/recovery. Main PR38296180292 and post-merge main38297213552 Android Builds passed. Independent immutable reviews found no required findings. Earlier scoped local results and retries remain below. |
-| 36 Device acceptance | WP36 owner sign-off remains historical. WP37 physical phones, OEM native prompts/Keystore flows, TalkBack and manual visual/backup/Statistics acceptance are **NOT YET VERIFIED**. |
+| 36 Device acceptance | WP36 owner sign-off remains historical. Owner reported manual WP37 testing green on2026-10-12; no per-scenario device/OS record, full API/OEM matrix or TalkBack transcript was supplied. |
 | 37 Risks | Legacy immediate credential limitation, missing real-world spending data, cross-domain process-kill atomicity not certified, browser performance warning thresholds, and unexecuted physical scenarios remain explicit. Live-main compatibility passed in two bounded synthetic scenarios; no provider-load certification or Render deployment ID/trigger receipt is claimed. If disposable-cache deletion itself fails during incomplete financial recovery, old claims are suppressed for the current process; that suppression is not durable across restart. |
 
 ## Historical local verification evidence and auth investigation
@@ -82,7 +82,7 @@ previous green2.1.2 application receipts remain labeled with their original sour
 
 **MAIN: MERGED. PRIVATE APK: INDEPENDENTLY VERIFIED. LIVE RUNTIME / BOUNDED COMPATIBILITY: PASSED.** Feature, integration and main share tree `08d4b0912d8be04efa4c83d34979eb8cda0737fa`. The owner rejected duplicate45minute manual gates; healthy automatic duplicate runs were preserved. Additional isolated backup job114967699360 was interrupted by Android killing SpendWise because Google FontsProvider's process died; artifact11768143813/device-logcat line7005 is retained, not counted as passing application proof. No source/security/assertion changes were made for that infrastructure event. Historical fixture heap exhaustion was fixed in reviewed512d950 with bounded Gradle resources and the final acceptance passed. The private main signing workflow retains immutable source/package/version/HTTPS/permanent-certificate guards. See [private artifact receipt](WP37_PRIVATE_APK.md) and [deployment status](STATUS.md).
 
-**DEVICE / AUTH / RTL / VISUAL / BACKUP / STATISTICS: NOT YET VERIFIED.** Automated browser checks are evidence for tested synthetic scenarios, not physical-device certification.
+**MANUAL DEVICE CHECKPOINT: GREEN — OWNER REPORTED.** After receiving2.1.3/code13, the owner said “manual test done all green” on2026-10-12. No per-scenario device/OS measurements, full API/OEM matrix or TalkBack transcript was supplied; those remain unverified. Automated checks and owner-reported phone acceptance retain their separate scope.
 
 ## Final owner-authorized cleanup — 2026-10-12
 
@@ -102,3 +102,32 @@ Run `npm ci` before future local development; builds regenerate the other output
 Useful unique CI/runtime/review evidence, signed APKs, source and secrets remain.
 The independently hash-verified delivery copy is
 `C:\Users\Administrator\Desktop\SpendWise-v2.1.3-test.apk`.
+
+## Historical artifact compaction and owner acceptance — 2026-10-13
+
+Owner manual WP37 sign-off2026-10-12: **“manual test done all green”** on the
+delivered2.1.3/code13. No detailed device/OS/API/OEM/TalkBack certification was supplied.
+
+The historical artifact tree was compacted after a read-only path-consumer audit.
+Preserved **7794files /1263509984bytes** in
+`artifacts/history-2026-10-12.zip` (**581189507bytes**).
+Archive SHA256: `f36b4a04e45674b42845db5deb5dbee4ec111586f84099a6df9bb8fd8f6e46ff`.
+Every source relative path, size and SHA256 was verified against the ZIP and
+rechecked against the original before removing loose originals. Full local index:
+`artifacts/history-manifest.json`. Unique recordings/logs were preserved; no
+claim is made that an unexamined recording establishes physical-device acceptance.
+
+Current`artifacts/wp37` and operational`android-e2e`, `wp33`, `wp35`,
+`wp35-live` inputs remain loose. Historical paths mentioned by dated reports
+are now ZIP-relative paths; extract the archive **into artifacts/** if needed.
+The artifact root now has seven items instead of372. Together with regenerated
+dependency/build cleanup, about965MB was reclaimed, while source, secrets,
+current signed APKs, Git history and useful evidence were preserved.
+
+Final documentation-only PR49 records these receipts separately from application,
+APK and live backend source9045c699. Its Android Build38301124879 passed at212b356.
+An extra historical isolated-import job114984033851 failed at packageDebug before
+emulator execution; no precise underlying cause appeared in its log. This duplicate
+packaging result is not counted as passing application proof and no assertion was
+weakened. The required application gates and exact-main delivery remain separately
+verified above. Current final documentation changes affect Markdown only.

@@ -1,6 +1,6 @@
 # Current status — WP37 integrated to main
 
-Updated **2026-10-12**. Candidate **2.1.3 / Android code13**, package
+Updated **2026-10-13** after delivery and owner manual acceptance on2026-10-12. Candidate **2.1.3 / Android code13**, package
 `com.spendwise.app`. Independent immutable application, workflow and version
 reviews found no remaining required actionable findings.
 
@@ -12,7 +12,7 @@ reviews found no remaining required actionable findings.
 | Private signed APK | GREEN / INDEPENDENTLY VERIFIED | [38297255401](https://github.com/RyanEid06/SpendWise/actions/runs/38297255401), exact main2.1.3/code13; [hash/certificate/identity receipt](WP37_PRIVATE_APK.md) |
 | Render settings | OWNER SCREENSHOT VERIFIED | Existing spendwise-api, branchmain, Auto-Deploy **After CI Checks Pass** |
 | Render runtime | MAIN OBSERVED LIVE / SCOPED CHECKS PASSED | HTTP200 version9045c699346f; installation auth and legacy/new144month deterministic Statistics checks passed2026-10-12T19:33:57Z. Owner Deploys screenshot confirms Auto-Deploy / main9045c69 / Live,1m12s; deployment ID not displayed |
-| WP37 physical/OEM/TalkBack | UNVERIFIED | [Device checklist](WP37_DEVICE_ACCEPTANCE.md); not a merge gate per owner |
+| WP37 manual phone testing | GREEN — OWNER REPORTED | Owner said “manual test done all green” for delivered2.1.3 on2026-10-12. No per-scenario device/OS measurements or exhaustive OEM/API/TalkBack certification supplied; [checklist](WP37_DEVICE_ACCEPTANCE.md) |
 
 Feature99278ce, integrationfa1dae and main9045c699 share the exact tested tree
 `08d4b0912d8be04efa4c83d34979eb8cda0737fa`. The main merge introduced no
@@ -96,3 +96,32 @@ Run `npm ci` before future local development; builds regenerate the other output
 Useful unique CI/runtime/review evidence, signed APKs, source and secrets remain.
 The independently hash-verified delivery copy is
 `C:\Users\Administrator\Desktop\SpendWise-v2.1.3-test.apk`.
+
+## Historical artifact compaction and owner acceptance — 2026-10-13
+
+Owner manual WP37 sign-off2026-10-12: **“manual test done all green”** on the
+delivered2.1.3/code13. No detailed device/OS/API/OEM/TalkBack certification was supplied.
+
+The historical artifact tree was compacted after a read-only path-consumer audit.
+Preserved **7794files /1263509984bytes** in
+`artifacts/history-2026-10-12.zip` (**581189507bytes**).
+Archive SHA256: `f36b4a04e45674b42845db5deb5dbee4ec111586f84099a6df9bb8fd8f6e46ff`.
+Every source relative path, size and SHA256 was verified against the ZIP and
+rechecked against the original before removing loose originals. Full local index:
+`artifacts/history-manifest.json`. Unique recordings/logs were preserved; no
+claim is made that an unexamined recording establishes physical-device acceptance.
+
+Current`artifacts/wp37` and operational`android-e2e`, `wp33`, `wp35`,
+`wp35-live` inputs remain loose. Historical paths mentioned by dated reports
+are now ZIP-relative paths; extract the archive **into artifacts/** if needed.
+The artifact root now has seven items instead of372. Together with regenerated
+dependency/build cleanup, about965MB was reclaimed, while source, secrets,
+current signed APKs, Git history and useful evidence were preserved.
+
+Final documentation-only PR49 records these receipts separately from application,
+APK and live backend source9045c699. Its Android Build38301124879 passed at212b356.
+An extra historical isolated-import job114984033851 failed at packageDebug before
+emulator execution; no precise underlying cause appeared in its log. This duplicate
+packaging result is not counted as passing application proof and no assertion was
+weakened. The required application gates and exact-main delivery remain separately
+verified above. Current final documentation changes affect Markdown only.
