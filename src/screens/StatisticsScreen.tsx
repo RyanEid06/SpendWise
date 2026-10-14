@@ -1,9 +1,10 @@
 import { AI_PROCESSING_TIMEOUT_MS } from '../security/aiOperationBudget';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { apiFetchJson } from '../utils/api';
-import { getAiErrorMessage, normalizeApiException, SpendWiseApiError } from '../utils/apiErrors';
+import { getAiErrorMessage, SpendWiseApiError } from '../utils/apiErrors';
 import { parseTrendResult } from '../utils/aiResultValidation';
 import { useAiOperation } from '../app/hooks/useAiOperation';
+import { useAiRetryPolicy } from '../app/hooks/useAiRetryPolicy';
 import { AiProgressPanel } from '../components/AiProgressPanel';
 import {
   BarChart3,
@@ -54,7 +55,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
   // AI Trend Explanation state
   const { operation, progress } = useAiOperation();
   const [aiIsLocal, setAiIsLocal] = useState(false);
-  const [retryAllowed, setRetryAllowed] = useState(true);
+  const { retryAllowed, canRetry, recordFailure, resetRetry } = useAiRetryPolicy();
   const [aiExplanation, setAiExplanation] = useState<AiTrendExplanationResult | null>(null);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -74,11 +75,12 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
   useEffect(() => {
     aiRequestIdRef.current += 1;
     operation.reset();
+    resetRetry();
     aiInFlightRef.current = false;
     setIsLoadingAi(false);
     setAiExplanation(null);
     setAiError(null);
-  }, [expenses, budgets, currentMonthYear, selectedPeriod, currencyCode, language, operation]);
+  }, [expenses, budgets, currentMonthYear, selectedPeriod, currencyCode, language, operation, resetRetry]);
 
   useEffect(() => {
     return () => {
@@ -97,7 +99,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
   ];
 
   const handleExplainWithAi = async () => {
-    if (aiInFlightRef.current) return;
+    if (aiInFlightRef.current || !canRetry()) return;
 
     if (stats.totalTransactions === 0) {
       setAiError(t(language, 'noMonthlyRecords'));
@@ -107,14 +109,14 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
     aiInFlightRef.current = true;
     const run = operation.begin();
     if (!run) { aiInFlightRef.current = false; return; }
-    setRetryAllowed(true);
     const requestId = ++aiRequestIdRef.current;
     setIsLoadingAi(true);
     setAiError(null);
 
-    const localFallback = StatisticsEngine.generateLocalTrendExplanation(stats, currencyCode, language);
+    let localFallback: AiTrendExplanationResult | null = null;
 
     try {
+      localFallback = StatisticsEngine.generateLocalTrendExplanation(stats, currencyCode, language);
       const response = await apiFetchJson<unknown>(
         '/api/gemini/explain-trends',
         {
@@ -138,11 +140,15 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
       run.finish('ready');
     } catch (error) {
       if (requestId !== aiRequestIdRef.current || !run.isCurrent()) return;
-      setAiExplanation(localFallback);
-      setAiIsLocal(true);
       setAiError(getAiErrorMessage(language, error));
-      setRetryAllowed(normalizeApiException(error).kind !== 'quota_exhausted');
-      run.finish('local');
+      recordFailure(error);
+      if (localFallback) {
+        setAiExplanation(localFallback);
+        setAiIsLocal(true);
+        run.finish('local');
+      } else {
+        run.finish('error');
+      }
     } finally {
       if (requestId === aiRequestIdRef.current) {
         aiInFlightRef.current = false;
@@ -306,7 +312,7 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({
           </div>
           <button
             onClick={handleExplainWithAi}
-            disabled={isLoadingAi || stats.totalTransactions === 0}
+            disabled={isLoadingAi || !retryAllowed || stats.totalTransactions === 0}
             className="w-full min-[390px]:w-auto min-h-[48px] flex items-center justify-center space-x-1.5 rtl:space-x-reverse px-4 py-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50 active:scale-95 shrink-0"
           >
             {isLoadingAi ? (

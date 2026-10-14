@@ -3,9 +3,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AiAnalysisResult, Expense, Language } from '../../types';
 import { apiFetchJson } from '../../utils/api';
 import { diagnostics } from '../../services/diagnostics/diagnostics';
-import { getAiErrorMessage, normalizeApiException, SpendWiseApiError } from '../../utils/apiErrors';
+import { getAiErrorMessage, SpendWiseApiError } from '../../utils/apiErrors';
 import { parseAnalysisResult } from '../../utils/aiResultValidation';
 import { useAiOperation } from './useAiOperation';
+import { useAiRetryPolicy } from './useAiRetryPolicy';
 import { getMonthKey, MonthYear } from '../../utils/date';
 import { SpendingAnalyzer } from '../../utils/spendingAnalyzer';
 import { StorageManager } from '../../utils/storage';
@@ -29,7 +30,7 @@ export function useAiAnalysis({
   language,
 }: UseAiAnalysisOptions) {
   const { operation, progress } = useAiOperation();
-  const [retryAllowed, setRetryAllowed] = useState(true);
+  const { retryAllowed, canRetry, recordFailure, resetRetry } = useAiRetryPolicy();
   const [result, setResult] = useState<AiAnalysisResult | null>(() =>
     StorageManager.getCachedAnalysis(getMonthKey(currentMonthYear))
   );
@@ -41,11 +42,12 @@ export function useAiAnalysis({
   const reloadCached = useCallback(() => {
     requestGateRef.current.invalidate();
     operation.reset();
+    resetRetry();
     setIsLoading(false);
     setResult(StorageManager.getCachedAnalysis(getMonthKey(currentMonthYear)));
     setError(null);
     setNotice(null);
-  }, [currentMonthYear, operation]);
+  }, [currentMonthYear, operation, resetRetry]);
 
   useEffect(() => {
     reloadCached();
@@ -56,6 +58,7 @@ export function useAiAnalysis({
   }, []);
 
   const analyze = useCallback(async () => {
+    if (!canRetry()) return;
     if (expenses.length === 0) {
       setError(t(language, 'noExpensesYetForAi'));
       return;
@@ -74,13 +77,12 @@ export function useAiAnalysis({
     setIsLoading(true);
     setError(null);
     setNotice(null);
-    setRetryAllowed(true);
-
-    const analyzer = new SpendingAnalyzer();
-    const summary = analyzer.computeHistoricalSummary(expenses, currentMonthYear);
-    const localFallback = analyzer.generateStatisticalAnalysis(summary, currencyCode);
+    let localFallback: AiAnalysisResult | null = null;
 
     try {
+      const analyzer = new SpendingAnalyzer();
+      const summary = analyzer.computeHistoricalSummary(expenses, currentMonthYear);
+      localFallback = analyzer.generateStatisticalAnalysis(summary, currencyCode);
       const response = await apiFetchJson<unknown>(
         '/api/gemini/analyze',
         {
@@ -104,18 +106,24 @@ export function useAiAnalysis({
       run.finish('ready');
     } catch (analysisError) {
       if (!requestGateRef.current.isCurrent(requestId) || !run.isCurrent()) return;
-      diagnostics.record({ operation: 'ai.fallback', outcome: 'fallback', code: 'AI_LOCAL_FALLBACK' });
-      StorageManager.cacheAnalysis(localFallback);
-      setResult(localFallback);
-      setNotice(`${getAiErrorMessage(language, analysisError)} ${t(language, 'aiFallbackNotice')}`);
-      setRetryAllowed(normalizeApiException(analysisError).kind !== 'quota_exhausted');
-      run.finish('local');
+      recordFailure(analysisError);
+      try {
+        if (!localFallback) throw analysisError;
+        StorageManager.cacheAnalysis(localFallback);
+        diagnostics.record({ operation: 'ai.fallback', outcome: 'fallback', code: 'AI_LOCAL_FALLBACK' });
+        setResult(localFallback);
+        setNotice(`${getAiErrorMessage(language, analysisError)} ${t(language, 'aiFallbackNotice')}`);
+        run.finish('local');
+      } catch (localError) {
+        setError(getAiErrorMessage(language, localError));
+        run.finish('error');
+      }
     } finally {
       if (requestGateRef.current.finish(requestId)) {
         setIsLoading(false);
       }
     }
-  }, [currencyCode, currentMonthYear, expenses, language, monthlyExpenses, operation]);
+  }, [currencyCode, currentMonthYear, expenses, language, monthlyExpenses, operation, canRetry, recordFailure]);
 
   const cancel = useCallback(() => {
     requestGateRef.current.invalidate();
@@ -132,11 +140,12 @@ export function useAiAnalysis({
   const reset = useCallback(() => {
     requestGateRef.current.invalidate();
     operation.reset();
+    resetRetry();
     setIsLoading(false);
     setResult(null);
     setError(null);
     setNotice(null);
-  }, [operation]);
+  }, [operation, resetRetry]);
 
   return {
     result,

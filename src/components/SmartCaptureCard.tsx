@@ -4,8 +4,8 @@ import { AlertCircle, Camera, CheckCircle2, ImagePlus, Sparkles, X } from 'lucid
 import { Language, SmartCaptureResult } from '../types';
 import type { DraftToolState } from '../data/ExpenseDraft';
 import { useAiOperation } from '../app/hooks/useAiOperation';
+import { useAiRetryPolicy } from '../app/hooks/useAiRetryPolicy';
 import { AiProgressPanel } from './AiProgressPanel';
-import { normalizeApiException } from '../utils/apiErrors';
 import { apiFetchJson } from '../utils/api';
 import { getAiErrorMessage, SpendWiseApiError } from '../utils/apiErrors';
 import { AttachmentDraft, AttachmentStorage } from '../utils/attachmentStorage';
@@ -129,7 +129,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
   onDraftStateChange,
 }) => {
   const { operation, progress } = useAiOperation();
-  const [retryAllowed, setRetryAllowed] = useState(true);
+  const { retryAllowed, canRetry, recordFailure, resetRetry } = useAiRetryPolicy();
   const selectionGenerationRef = useRef(0);
   const mountedRef = useRef(true);
   const preparationRequestIdRef = useRef(0);
@@ -154,6 +154,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
   useLayoutEffect(() => {
     if (previousContext.current.currencyCode === currencyCode && previousContext.current.language === language) return;
     previousContext.current = { currencyCode, language };
+    resetRetry();
     requestIdRef.current += 1;
     operation.reset();
     analysisInFlightRef.current = false;
@@ -195,6 +196,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
   };
 
   const resetSelection = () => {
+    resetRetry();
     selectionGenerationRef.current += 1;
     setInterrupted(false);
     preparationRequestIdRef.current += 1;
@@ -241,6 +243,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
       const photos = await (protectAcquisition ? protectAcquisition(prepare, () => selectionGeneration === selectionGenerationRef.current) : prepare());
       if (!mountedRef.current || selectionGeneration !== selectionGenerationRef.current || photos.length === 0) return;
       const draft = photos[0];
+      resetRetry();
       const preparedPreviewUrl = URL.createObjectURL(draft.blob);
       clearPreparedPreview();
       preparedPreviewUrlRef.current = preparedPreviewUrl;
@@ -256,19 +259,17 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
   };
 
   const analyze = async () => {
-    if (!preparedDraft || isPreparing || isAnalyzing || analysisInFlightRef.current || disabled) {
+    if (!preparedDraft || isPreparing || isAnalyzing || analysisInFlightRef.current || disabled || !canRetry()) {
       return;
     }
 
     const run = operation.begin('preparing');
     if (!run) return;
     analysisInFlightRef.current = true;
-    setRetryAllowed(true);
     setInterrupted(false);
     const requestId = ++requestIdRef.current;
     setIsAnalyzing(true);
     setError(null);
-    setResult(null);
 
     try {
       const imageBase64 = await blobToDataUrl(preparedDraft.blob);
@@ -298,7 +299,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
     } catch (error) {
       if (requestId !== requestIdRef.current || !run.isCurrent()) return;
       setError(getAiErrorMessage(language, error));
-      setRetryAllowed(normalizeApiException(error).kind !== 'quota_exhausted');
+      recordFailure(error);
       run.finish('error');
     } finally {
       if (requestId === requestIdRef.current) {
@@ -392,7 +393,7 @@ export const SmartCaptureCard: React.FC<SmartCaptureCardProps> = ({
           </div>
           <button
             type="button"
-            disabled={disabled || isPreparing || !preparedDraft || isAnalyzing}
+            disabled={disabled || isPreparing || !preparedDraft || isAnalyzing || !retryAllowed}
             onClick={() => void analyze()}
             className="w-full min-h-[44px] rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-extrabold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >

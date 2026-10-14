@@ -46,6 +46,9 @@ export class GeminiService implements GeminiServiceContract {
       endpoint: request.endpoint,
       requestId: request.requestId,
       models,
+      // config.ts qualifies default routes and requires explicit verification
+      // for every configured distinct fallback. No same-model repair request.
+      recoverInvalidResponse: true,
       signal: request.signal,
       operationBudgetMs: serverConfig.geminiOperationBudgetMs,
       operationDeadline: request.deadline,
