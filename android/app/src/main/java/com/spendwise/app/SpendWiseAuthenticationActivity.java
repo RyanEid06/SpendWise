@@ -10,6 +10,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.view.WindowManager;
+import androidx.activity.OnBackPressedCallback;
 import androidx.biometric.BiometricManager;
 import androidx.biometric.BiometricPrompt;
 import androidx.core.content.ContextCompat;
@@ -49,6 +50,14 @@ public final class SpendWiseAuthenticationActivity extends FragmentActivity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         operation = getIntent().getLongExtra("operation", 0);
         terminalToken = terminal.begin(0);
+        // AndroidX connects this lifecycle-bound callback to both button Back
+        // and API36 predictive gestures. Always use the same terminal cleanup
+        // as OS prompt cancellation; never rely on Activity.onBackPressed.
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override public void handleOnBackPressed() {
+                complete("cancelled", "AUTHENTICATION_CANCELLED");
+            }
+        });
         host = new WeakReference<>(this);
         if (operation == 0 || operation <= cancelledThrough || savedInstanceState != null) {
             complete("cancelled", "AUTHENTICATION_STALE");
@@ -144,11 +153,6 @@ public final class SpendWiseAuthenticationActivity extends FragmentActivity {
     @Override protected void onUserLeaveHint() {
         super.onUserLeaveHint();
         complete("cancelled", "AUTHENTICATION_BACKGROUND");
-    }
-
-    @SuppressWarnings("deprecation")
-    @Override public void onBackPressed() {
-        complete("cancelled", "AUTHENTICATION_CANCELLED");
     }
 
     @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
