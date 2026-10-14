@@ -1,8 +1,8 @@
 # SpendWise 2.1 automated verification
 
-## WP38 2.1.4 / code14 — automated private delivery verified
+## WP38 2.1.4 / code14 — automated gates and owner testing passed
 
-The [WP38 ledger](WP38_PROGRESS.md) records current red/green evidence. All six required workflows passed immutable source `732065e5455ca4de734d4982a662c2819fdd01af`, including all four combined jobs and all five isolated native jobs. Private build38589986178 passed; independent Google apksig/binary-manifest/asset inspection verified V2, permanent signer, hash, package/version, embedded source/run and compiled HTTPS endpoint. [Artifact receipt and CI links](WP38_PRIVATE_APK.md). Final documentation changes do not alter the tested application. [Owner phone and Render checks](WP38_DEVICE_ACCEPTANCE.md) remain separate and unverified; previous WP37 acceptance does not certify this hotfix.
+The [WP38 ledger](WP38_PROGRESS.md) records current red/green evidence. All six required workflows passed immutable source `732065e5455ca4de734d4982a662c2819fdd01af`, including all four combined jobs and all five isolated native jobs. Private build38589986178 passed; independent Google apksig/binary-manifest/asset inspection verified V2, permanent signer, hash, package/version, embedded source/run and compiled HTTPS endpoint. [Artifact receipt and CI links](WP38_PRIVATE_APK.md). Final documentation changes do not alter the tested application. The owner reported “It officially all works” on 2026-10-14 and authorized the public Latest release/tag; [public build and independent download verification](WP38_PUBLIC_RELEASE.md). Exhaustive device coverage and effective Render/live-provider checks remain separately unverified. Historical WP37 acceptance is not used as WP38 proof.
 
 ## WP37 2.1.3 / code13 — code, CI and main integration passed
 

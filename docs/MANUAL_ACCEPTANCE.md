@@ -1,8 +1,8 @@
 # Owner phone acceptance
 
-## WP38 2.1.4/code14 — pending owner acceptance
+## WP38 2.1.4/code14 — GREEN, owner reported 2026-10-14
 
-The permanent-signed private APK is independently verified ([receipt](WP38_PRIVATE_APK.md)). Use the [WP38 phone/Render checklist](WP38_DEVICE_ACCEPTANCE.md). Preserve the installed2.1.3 app/data during upgrade. Native PIN/pattern/password, cancellation->retry, Arabic visual checks and effective production Gemini routes require the owner's separate sign-off. Do not reuse WP37's historical green status for this candidate.
+After testing the independently verified 2.1.4 APK, the owner reported “It officially all works” and authorized official publication. [Public receipt](WP38_PUBLIC_RELEASE.md), [accepted test receipt](WP38_PRIVATE_APK.md), [phone/Render checklist](WP38_DEVICE_ACCEPTANCE.md). This is owner-reported practical acceptance, with no per-scenario device/API/OEM measurements supplied. Effective production Gemini routing and live-provider checks remain separately unverified. Preserve existing app data during updates.
 
 ## WP37 2.1.3/code13 — GREEN, owner reported2026-10-12
 

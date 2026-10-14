@@ -1,8 +1,6 @@
 # Security, storage and recovery
 
-Current checkpoint: **WP37 automated application/security gates passed; main merged
-(2026-10-12)**. Owner reported WP37 manual testing green on2026-10-12; exhaustive OEM/API/TalkBack coverage remains unverified; the WP36 owner phone
-acceptance is historical (2026-10-11). See [status](STATUS.md).
+Current checkpoint: **WP38 / SpendWise 2.1.4 automated application/security gates passed; owner phone testing reported green on 2026-10-14**. Main/public release publication is authorized; [current status](STATUS.md), [release verification](WP38_PUBLIC_RELEASE.md). Exhaustive OEM/API/TalkBack coverage remains unverified. Earlier WP36/WP37 acceptance is historical.
 This sign-off does not expand the threat model or waive the safeguards below.
 
 This records implemented boundaries and release checks. It does not establish

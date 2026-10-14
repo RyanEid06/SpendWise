@@ -41,7 +41,7 @@ Exact reviewed application/workflow source: `732065e5455ca4de734d4982a662c2819fd
 | Required PR workflows | Android Build, Auth Recovery, Gemini Runtime and WP32 E2E passed |
 | Private signed build38589986178 | Passed, including repeated synthetic regressions, web build, native signing and identity guards |
 | Independent downloaded APK | Valid Google apksigV2/permanent certificate, exact package2.1.4/code14/source/run/hash and compiled HTTPS endpoint |
-| Phone credentials / OEM / real-data upgrade | **OWNER-PENDING**, not certified by CI |
+| Owner phone acceptance | **GREEN — OWNER REPORTED** “It officially all works”, 2026-10-14; no detailed OEM/API matrix supplied |
 | Effective Render routes / live Gemini | **OWNER-DEFERRED / UNVERIFIED**, no production action |
 
 Local `npm run verify` passed on Node22 (existing bundle-size warning). WP32 runner19/19 and failure-injection11/11 passed; local component105/106 plus one unchanged successful retry, and remaining browser/accessibility/visual86/86 passed. The initial component interruption was a destroyed execution context during Home geometry; no assertion/selector/timeout was changed. CI subsequently passed the full gates.
@@ -56,6 +56,6 @@ Repository defaults, verified synthetically for each of smart-capture, scan-rece
 
 ## Version, artifact and remaining acceptance
 
-Candidate metadata:2.1.4/code14; `com.spendwise.app`; original permanent signing certificate. Package/lockfile root versions and deliberate current-version test/runbook/workflow expectations updated; dependency entries unchanged. Private immutable-source build and independent verification passed: [APK receipt](WP38_PRIVATE_APK.md), [machine-readable values](WP38_APK_RECEIPT.json). Install over existing2.1.3 without uninstall/reset. Physical PIN/pattern/password, cancellation/overlays/OEM/API matrix and in-place real-data upgrade remain owner checks in [WP38_DEVICE_ACCEPTANCE.md](WP38_DEVICE_ACCEPTANCE.md).
+Candidate metadata:2.1.4/code14; `com.spendwise.app`; original permanent signing certificate. Package/lockfile root versions and deliberate current-version test/runbook/workflow expectations updated; dependency entries unchanged. Private immutable-source build and independent verification passed: [APK receipt](WP38_PRIVATE_APK.md), [machine-readable values](WP38_APK_RECEIPT.json). Install over existing2.1.3 without uninstall/reset. The owner accepted phone testing on 2026-10-14; no detailed OEM/API/per-scenario measurements were supplied. The [checklist](WP38_DEVICE_ACCEPTANCE.md) remains for regressions and untested matrix coverage. Official public tag/build/download verification is recorded separately in [WP38_PUBLIC_RELEASE.md](WP38_PUBLIC_RELEASE.md).
 
-Release recommendation: **GREEN for automated private candidate delivery; owner acceptance pending and production release not approved**. Main merge, Render deployment/settings, tag/public release and branch deletion remain unauthorized.
+Release recommendation: **GREEN for the owner-accepted 2.1.4 public release**. The owner has authorized main integration, official Latest release/tag and deletion of completed branches after verification. Publication is in progress; Render effective routing/live-provider checks remain separately unverified, with no settings changes or manual calls included.

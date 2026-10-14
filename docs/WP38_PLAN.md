@@ -1,5 +1,7 @@
 # SpendWise WP38 — Android Authentication, Arabic Lock UX & Gemini Reliability Hotfix
 
+> Subsequent owner decision, 2026-10-14: “It officially all works.” Main integration, official public Latest release, tag `v2.1.4`, current documentation updates and cleanup of completed branches after green verification are now authorized. This supersedes the original private-handoff stop below. Render settings/manual provider checks remain separate. [Public delivery record](WP38_PUBLIC_RELEASE.md).
+
 > Execution authorization, 2026-10-14: implement WP38 on `codex/wp38-auth-gemini-reliability`, prepare and independently verify the private signed 2.1.4/code14 APK, then stop for the owner's acceptance. All Render inspection/live-provider checks and phone-only checks are deferred to the owner. No questions during execution; record unavailable checks in the handoff. No main merge, production deployment, tag/public release or branch deletion. Required build workflow metadata/branch changes are included; immutable source, endpoint, package and permanent signer guards remain intact. Home/background invalidates an interrupted authentication, while a fresh foreground authentication and established lock timeout behavior remain permitted. Candidate readiness is distinct from physical/production acceptance.
 
 **Target:** SpendWise **2.1.4 / Android `versionCode` 14** (candidate; apply version bump only after changes and tests are ready).  

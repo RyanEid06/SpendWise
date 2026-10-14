@@ -1,19 +1,19 @@
-# Current status — WP38 hotfix candidate
+# Current status — SpendWise 2.1.4
 
-WP38 targets **2.1.4 / Android code14**, package `com.spendwise.app`, on the dedicated `codex/wp38-auth-gemini-reliability` branch. Implementation, all required exact-source CI and independent private APK verification passed; [artifact receipt](WP38_PRIVATE_APK.md); see [plan](WP38_PLAN.md) and [ledger](WP38_PROGRESS.md). The owner has deferred phone-only acceptance and all Render/live Gemini verification to the [handoff](WP38_DEVICE_ACCEPTANCE.md). No main merge, production deployment, Render settings change, tag/public release or branch deletion is authorized.
+**2.1.4 / Android code14**, package `com.spendwise.app`, is accepted by the owner. On 2026-10-14 the owner reported “It officially all works” and authorized main integration, the official public Latest release, tag `v2.1.4`, current documentation updates and deletion of completed branches after verification. Publication is in progress; [public release receipt](WP38_PUBLIC_RELEASE.md), [release notes](RELEASE_NOTES_2.1.4.md), [progress](WP38_PROGRESS.md).
 
 ## WP38 delivery gates
 
 | Gate | Status | Evidence |
 | --- | --- | --- |
-| Reviewed source | VERIFIED | `732065e5455ca4de734d4982a662c2819fdd01af`; [draft PR50](https://github.com/RyanEid06/SpendWise/pull/50) |
-| Required application CI | GREEN | [Combined38530729922](https://github.com/RyanEid06/SpendWise/actions/runs/38530729922), all4jobs; [isolated38530734631](https://github.com/RyanEid06/SpendWise/actions/runs/38530734631), all5jobs; Android Build/Auth/Gemini/WP32 E2E passed at the same source |
-| Private signed APK | GREEN / INDEPENDENTLY VERIFIED | [Build38589986178](https://github.com/RyanEid06/SpendWise/actions/runs/38589986178); [hash/signer/package/source receipt](WP38_PRIVATE_APK.md) |
-| Phone / in-place real-data upgrade | OWNER-PENDING | [Checklist](WP38_DEVICE_ACCEPTANCE.md); synthetic/emulator proof does not certify OEM credentials or installed-data continuity |
-| Render / live Gemini | OWNER-DEFERRED / UNVERIFIED | No production action or live requests; backend recovery requires separately authorized deployment |
-| Main / public release | NOT AUTHORIZED | Main remains `16ea6870243d67daa28cfbc6e5d0e1126416fe47`; branch and draft PR preserved |
+| Reviewed application/workflow | VERIFIED | `732065e5455ca4de734d4982a662c2819fdd01af`; later changes are documentation only |
+| Required application CI | GREEN | [Combined38530729922](https://github.com/RyanEid06/SpendWise/actions/runs/38530729922), all four jobs; [isolated38530734631](https://github.com/RyanEid06/SpendWise/actions/runs/38530734631), all five jobs; Android Build/Auth/Gemini/WP32 E2E passed at the same source |
+| Accepted signed test APK | GREEN / INDEPENDENTLY VERIFIED | [Build38589986178](https://github.com/RyanEid06/SpendWise/actions/runs/38589986178); [test artifact receipt](WP38_PRIVATE_APK.md) |
+| Owner phone testing | GREEN — OWNER REPORTED | “It officially all works”, 2026-10-14; no detailed device/API/OEM measurements or exhaustive matrix supplied |
+| Main / public tag / Latest release | AUTHORIZED / IN PROGRESS | [PR50](https://github.com/RyanEid06/SpendWise/pull/50); [official release verification](WP38_PUBLIC_RELEASE.md) |
+| Render / live Gemini | SEPARATELY UNVERIFIED | No settings changes or manual provider calls included; an APK release is not proof of deployed backend routing |
 
-Candidate automated delivery is GREEN. Production release remains unapproved pending owner acceptance. Final docs are a docs-only child of the tested APK source; they do not change the application.
+The public release retains the permanent signer and version 2.1.4/code14. Historical release and deployment receipts below remain dated evidence, not the current release designation.
 
 ## Accepted WP37 main checkpoint (historical)
 

@@ -1,18 +1,12 @@
 # SpendWise
 
-**WP38 private hotfix candidate: 2.1.4 / Android code14.** Android authentication reliability, concise Arabic lock UX and bounded Gemini fixes on `codex/wp38-auth-gemini-reliability`; [report](docs/WP38_REPORT.md), [plan](docs/WP38_PLAN.md), [progress](docs/WP38_PROGRESS.md), and [owner acceptance / Render handoff](docs/WP38_DEVICE_ACCEPTANCE.md). All required exact-source CI and independent private APK verification passed; [APK identity/hash receipt](docs/WP38_PRIVATE_APK.md). Phone and Render/live-provider acceptance remain owner-pending. Main/production remain at the WP37 checkpoint below. No merge, Render change or public release is authorized.
+**SpendWise 2.1.4 / Android code14** is the owner-accepted release: reliable Android authentication, concise Arabic lock UX and bounded Gemini reliability improvements. Public publication is in progress.
 
-SpendWise is a local-first expense tracker and
-monthly budget planner for Android and the web. Package: `com.spendwise.app`.
+[Download 2.1.4 APK](https://github.com/RyanEid06/SpendWise/releases/latest/download/SpendWise-v2.1.4.apk) · [Release and tag v2.1.4](https://github.com/RyanEid06/SpendWise/releases/tag/v2.1.4) · [Release notes](docs/RELEASE_NOTES_2.1.4.md) · [Release verification](docs/WP38_PUBLIC_RELEASE.md)
 
-**Historical WP37 2.1.3/code13 checks passed; merged to main (2026-10-12).** Historical WP36 phone acceptance remains recorded separately.
-WP37 **2.1.3/code13** code review and all required automated application gates passed;
-[PR48](https://github.com/RyanEid06/SpendWise/pull/48) merged to main as
-`9045c699346f44f7867cf9d1238c6558ca17e841`. The [private APK receipt](docs/WP37_PRIVATE_APK.md)
-and [current status](docs/STATUS.md) track artifact and deployment verification.
-Owner reported WP37 manual testing green on2026-10-12; exhaustive OEM/API/TalkBack coverage remains unverified.
-The latest public release remains [2.1.0](https://github.com/RyanEid06/SpendWise/releases/tag/v2.1.0);
-WP37 has no public tag or release. See the [roadmap](docs/ROADMAP.md).
+SpendWise is a local-first expense tracker and monthly budget planner for Android and the web. Package: `com.spendwise.app`. Existing installs update with the same permanent signing identity; preserve app data and do not uninstall or clear storage.
+
+The owner reported “It officially all works” on 2026-10-14 after testing the verified 2.1.4 APK. All required application CI passed. [Current status](docs/STATUS.md), [WP38 report](docs/WP38_REPORT.md), [verification](docs/VERIFICATION.md) and [roadmap](docs/ROADMAP.md) distinguish automated, owner-reported and production evidence. Render effective routing and live-provider checks remain separately unverified.
 
 Financial records stay on the device. Optional AI analysis, Smart Capture and
 receipt scanning send selected data to the backend/Gemini when invoked.
@@ -32,8 +26,7 @@ receipt scanning send selected data to the backend/Gemini when invoked.
   Conversion defaults are dated suggestions, not a live exchange-rate feed.
 
 Home, History, AI Insights and Statistics are the four primary destinations.
-Settings opens from the top app bar. The owner accepted the historical WP36 phone build;
-automated and owner-reported evidence is recorded in [verification](docs/VERIFICATION.md).
+Settings opens from the top app bar. Automated and owner-reported 2.1.4 evidence is recorded in [verification](docs/VERIFICATION.md).
 The reusable [manual checklist](docs/MANUAL_ACCEPTANCE.md) remains available for future regressions.
 
 ## Development
@@ -79,7 +72,8 @@ The `wpNN` names identify active regressions and fixtures.
 - [Signing and release runbook](docs/RELEASE.md)
 - [Current green checkpoint](docs/STATUS.md)
 - [Completed work and next WP](docs/ROADMAP.md)
-- [Private 2.1.2 APK receipt](docs/WP36_PRIVATE_APK.md)
+- [Official 2.1.4 release receipt](docs/WP38_PUBLIC_RELEASE.md)
+- [Accepted 2.1.4 test APK receipt](docs/WP38_PRIVATE_APK.md)
 - [2.1 automated verification and artifact provenance](docs/VERIFICATION.md)
 - [Owner phone acceptance checklist](docs/MANUAL_ACCEPTANCE.md)
 - [Synthetic fixture inventory](tests/fixtures/README.md)

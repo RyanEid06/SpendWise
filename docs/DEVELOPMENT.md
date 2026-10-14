@@ -1,12 +1,6 @@
 # Development and maintenance
 
-**WP38 implementation and automated private delivery verified:** permanent-signed2.1.4/code14 ([receipt](WP38_PRIVATE_APK.md)), limited to authentication, Arabic lock copy/bidi and bounded Gemini cleanup. Follow [WP38 plan](WP38_PLAN.md) and [progress](WP38_PROGRESS.md). Preserve existing encryption, key identities, timeouts, financial/schema validators and provider architecture. Render/live-provider and physical checks are owner-deferred; no production action is authorized.
-
-**WP37 2.1.3/code13: code/required CI passed and main merged, 2026-10-12.**
-The independently verified private APK and live-main runtime checks are tracked in
-[status](STATUS.md), [artifact receipt](WP37_PRIVATE_APK.md) and
-[roadmap](ROADMAP.md). Owner reported WP37 manual testing green on2026-10-12; exhaustive OEM/API/TalkBack coverage remains unverified; the owner
-accepted WP36 2.1.2/code12 historically. Keep source-specific evidence separate.
+**Current version: SpendWise 2.1.4 / Android code14.** WP38 authentication, Arabic lock copy/bidi and bounded Gemini reliability changes passed required CI; the owner reported all works on 2026-10-14 and authorized public release. [Release notes](RELEASE_NOTES_2.1.4.md), [release receipt](WP38_PUBLIC_RELEASE.md), [plan](WP38_PLAN.md), [progress](WP38_PROGRESS.md). Preserve existing encryption, key identities, timeouts, financial/schema validators and provider architecture. Render effective routing/live-provider checks remain separate. Historical WP36/WP37 receipts retain their own source and acceptance dates.
 
 ## Product constraints
 

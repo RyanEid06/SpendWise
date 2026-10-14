@@ -1,6 +1,6 @@
 # WP38-C — Gemini reliability implementation evidence
 
-Current integrated outcome: all required exact-source CI and independent private2.1.4/code14 APK checks passed at `732065e5455ca4de734d4982a662c2819fdd01af`; [final report](WP38_REPORT.md), [artifact receipt](WP38_PRIVATE_APK.md). Historical local/pending statements below describe their recorded checkpoint. Phone/upgrade and Render/live-provider acceptance remain owner-deferred.
+Current integrated outcome: all required exact-source CI and independent private2.1.4/code14 APK checks passed at `732065e5455ca4de734d4982a662c2819fdd01af`; [final report](WP38_REPORT.md), [artifact receipt](WP38_PRIVATE_APK.md). Historical local/pending statements below describe their recorded checkpoint. The owner reported the tested 2.1.4 build all working on 2026-10-14 and authorized public publication; [public receipt](WP38_PUBLIC_RELEASE.md). Exhaustive device coverage and Render/live-provider verification remain separate and unverified.
 
 Date: 2026-10-14. Branch: `codex/wp38-auth-gemini-reliability`. This packet covers the local Gemini work only; the parent WP38 report owns full-suite/CI, signing, Android and release acceptance evidence.
 

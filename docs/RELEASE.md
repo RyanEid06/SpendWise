@@ -1,8 +1,10 @@
 # Signing and release runbook
 
-Current WP38 private candidate metadata: **2.1.4 / Android versionCode14**, package `com.spendwise.app`, upgrading installed2.1.3/code13 in place with the same permanent signing identity. The owner authorized implementation and private candidate delivery on `codex/wp38-auth-gemini-reliability`; **no main merge, Render deployment/settings change, tag/public release or branch deletion is authorized**. [WP38 report](WP38_REPORT.md), [phone/Render handoff](WP38_DEVICE_ACCEPTANCE.md).
+Current official version: **2.1.4 / Android versionCode14**, package `com.spendwise.app`, permanent signing identity unchanged. On 2026-10-14 the owner accepted phone testing and authorized main integration, public Latest release/tag `v2.1.4`, documentation updates and verified completed-branch cleanup. [Release notes](RELEASE_NOTES_2.1.4.md), [official release receipt](WP38_PUBLIC_RELEASE.md), [WP38 report](WP38_REPORT.md).
 
-Completed delivery: [all required exact-source CI and private APK receipt](WP38_PRIVATE_APK.md), source `732065e5455ca4de734d4982a662c2819fdd01af`, signed run38589986178. Phone/Render sign-off remains pending. For any subsequently authorized candidate, run the existing combined CI on its exact WP38 branch head, then dispatch `wp35-integration.yml` on that branch with `signed_test_apk=true` and `expected_source=EXACT_REVIEWED_SHA`. The reusable private build enforces2.1.4/code14, source/run provenance, HTTPS endpoint, package and permanent certificate, uploads privately and does not deploy. Independently verify the downloaded artifact and stop for owner phone acceptance. Do not uninstall/reset the existing app.
+The accepted test build and all required application CI identify source `732065e5455ca4de734d4982a662c2819fdd01af`. Prove application/build inputs unchanged through documentation and main integration before tagging. Publish the official permanent-signed APK through `android-build.yml` from the verified main tag, then independently download and verify the actual public asset and receipt. Public and private build hashes may differ; retain separate receipts. Mark the stable release Latest and verify both the direct APK URL and `releases/latest`.
+
+Do not uninstall, clear storage or reset keys. Render settings/manual provider calls are not part of this publication; effective production routing remains separate evidence. Delete only completed branch refs after proving merged ancestry, clean main and green applicable checks. Never recreate or move a published tag.
 
 ## Historical WP37 delivery
 
@@ -75,13 +77,13 @@ Targeted phase success is scoped evidence and must not be described as a full ru
 Inspect actual APK package/version, cryptographic signature, signer, source receipt,
 manifest/WebView/provider/network boundaries, embedded files, SBOM and checksum.
 Review system splash video recorded before launch in Light and Dark. Keep owner
-phone acceptance separate; this 2.1 release was authorized for the subsequent phone trial.
+phone acceptance separate; the owner accepted the 2.1.4 phone trial and authorized public publication on 2026-10-14.
 
 The tag must match `version.json`. Publish from the verified final main commit:
 
 ```powershell
-git tag v2.1.0 <verified-main-sha>
-git push origin v2.1.0
+git tag -a v2.1.4 <verified-main-sha> -m "SpendWise 2.1.4"
+git push origin v2.1.4
 ```
 
 `android-build.yml` verifies the tag, builds with the permanent key, checks actual

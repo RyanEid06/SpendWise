@@ -1,6 +1,6 @@
 # WP38 owner acceptance and Render handoff
 
-Status: pending owner testing of the private **2.1.4 / code14** candidate. Automated synthetic/emulator checks do not prove the owner's PIN/OEM behavior or effective production Gemini routing. No production changes or live Gemini requests are performed for WP38 implementation.
+Status: **owner reported all works on 2026-10-14** after testing the independently verified **2.1.4 / code14** APK, then authorized main integration and official public release/tag. No per-scenario device/API/OEM measurements were supplied. The checklist remains available for future regressions; exhaustive matrix coverage and effective production Gemini routing/live-provider checks remain unverified. [Public release receipt](WP38_PUBLIC_RELEASE.md).
 
 ## In-place phone upgrade
 
@@ -35,4 +35,4 @@ Do not infer effective deployment routes from repository defaults. Read current 
 
 ## Sign-off
 
-Record phone model/API, installed APK hash/source, tested scenarios and failures. Candidate readiness, automated verification, physical acceptance and production routing/deployment each retain their own status. Merge/deploy/publication remains unauthorized until the owner explicitly approves it.
+Record phone model/API, installed APK hash/source, tested scenarios and failures. Candidate readiness, automated verification, physical acceptance and production routing/deployment each retain their own status. The owner has authorized main integration and public Latest release/tag on 2026-10-14. Render settings/manual provider checks remain separate; no additional product changes are authorized.

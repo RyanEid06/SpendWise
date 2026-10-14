@@ -32,9 +32,14 @@
     "providerKeyPatternAbsent": true
   },
   "ownerDeferred": [
-    "physical authentication and Arabic overlay acceptance",
-    "in-place real-data upgrade",
+    "exhaustive physical API/OEM scenario coverage",
     "Render effective routing and live-provider checks"
   ],
-  "productionReleaseApproved": false
+  "productionReleaseApproved": true,
+  "ownerAcceptance": {
+    "date": "2026-10-14",
+    "statement": "It officially all works",
+    "evidenceType": "owner-reported phone testing",
+    "publicReleaseAuthorized": true
+  }
 }
