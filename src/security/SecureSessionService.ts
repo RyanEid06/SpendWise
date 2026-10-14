@@ -139,6 +139,9 @@ export class DefaultSecureSessionService {
   private lastAuthenticatedAt = 0;
   private sensitiveSurfaceDepth = 0;
   private authenticating = false;
+  private authenticationOwner: object | null = null;
+  private cancellationPending: Promise<boolean> | null = null;
+  private cancellationNeedsRetry = false;
   private authenticationGeneration = 0;
   private privacyShieldDesired: boolean | null = null;
   private initialized = false;
@@ -263,8 +266,11 @@ export class DefaultSecureSessionService {
   private async runNativeKeyOperation<T>(
     operation: () => Promise<SecureKeyResult<T>>
   ): Promise<SecureKeyResult<T>> {
+    if (this.authenticating && this.cancellationNeedsRetry) await this.cancelPendingAuthentication();
     if (this.authenticating) return { ok: false, kind: 'cancelled', code: 'AUTHENTICATION_BUSY' };
     const generation = this.authenticationGeneration;
+    const owner = {};
+    this.authenticationOwner = owner;
     this.authenticating = true;
     await this.reconcilePrivacyShield();
     let result: SecureKeyResult<T>;
@@ -273,19 +279,59 @@ export class DefaultSecureSessionService {
         return { ok: false, kind: 'cancelled', code: 'AUTHENTICATION_STALE' };
       }
       result = await operation();
-      if (!result.ok && ['AUTHENTICATION_BACKGROUND', 'AUTHENTICATION_BACKGROUND_TIMEOUT', 'AUTHENTICATION_STALE', 'AUTHENTICATION_DESTROYED'].includes(result.code ?? '')) {
+      if (generation === this.authenticationGeneration && !result.ok && ['AUTHENTICATION_BACKGROUND', 'AUTHENTICATION_BACKGROUND_TIMEOUT', 'AUTHENTICATION_STALE', 'AUTHENTICATION_DESTROYED'].includes(result.code ?? '')) {
         this.lock();
       }
     } finally {
-      this.authenticating = false;
-      await this.reconcilePrivacyShield();
+      if (this.authenticationOwner === owner && !this.cancellationPending) {
+        this.authenticationOwner = null;
+        this.authenticating = false;
+        await this.reconcilePrivacyShield();
+      }
     }
     if (generation !== this.authenticationGeneration) {
       // Include final privacy-shield reconciliation in the protected scope.
-      this.keyService.releaseSessionSecrets();
       return { ok: false, kind: 'cancelled', code: 'AUTHENTICATION_STALE' };
     }
     return result;
+  }
+
+  async cancelPendingAuthentication(): Promise<boolean> {
+    if (this.cancellationPending) return this.cancellationPending;
+    // Invalidate both service results and key-service secret priming BEFORE
+    // awaiting the bridge. A hung bridge never leaves an old success valid.
+    this.authenticationGeneration += 1;
+    this.state = 'locked';
+    this.lastAuthenticatedAt = 0;
+    this.backgroundedAt = 0;
+    this.keyService.releaseSessionSecrets();
+    const owner = this.authenticationOwner;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const cancellation = (async () => {
+      try {
+        await Promise.race([
+          this.nativeAdapter.cancelAuthentication(),
+          new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('AUTHENTICATION_CANCEL_TIMEOUT')), 5_000); }),
+        ]);
+        if (this.authenticationOwner === owner) {
+          this.authenticationOwner = null;
+          this.authenticating = false;
+        }
+        this.cancellationNeedsRetry = false;
+        return true;
+      } catch {
+        // Keep ownership until a later acknowledged recovery. Resetting busy
+        // on an unacknowledged cancellation would allow overlapping requests.
+        this.cancellationNeedsRetry = true;
+        return false;
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+    })();
+    this.cancellationPending = cancellation;
+    const acknowledged = await cancellation;
+    if (this.cancellationPending === cancellation) this.cancellationPending = null;
+    return acknowledged;
   }
 
   async unlock(credential?: string, method: AuthenticationMethod = 'primary'): Promise<SecureSessionActionResult> {
@@ -397,10 +443,13 @@ export class DefaultSecureSessionService {
 
   lock(): void {
     if (!safeAppLockEnabled()) return;
-    this.authenticationGeneration += 1;
     if (this.nativeAdapter.isAvailable() && typeof this.nativeAdapter.cancelAuthentication === 'function') {
-      void this.nativeAdapter.cancelAuthentication().catch(() => {});
+      // Also recover service ownership when a backgrounded sensitive operation
+      // never settles. The next lock presentation must not inherit a hung mutex.
+      void this.cancelPendingAuthentication();
+      return;
     }
+    this.authenticationGeneration += 1;
     this.state = 'locked';
     this.lastAuthenticatedAt = 0;
     this.backgroundedAt = 0;
@@ -418,7 +467,7 @@ export class DefaultSecureSessionService {
     if (typeof this.nativeAdapter.getAuthenticationLifecycle === 'function') {
       try {
         const lifecycle = await this.nativeAdapter.getAuthenticationLifecycle();
-        if (lifecycle.systemCredentialActive && safeTimeout() > 0) return;
+        if (lifecycle.internalAuthenticationActive || (lifecycle.systemCredentialActive && safeTimeout() > 0)) return;
       } catch { /* Unknown lifecycle is treated as a real background transition. */ }
     }
     this.onBackground(now);
@@ -612,6 +661,7 @@ export interface SecureSessionService {
   initialize(): Promise<SecureSessionSnapshot>;
   unlock(credential?: string, method?: AuthenticationMethod): Promise<SecureSessionActionResult>;
   lock(): void;
+  cancelPendingAuthentication(): Promise<boolean>;
   onBackground(now?: number): void;
   onNativeBackground(now?: number): Promise<void>;
   onForeground(now?: number): boolean;

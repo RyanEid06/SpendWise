@@ -913,7 +913,7 @@ export const TRANSLATIONS = {
     mergeImportBtn: 'دمج واستيراد',
 
     // Lock Screen
-    lockTitle: 'التطبيق مقفل لحماية الخصوصية',
+    lockTitle: 'SpendWise مقفل',
     lockSub: 'المصادقة مطلوبة للوصول إلى السجلات المالية والمصاريف.',
     enterPinPlaceholder: 'أدخل رمز PIN',
     unlockBtn: 'فتح التطبيق',

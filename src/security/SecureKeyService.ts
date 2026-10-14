@@ -166,6 +166,7 @@ export class AndroidSecureKeyService implements SecureKeyService {
     action: AuthenticationAction,
     method: AuthenticationMethod = 'primary'
   ): Promise<SecureKeyResult<ActiveKeyMetadata>> {
+    const generation = this.secretGeneration;
     if (!this.adapter.isAvailable()) {
       return { ok: false, kind: 'unavailable', code: 'NATIVE_SECURITY_UNAVAILABLE' };
     }
@@ -194,6 +195,7 @@ export class AndroidSecureKeyService implements SecureKeyService {
       return { ok: false, kind: 'error', code: 'KEY_STATUS_FAILED' };
     }
 
+    if (generation !== this.secretGeneration) return this.staleOperation();
     if (status.status === 'present') return this.verifyActiveKey(action, method);
     // Existing metadata is evidence of a previous key, even if a registry is damaged.
     // Recovery must be explicit; never infer that encrypted data can be discarded.

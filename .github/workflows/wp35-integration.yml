@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       signed_test_apk:
-        description: 'Build only the private signed 2.1.3 test APK; no deployment'
+        description: 'Build only the private signed 2.1.4 test APK; no deployment'
         type: boolean
         default: false
       expected_source:
@@ -495,7 +495,7 @@ jobs:
           retention-days: 7
 
   signed-test-apk:
-    if: github.event_name == 'workflow_dispatch' && inputs.signed_test_apk && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/codex/wp35-integration' || github.ref == 'refs/heads/fix/wp37-localization-native-auth-ux')
+    if: github.event_name == 'workflow_dispatch' && inputs.signed_test_apk && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/codex/wp35-integration' || github.ref == 'refs/heads/fix/wp37-localization-native-auth-ux' || github.ref == 'refs/heads/codex/wp38-auth-gemini-reliability')
     uses: ./.github/workflows/wp35-test-apk.yml
     with:
       expected_source: ${{ inputs.expected_source }}

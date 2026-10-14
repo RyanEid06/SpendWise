@@ -252,9 +252,9 @@ test('WP26 preserves behavior and approved release metadata', () => {
   const versionJson = JSON.parse(read('version.json')) as { versionName: string; versionCode: number };
   const appLock = read('src/app/hooks/useAppLockLifecycle.ts');
 
-  assert.equal(packageJson.version, '2.1.3');
-  assert.equal(versionJson.versionName, '2.1.3');
-  assert.equal(versionJson.versionCode, 13);
+  assert.equal(packageJson.version, '2.1.4');
+  assert.equal(versionJson.versionName, '2.1.4');
+  assert.equal(versionJson.versionCode, 14);
 
   for (const forbidden of [
     'BiometricPrompt',

@@ -75,7 +75,22 @@ export class SecurityLifecycleCoordinator {
     if (!presentationCurrent() || this.session.getSnapshot().sessionRevision !== revision) {
       return { ok: false, code: 'cancelled', detailCode: 'AUTHENTICATION_STALE' };
     }
-    return operation();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        operation(),
+        new Promise<SecureSessionActionResult>(resolve => {
+          timer = setTimeout(() => {
+            void this.session.cancelPendingAuthentication().then(acknowledged => {
+              this.notify(true);
+              resolve({ ok: false, code: acknowledged ? 'cancelled' : 'error', detailCode: acknowledged ? 'AUTHENTICATION_TIMEOUT' : 'AUTHENTICATION_CANCEL_TIMEOUT' });
+            });
+          }, 65_000);
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
 }
 

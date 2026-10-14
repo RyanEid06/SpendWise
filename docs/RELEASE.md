@@ -1,10 +1,10 @@
 # Signing and release runbook
 
-Current WP37 candidate metadata: **2.1.3 / Android versionCode13**, package `com.spendwise.app`.
-The owner selected this next version after the accepted private WP36 **2.1.2/code12** build.
-The permanent signing identity is retained. Review and required CI gate merging
-through integration to main; then build the private APK from the exact merged main SHA.
-No2.1.3 tag or public release is authorized.
+Current WP38 private candidate metadata: **2.1.4 / Android versionCode14**, package `com.spendwise.app`, upgrading installed2.1.3/code13 in place with the same permanent signing identity. The owner authorized implementation and private candidate delivery on `codex/wp38-auth-gemini-reliability`; **no main merge, Render deployment/settings change, tag/public release or branch deletion is authorized**. [WP38 report](WP38_REPORT.md), [phone/Render handoff](WP38_DEVICE_ACCEPTANCE.md).
+
+Run the existing combined CI on the exact WP38 branch head, then dispatch `wp35-integration.yml` on that branch with `signed_test_apk=true` and `expected_source=EXACT_REVIEWED_SHA`. The reusable private build enforces2.1.4/code14, source/run provenance, HTTPS endpoint, package and permanent certificate, uploads privately and does not deploy. Independently verify the downloaded artifact and stop for owner phone acceptance. Do not uninstall/reset the existing app.
+
+## Historical WP37 delivery
 
 **WP37 code/required application CI and main integration passed (2026-10-12).**
 [PR48](https://github.com/RyanEid06/SpendWise/pull/48) merged main9045c699;
@@ -19,7 +19,7 @@ and [private2.1.2 receipt](WP36_PRIVATE_APK.md) remain distinct. See [status](ST
 The current authoritative values are:
 
 ```json
-{"versionName": "2.1.3", "versionCode": 13}
+{"versionName": "2.1.4", "versionCode": 14}
 ```
 
 Every future APK update must increase the Android version code and retain the
@@ -52,7 +52,7 @@ pairs are 2.0.2/code9 and 2.1.0/code10; strict baseline/source/hash/signature ch
 must be updated deliberately for later releases. Code8 is never launched in its
 historical upgrade path because that artifact has the known Android16 startup bug.
 
-For WP37's private2.1.3/code13 APK, after the checked main merge dispatch
+For historical WP37's private2.1.3/code13 APK, after the checked main merge dispatch
 `wp35-integration.yml` on `main` with `signed_test_apk=true` and
 `expected_source` equal to the exact merged main SHA.
 It calls the reusable `wp35-test-apk.yml`; this build-only workflow uses

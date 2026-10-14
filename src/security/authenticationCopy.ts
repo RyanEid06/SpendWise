@@ -57,12 +57,16 @@ export const AUTHENTICATION_COPY = {
 export const AUTHENTICATION_RECOVERY_COPY = {
   en: { cancelButton: 'Cancel', credentialButton: 'Use phone PIN, pattern or password', retry: 'Try fingerprint again', explanation: 'You can retry biometrics or use your phone’s secure screen lock.', temporary: 'Biometrics are temporarily locked. Try again later or use your phone’s screen lock.', permanent: 'Biometrics are unavailable. Use your phone’s secure screen lock.' },
   fr: { cancelButton: 'Annuler', credentialButton: 'Utiliser le code, schéma ou mot de passe du téléphone', retry: 'Réessayer l’empreinte', explanation: 'Réessayez la biométrie ou utilisez le verrouillage sécurisé du téléphone.', temporary: 'La biométrie est temporairement bloquée. Réessayez plus tard ou utilisez le verrouillage du téléphone.', permanent: 'La biométrie est indisponible. Utilisez le verrouillage sécurisé du téléphone.' },
-  ar: { cancelButton: 'إلغاء', credentialButton: 'استخدام رمز الهاتف أو النمط أو كلمة المرور', retry: 'إعادة المحاولة ببصمة الإصبع', explanation: 'يمكنك إعادة المحاولة بالمصادقة الحيوية أو استخدام قفل شاشة هاتفك الآمن.', temporary: 'المصادقة الحيوية مقفلة مؤقتًا. حاول لاحقًا أو استخدم قفل شاشة هاتفك.', permanent: 'المصادقة الحيوية غير متاحة. استخدم قفل شاشة هاتفك الآمن.' },
+  ar: { cancelButton: 'إلغاء', credentialButton: 'استخدام رمز الهاتف أو النمط أو كلمة المرور', retry: 'إعادة المحاولة بالبصمة', explanation: 'أعد المحاولة بالبصمة أو استخدم قفل شاشة هاتفك.', temporary: 'المصادقة الحيوية مقفلة مؤقتًا. حاول لاحقًا أو استخدم قفل شاشة هاتفك.', permanent: 'المصادقة الحيوية غير متاحة. استخدم قفل شاشة هاتفك الآمن.' },
 } as const;
 
 export function authenticationPrompt(action: AuthenticationAction, language: Language) {
   const [title, reason] = AUTHENTICATION_COPY[language][action];
-  return { title, reason, ...AUTHENTICATION_RECOVERY_COPY[language] };
+  // Native OS prompts cannot contain HTML bdi; isolate the Latin brand in
+  // application-owned Arabic text without changing security-operation meaning.
+  const isolateBrand = (text: string) => language === 'ar'
+    ? text.replace(/SpendWise/g, '\u2066SpendWise\u2069') : text;
+  return { title: isolateBrand(title), reason: isolateBrand(reason), ...AUTHENTICATION_RECOVERY_COPY[language] };
 }
 
 export const AUTHENTICATION_LIMIT_COPY = {
