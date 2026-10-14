@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       signed_test_apk:
-        description: 'Build only the private signed 2.1.3 test APK; no deployment'
+        description: 'Build only the private signed 2.1.4 test APK; no deployment'
         type: boolean
         default: false
       expected_source:
@@ -55,7 +55,7 @@ jobs:
       - name: TypeScript and production build
         run: npm run verify
       - name: Synthetic progress, security, reliability, encrypted storage and diagnostics regressions
-        run: node --import tsx --test tests/*.test.ts
+        run: node --import tsx --test tests/*.test.ts tests/*.test.cjs
       - name: Existing WP32 components, browser, accessibility and visual suites
         run: npm run test:wp32
       - name: Existing WP33 browser and diagnostics gates
@@ -153,12 +153,18 @@ jobs:
             RESULT_ROOT=artifacts/android-isolated/wp35-gesture bash scripts/run-wp32-isolated-gate.sh
             adb -s emulator-5554 shell cmd overlay enable-exclusive --category com.android.internal.systemui.navbar.threebutton
             RESULT_ROOT=artifacts/android-isolated/wp35-threebutton bash scripts/run-wp32-isolated-gate.sh
+            # Resolve the real compiled host theme in day/night configurations;
+            # host instrumentation does not change credentials or financial data.
+            (cd android && ./gradlew '-Dorg.gradle.jvmargs=-Xmx2g' --max-workers=2 :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.spendwise.app.AuthenticationHostThemeTest)
       - name: Upload isolated emulator evidence (no APK publication)
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: wp35-integration-api36-emulator-evidence
-          path: artifacts/android-isolated/wp35-*/
+          path: |
+            artifacts/android-isolated/wp35-*/
+            android/app/build/reports/androidTests/
+            android/app/build/outputs/androidTest-results/
           if-no-files-found: ignore
           retention-days: 14
 
@@ -495,7 +501,7 @@ jobs:
           retention-days: 7
 
   signed-test-apk:
-    if: github.event_name == 'workflow_dispatch' && inputs.signed_test_apk && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/codex/wp35-integration' || github.ref == 'refs/heads/fix/wp37-localization-native-auth-ux')
+    if: github.event_name == 'workflow_dispatch' && inputs.signed_test_apk && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/codex/wp35-integration' || github.ref == 'refs/heads/fix/wp37-localization-native-auth-ux' || github.ref == 'refs/heads/codex/wp38-auth-gemini-reliability')
     uses: ./.github/workflows/wp35-test-apk.yml
     with:
       expected_source: ${{ inputs.expected_source }}

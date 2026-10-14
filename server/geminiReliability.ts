@@ -76,6 +76,8 @@ export interface GeminiJsonExecutionOptions<T> {
 }
 export interface GeminiJsonModelFallbackOptions<T> extends Omit<GeminiJsonExecutionOptions<T>, 'request'> {
   models: string[];
+  /** Only enable after configuration has qualified all distinct model routes. */
+  recoverInvalidResponse?: boolean;
   request: (model: string, timeoutMs: number, attempt: number, signal: AbortSignal) => Promise<ProviderResponse>;
   logModelFallback?: (details: { endpoint: string; requestId: string; fromModel: string; toModel: string; code: AiFailureCode }) => void;
 }
@@ -105,6 +107,7 @@ export async function executeGeminiJsonWithModelFallback<T>(o: GeminiJsonModelFa
   const operation = new AbortController(); const cancel = () => operation.abort(o.signal?.reason instanceof AiReliabilityError && o.signal.reason.code === 'AI_DEADLINE_EXCEEDED' ? o.signal.reason : createAiFailure('AI_CANCELLED'));
   if (o.signal?.aborted) cancel(); else o.signal?.addEventListener('abort', cancel, { once: true });
   const operationTimer = setTimeout(() => operation.abort(createAiFailure('AI_DEADLINE_EXCEEDED')), remaining());
+  let invalidResponseRecoveryUsed = false;
   try {
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       operation.signal.throwIfAborted();
@@ -129,14 +132,18 @@ export async function executeGeminiJsonWithModelFallback<T>(o: GeminiJsonModelFa
       const normalized = normalizeGeminiFailure(error);
       const backoff = Math.min(8000, Math.max(0, o.retryDelayMs) * 2 ** (attempt - 1)) * (1 + Math.max(0, Math.min(1, (o.random ?? Math.random)())) * 0.5);
       const wait = Math.max(backoff, normalized.retryAfterMs ?? 0);
-      const willRetry = !operation.signal.aborted && normalized.retryable && attempt < maxAttempts && remaining() >= wait + minAttempt;
+      const nextModel = models[Math.min(attempt, models.length - 1)];
+      const recoverInvalid = o.recoverInvalidResponse === true && normalized.code === 'AI_INVALID_RESPONSE' &&
+        attempt === 1 && nextModel !== model;
+      const willRetry = !operation.signal.aborted && !invalidResponseRecoveryUsed && (normalized.retryable || recoverInvalid) &&
+        attempt < maxAttempts && remaining() >= wait + minAttempt;
       const event = { endpoint: o.endpoint, requestId: o.requestId, model, attempt, fallbackUsed: model !== models[0], code: normalized.code, elapsedMs: now() - started, attemptMs: now() - attemptStart, remainingMs: remaining(), willRetry, retryDelayMs: wait, upstreamStatus: normalized.upstreamStatus, networkClass: normalized.networkClass };
       o.logFailure?.(event); o.logAttempt?.(event);
       if (!willRetry) {
         if (!operation.signal.aborted && remaining() <= 0) throw createAiFailure('AI_DEADLINE_EXCEEDED');
         throw new AiReliabilityError(normalized);
       }
-      const nextModel = models[Math.min(attempt, models.length - 1)];
+      if (recoverInvalid) invalidResponseRecoveryUsed = true;
       if (nextModel !== model) o.logModelFallback?.({ endpoint: o.endpoint, requestId: o.requestId, fromModel: model, toModel: nextModel, code: normalized.code });
       await delay(wait, operation.signal);
     }

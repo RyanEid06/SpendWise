@@ -75,12 +75,13 @@ test('client disconnect propagates cancellation and preserves WP35.1 correlation
   res.emit('close'); assert.equal(res.locals.aiSignal.aborted, true);
   assert.equal(res.listenerCount('close'), 0); assert.equal(res.listenerCount('finish'), 0);
 });
-test('actual service rejects structurally invalid JSON before route sanitization without retry', async () => {
-  const service = new GeminiService(); let calls = 0;
-  (service as any).createClient = () => ({ models: { generateContent: async () => { calls++; return { text: '{}' }; } } });
+test('actual service rejects invalid schema on both qualified models before route sanitization', async () => {
+  const service = new GeminiService(); const models: string[] = []; let validations = 0;
+  (service as any).createClient = () => ({ models: { generateContent: async (request: { model: string }) => { models.push(request.model); return { text: '{}' }; } } });
   await assert.rejects(service.generateJson({ endpoint: '/api/gemini/analyze', requestId: 'test', contents: 'synthetic', systemInstruction: 'synthetic',
-    responseJsonSchema: { type: 'object', required: ['amount'], properties: { amount: { type: 'number' } } }, validate: v => v }), (e: any) => e.code === 'AI_INVALID_RESPONSE');
-  assert.equal(calls, 1);
+    responseJsonSchema: { type: 'object', required: ['amount'], properties: { amount: { type: 'number' } } }, validate: v => { validations++; return v; } }), (e: any) => e.code === 'AI_INVALID_RESPONSE');
+  assert.deepEqual(models, ['gemini-3.5-flash-lite', 'gemini-3.8-flash']);
+  assert.equal(validations, 0); // Recovery never lets invalid schema reach route sanitization.
 });
 test('installed SDK preserves provider Retry-After through the service without hidden retries', async t => {
   const service = new GeminiService(); let calls = 0;

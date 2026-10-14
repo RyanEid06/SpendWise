@@ -11,7 +11,7 @@ const homeFrameTiming = readFileSync('src/app/startup/StartupHomeFrameTiming.ts'
 const plugin = readFileSync(
   'android/app/src/main/java/com/spendwise/app/SpendWiseSecurityPlugin.java',
   'utf8'
-);
+) + readFileSync('android/app/src/main/java/com/spendwise/app/SpendWiseAuthenticationActivity.java', 'utf8');
 const styles = readFileSync('android/app/src/main/res/values/styles.xml', 'utf8');
 const nightStyles = readFileSync('android/app/src/main/res/values-night/styles.xml', 'utf8');
 const diagnosticsContract = readFileSync('src/services/diagnostics/contract.ts', 'utf8');
@@ -40,7 +40,9 @@ test('WP33.5-01 successful authentication keeps secure UI up until protected sto
   assert.ok(failureGuard > unlockStart);
   assert.ok(storageOpen > failureGuard);
   assert.ok(renderHome > storageInit);
-  assert.match(lock, /\{busy \? copy\.unlocking :/);
+  // Arabic bidi isolation wraps the same busy-state decision; the actual
+  // cancelled/hung UI behavior is also exercised by WP38 browser regressions.
+  assert.match(lock, /lockText\(busy \? copy\.unlocking :/);
   assert.match(lock, /disabled=\{busy \|\| isThrottled/);
   assert.match(lock, /data-testid="secure-lock-surface"/);
 });
@@ -59,7 +61,9 @@ test('WP33.5-01 native auto authentication is one-shot and cancellation leaves a
 test('WP33.5-01 keeps Android system strong biometric plus device credential authentication', () => {
   assert.match(plugin, /BIOMETRIC_STRONG\s*\|\s*BiometricManager\.Authenticators\.DEVICE_CREDENTIAL/);
   assert.match(plugin, /createConfirmDeviceCredentialIntent\(title, reason\)/);
-  assert.match(plugin, /Build\.VERSION\.SDK_INT >= Build\.VERSION_CODES\.R[\s\S]*startBiometricAuthentication\(token, title, reason, true\)/);
+  assert.match(plugin, /Build\.VERSION\.SDK_INT >= Build\.VERSION_CODES\.R/);
+  assert.match(plugin, /mode == NativeAuthenticationGate\.LEGACY_CREDENTIAL/);
+  assert.match(plugin, /mode == NativeAuthenticationGate\.COMBINED/);
   assert.match(plugin, /setAllowedAuthenticators\(BiometricManager\.Authenticators\.DEVICE_CREDENTIAL\)/);
   assert.doesNotMatch(plugin, /setDeviceCredentialAllowed\(true\)/);
   assert.match(plugin, /ERROR_USER_CANCELED/);
@@ -122,5 +126,5 @@ test('WP33.5-01 steady-state cleanup optimization only skips duplicate validatio
 });
 
 test('WP06 uses the owner-selected candidate version and upgrade code', () => {
-  assert.deepEqual(version, { versionName: '2.1.3', versionCode: 13 });
+  assert.deepEqual(version, { versionName: '2.1.4', versionCode: 14 });
 });

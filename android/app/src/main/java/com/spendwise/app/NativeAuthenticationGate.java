@@ -2,6 +2,17 @@ package com.spendwise.app;
 
 /** Monotonic, session-bound guard. Contains no Android UI or key material. */
 final class NativeAuthenticationGate {
+    static final int UNAVAILABLE = 0, BIOMETRIC = 1, CREDENTIAL = 2, COMBINED = 3,
+        LEGACY_CREDENTIAL = 4, IMMEDIATE_UNSUPPORTED = 5;
+
+    static int promptMode(int api, boolean strong, boolean credential, boolean combined, boolean explicitCredential, int timeout) {
+        if (explicitCredential || !strong) {
+            if (!credential) return UNAVAILABLE;
+            if (api >= 30) return CREDENTIAL;
+            return timeout > 0 ? LEGACY_CREDENTIAL : IMMEDIATE_UNSUPPORTED;
+        }
+        return api >= 30 && credential && combined ? COMBINED : BIOMETRIC;
+    }
     static boolean canLaunchPrompt(boolean resumed, boolean fragmentStateSaved, boolean destroyed) {
         return resumed && !fragmentStateSaved && !destroyed;
     }
@@ -43,5 +54,9 @@ final class NativeAuthenticationGate {
     synchronized void cancel() {
         active = 0;
         backgroundedAt = -1;
+    }
+
+    synchronized boolean cancel(long token) {
+        return finish(token);
     }
 }

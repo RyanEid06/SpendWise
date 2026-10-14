@@ -1,10 +1,12 @@
 # Signing and release runbook
 
-Current WP37 candidate metadata: **2.1.3 / Android versionCode13**, package `com.spendwise.app`.
-The owner selected this next version after the accepted private WP36 **2.1.2/code12** build.
-The permanent signing identity is retained. Review and required CI gate merging
-through integration to main; then build the private APK from the exact merged main SHA.
-No2.1.3 tag or public release is authorized.
+Current official version: **2.1.4 / Android versionCode14**, package `com.spendwise.app`, permanent signing identity unchanged. On 2026-10-14 the owner accepted phone testing and authorized main integration, public Latest release/tag `v2.1.4`, documentation updates and verified completed-branch cleanup. [Release notes](RELEASE_NOTES_2.1.4.md), [official release receipt](WP38_PUBLIC_RELEASE.md), [WP38 report](WP38_REPORT.md).
+
+The accepted test build and all required application CI identify source `732065e5455ca4de734d4982a662c2819fdd01af`. Prove application/build inputs unchanged through documentation and main integration before tagging. Publish the official permanent-signed APK through `android-build.yml` from the verified main tag, then independently download and verify the actual public asset and receipt. Public and private build hashes may differ; retain separate receipts. Mark the stable release Latest and verify both the direct APK URL and `releases/latest`.
+
+Do not uninstall, clear storage or reset keys. Render settings/manual provider calls are not part of this publication; effective production routing remains separate evidence. Delete only completed branch refs after proving merged ancestry, clean main and green applicable checks. Never recreate or move a published tag.
+
+## Historical WP37 delivery
 
 **WP37 code/required application CI and main integration passed (2026-10-12).**
 [PR48](https://github.com/RyanEid06/SpendWise/pull/48) merged main9045c699;
@@ -19,7 +21,7 @@ and [private2.1.2 receipt](WP36_PRIVATE_APK.md) remain distinct. See [status](ST
 The current authoritative values are:
 
 ```json
-{"versionName": "2.1.3", "versionCode": 13}
+{"versionName": "2.1.4", "versionCode": 14}
 ```
 
 Every future APK update must increase the Android version code and retain the
@@ -52,7 +54,7 @@ pairs are 2.0.2/code9 and 2.1.0/code10; strict baseline/source/hash/signature ch
 must be updated deliberately for later releases. Code8 is never launched in its
 historical upgrade path because that artifact has the known Android16 startup bug.
 
-For WP37's private2.1.3/code13 APK, after the checked main merge dispatch
+For historical WP37's private2.1.3/code13 APK, after the checked main merge dispatch
 `wp35-integration.yml` on `main` with `signed_test_apk=true` and
 `expected_source` equal to the exact merged main SHA.
 It calls the reusable `wp35-test-apk.yml`; this build-only workflow uses
@@ -75,13 +77,13 @@ Targeted phase success is scoped evidence and must not be described as a full ru
 Inspect actual APK package/version, cryptographic signature, signer, source receipt,
 manifest/WebView/provider/network boundaries, embedded files, SBOM and checksum.
 Review system splash video recorded before launch in Light and Dark. Keep owner
-phone acceptance separate; this 2.1 release was authorized for the subsequent phone trial.
+phone acceptance separate; the owner accepted the 2.1.4 phone trial and authorized public publication on 2026-10-14.
 
 The tag must match `version.json`. Publish from the verified final main commit:
 
 ```powershell
-git tag v2.1.0 <verified-main-sha>
-git push origin v2.1.0
+git tag -a v2.1.4 <verified-main-sha> -m "SpendWise 2.1.4"
+git push origin v2.1.4
 ```
 
 `android-build.yml` verifies the tag, builds with the permanent key, checks actual

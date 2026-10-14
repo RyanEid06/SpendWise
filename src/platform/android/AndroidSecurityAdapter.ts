@@ -89,7 +89,7 @@ interface SpendWiseSecurityPlugin {
   }): Promise<{ durationMs: number }>;
   authenticate(options: NativePromptOptions): Promise<NativeAuthenticationResult>;
   cancelAuthentication(): Promise<{ cancelled: boolean }>;
-  getAuthenticationLifecycle(): Promise<{ systemCredentialActive: boolean }>;
+  getAuthenticationLifecycle(): Promise<{ systemCredentialActive: boolean; internalAuthenticationActive?: boolean }>;
   ensureKey(options: {
     keyVersion: number;
     authenticationRequired: boolean;
@@ -199,7 +199,7 @@ export class AndroidSecurityAdapter {
     return this.securityPlugin.cancelAuthentication();
   }
 
-  getAuthenticationLifecycle(): Promise<{ systemCredentialActive: boolean }> {
+  getAuthenticationLifecycle(): Promise<{ systemCredentialActive: boolean; internalAuthenticationActive?: boolean }> {
     return this.securityPlugin.getAuthenticationLifecycle();
   }
 

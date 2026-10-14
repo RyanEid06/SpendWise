@@ -1,4 +1,21 @@
-# Current status — WP37 integrated to main
+# Current status — SpendWise 2.1.4
+
+**2.1.4 / Android code14**, package `com.spendwise.app`, is accepted by the owner. On 2026-10-14 the owner reported “It officially all works” and authorized main integration, the official public Latest release, tag `v2.1.4`, current documentation updates and deletion of completed branches after verification. Publication is in progress; [public release receipt](WP38_PUBLIC_RELEASE.md), [release notes](RELEASE_NOTES_2.1.4.md), [progress](WP38_PROGRESS.md).
+
+## WP38 delivery gates
+
+| Gate | Status | Evidence |
+| --- | --- | --- |
+| Reviewed application/workflow | VERIFIED | `732065e5455ca4de734d4982a662c2819fdd01af`; later changes are documentation only |
+| Required application CI | GREEN | [Combined38530729922](https://github.com/RyanEid06/SpendWise/actions/runs/38530729922), all four jobs; [isolated38530734631](https://github.com/RyanEid06/SpendWise/actions/runs/38530734631), all five jobs; Android Build/Auth/Gemini/WP32 E2E passed at the same source |
+| Accepted signed test APK | GREEN / INDEPENDENTLY VERIFIED | [Build38589986178](https://github.com/RyanEid06/SpendWise/actions/runs/38589986178); [test artifact receipt](WP38_PRIVATE_APK.md) |
+| Owner phone testing | GREEN — OWNER REPORTED | “It officially all works”, 2026-10-14; no detailed device/API/OEM measurements or exhaustive matrix supplied |
+| Main / public tag / Latest release | AUTHORIZED / IN PROGRESS | [PR50](https://github.com/RyanEid06/SpendWise/pull/50); [official release verification](WP38_PUBLIC_RELEASE.md) |
+| Render / live Gemini | SEPARATELY UNVERIFIED | No settings changes or manual provider calls included; an APK release is not proof of deployed backend routing |
+
+The public release retains the permanent signer and version 2.1.4/code14. Historical release and deployment receipts below remain dated evidence, not the current release designation.
+
+## Accepted WP37 main checkpoint (historical)
 
 Updated **2026-10-13** after delivery and owner manual acceptance on2026-10-12. Candidate **2.1.3 / Android code13**, package
 `com.spendwise.app`. Independent immutable application, workflow and version
