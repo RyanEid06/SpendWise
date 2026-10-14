@@ -51,7 +51,7 @@ jobs:
           NODE
       - run: npm ci
       - name: Existing synthetic security and runtime regressions
-        run: node --import tsx --test tests/*.test.ts
+        run: node --import tsx --test tests/*.test.ts tests/*.test.cjs
       - name: TypeScript and production web build
         run: npm run verify
       - name: Embed nonsecret build identity

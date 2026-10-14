@@ -55,7 +55,7 @@ jobs:
       - name: TypeScript and production build
         run: npm run verify
       - name: Synthetic progress, security, reliability, encrypted storage and diagnostics regressions
-        run: node --import tsx --test tests/*.test.ts
+        run: node --import tsx --test tests/*.test.ts tests/*.test.cjs
       - name: Existing WP32 components, browser, accessibility and visual suites
         run: npm run test:wp32
       - name: Existing WP33 browser and diagnostics gates
@@ -153,12 +153,18 @@ jobs:
             RESULT_ROOT=artifacts/android-isolated/wp35-gesture bash scripts/run-wp32-isolated-gate.sh
             adb -s emulator-5554 shell cmd overlay enable-exclusive --category com.android.internal.systemui.navbar.threebutton
             RESULT_ROOT=artifacts/android-isolated/wp35-threebutton bash scripts/run-wp32-isolated-gate.sh
+            # Resolve the real compiled host theme in day/night configurations;
+            # resource-only instrumentation does not change credentials/data.
+            (cd android && ./gradlew '-Dorg.gradle.jvmargs=-Xmx2g' --max-workers=2 connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.spendwise.app.AuthenticationHostThemeTest)
       - name: Upload isolated emulator evidence (no APK publication)
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: wp35-integration-api36-emulator-evidence
-          path: artifacts/android-isolated/wp35-*/
+          path: |
+            artifacts/android-isolated/wp35-*/
+            android/app/build/reports/androidTests/
+            android/app/build/outputs/androidTest-results/
           if-no-files-found: ignore
           retention-days: 14
 

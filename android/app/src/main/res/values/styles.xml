@@ -18,6 +18,21 @@
     </style>
     <style name="AppTheme.NoActionBar" parent="AppTheme.NoActionBar.Base" />
 
+    <!-- Private auth lifecycle owner: keep the existing secure WebView surface
+         beneath the OS prompt. This is a full-size modal Activity, not a
+         floating dialog or a touch-through/keyguard window. -->
+    <style name="AppTheme.AuthenticationHost" parent="AppTheme.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowDisablePreview">true</item>
+    </style>
+
     <style name="AppTheme.NoActionBarLaunch.Base" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/spendwise_launch_background</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/spendwise_splash_icon</item>

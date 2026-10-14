@@ -48,3 +48,24 @@ Existing source contract tests were updated to read the new native host alongsid
 Local Android SDK is unavailable at the configured path; Android compile/unit/instrumented encrypted-recovery gates must run in CI. No physical PIN/pattern/password, API24–29 device, canceled legacy child, Activity recreation, or in-place signed upgrade result is claimed here. In particular, validate `onUserLeaveHint` on the owner's OEM during the Android 11+ system credential switch, and validate Home/Recents/screen-off with the platform prompt over the private host. Any credential dismissal without protected-key verification or any post-cancel unlock is a release blocker.
 
 Parent report owns immutable-head CI, complete regression results, signed private APK identity, physical acceptance and release recommendation. This lane made no commit/push, version/workflow change, merge, tag, publication, Render change or data deletion.
+
+## Review correction: preserve the existing secure prompt backdrop
+
+Independent review of `54085c2` identified a presentation regression: the private authentication host selected `AppTheme`, whose parent is `Theme.AppCompat.Light.DarkActionBar`. An Activity with no content therefore put light native decor and an action bar over the existing lock card, including in dark mode. Source inspection confirmed the manifest/theme inheritance before changing it.
+
+The host now selects `AppTheme.AuthenticationHost`, inheriting the existing `AppTheme.NoActionBar`. It explicitly disables both native/AppCompat action bars and titles, uses a transparent translucent non-floating window, and disables its own dimming and starting preview. The OS authentication prompt controls its own dimming. Day/night system-bar styling continues through the existing parent theme. This is a full-size Activity using normal input/focus defaults; no touch-through, `showWhenLocked`, `turnScreenOn` or keyguard-dismiss flags were added. The existing runtime `FLAG_SECURE` remains.
+
+The backdrop is the same already-rendered secure surface used by the existing OS biometric prompt: a lock card while locked, or the already-authorized settings/other sensitive screen while requesting fresh authentication. Translucency itself does not authorize storage access or render a new screen. Native result tokens, protected-key verification, session revisions, privacy shields and cancellation policies are unchanged.
+
+Lifecycle implication: the Main Activity can remain **STARTED/paused** underneath a translucent host rather than receiving `onStop` solely because the host opened. Inspection of the installed Capacitor source confirms `appStateChange(false)` originates at Main `onStop`, while `appStateChange(true)` is emitted on resume. Therefore the internal transition need not trigger a synthetic background/privacy overlay that would hide the intended card. Real Home/screen-off still stops the app; the existing host user-departure callback, plugin departure receiver and session/cancellation gates remain responsible for cancellation. Returning focus still resumes Main. OEM/system credential transitions and actual window rendering require device/emulator validation; a resource audit cannot certify those callbacks.
+
+Verification added:
+
+```powershell
+& ./scripts/wp38/audit-auth-host-theme.ps1
+node node_modules/tsx/dist/cli.mjs --test tests/wp33-5-01-branding-auth.test.ts tests/wp37-auth.test.ts tests/wp37-auth-startup.test.ts tests/wp38-auth-recovery.test.ts
+```
+
+The executable XML audit resolves the manifest-selected local style inheritance through day/night and API24/API27 qualifiers. It first failed on the original `AppTheme` (`android:windowDisablePreview` missing; the original theme also lacked the required transparent/no-action-bar host contract). After the change it passed **four qualifier configurations plus the privacy/input/keyguard source/manifest guard**. Focused existing/authentication regressions passed **41/41**, and `git diff --check` passed.
+
+`AuthenticationHostThemeTest` was added to Android instrumentation. It resolves the **compiled manifest-selected theme** with `ContextThemeWrapper` and `TypedArray` in day/night contexts, asserting the host is private, no-action-bar/no-title, translucent, non-floating, transparent, without added dimming or preview. It does not launch an authentication prompt or require enrolled credentials. Parent CI wires the exact class `com.spendwise.app.AuthenticationHostThemeTest`; local execution remains unavailable without the Android SDK. No existing test assertion was removed or relaxed for this correction.

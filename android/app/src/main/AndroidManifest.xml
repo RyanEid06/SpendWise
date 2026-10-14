@@ -34,7 +34,7 @@
         <activity
             android:name=".SpendWiseAuthenticationActivity"
             android:exported="false"
-            android:theme="@style/AppTheme"
+            android:theme="@style/AppTheme.AuthenticationHost"
             android:excludeFromRecents="true" />
 
         <provider
