@@ -1,84 +1,82 @@
+<img src="public/app-icon.png" alt="SpendWise app icon" width="72" height="72">
+
 # SpendWise
 
-**SpendWise 2.1.4 / Android code14** is the owner-accepted release: reliable Android authentication, concise Arabic lock UX and bounded Gemini reliability improvements. It is the latest stable public release; the official APK, checksum, source receipt and SBOM are published and independently verified.
+A local-first expense tracker and monthly budget planner for Android and the web. Built with React, TypeScript and Capacitor, with encrypted Android storage and optional Gemini assistance.
 
-[Download 2.1.4 APK](https://github.com/RyanEid06/SpendWise/releases/latest/download/SpendWise-v2.1.4.apk) · [Release and tag v2.1.4](https://github.com/RyanEid06/SpendWise/releases/tag/v2.1.4) · [Release notes](docs/RELEASE_NOTES_2.1.4.md) · [Release verification](docs/WP38_PUBLIC_RELEASE.md)
+**Latest stable release: 2.1.4 · Android versionCode 14 · Product development complete.**
 
-SpendWise is a local-first expense tracker and monthly budget planner for Android and the web. Package: `com.spendwise.app`. Existing installs update with the same permanent signing identity; preserve app data and do not uninstall or clear storage.
-
-The owner reported “It officially all works” on 2026-10-14 after testing the verified 2.1.4 APK. All required application CI passed. [Current status](docs/STATUS.md), [WP38 report](docs/WP38_REPORT.md), [verification](docs/VERIFICATION.md) and [roadmap](docs/ROADMAP.md) distinguish automated, owner-reported and production evidence. Render effective routing and live-provider checks remain separately unverified.
-
-Financial records stay on the device. Optional AI analysis, Smart Capture and
-receipt scanning send selected data to the backend/Gemini when invoked.
+[Download Android APK](https://github.com/RyanEid06/SpendWise/releases/latest/download/SpendWise-v2.1.4.apk) · [Release notes](docs/RELEASE_NOTES_2.1.4.md) · [Documentation](docs/README.md) · [Freeze record](docs/FREEZE.md)
 
 ## Features
 
-- Monthly budgets, remaining-money status, category breakdowns and top expenses.
-- Manual expense entry and editing, optional description/merchant and notes, and up to eight photos.
-  A blank description saves the selected category's localized display name.
-- Searchable History, read-only details, grouped delete/Undo and multi-period Statistics.
-- Optional AI insights with deterministic local analysis and offline error handling.
-- Private media with All/Day/Category filters, integrity checks and safe repair.
-- Encrypted data-only or photo-inclusive backups; legacy v1/v2 import and CSV export.
-- Android strong-biometric/device-credential App Lock, encrypted database/media,
-  protected unfinished drafts and startup/recovery handling.
-- English, French and Arabic/RTL; Light, Dark and System themes; eleven currencies.
-  Conversion defaults are dated suggestions, not a live exchange-rate feed.
+- Monthly budgets, remaining-money summaries, category breakdowns and top expenses.
+- Manual expense entry and editing, optional descriptions and notes, and up to eight photos per expense.
+- Searchable History, delete/Undo, and Statistics across multiple periods.
+- Optional AI insights, Smart Capture and receipt scanning, with deterministic financial calculations and local analysis when available.
+- Private media with date/category filters and integrity checks.
+- Encrypted backups with or without photos, legacy backup import and CSV export.
+- Android App Lock with strong biometrics and supported device credentials, encrypted database/media, and protected unfinished drafts.
+- English, French and Arabic/RTL; light, dark and system themes; eleven currencies.
 
-Home, History, AI Insights and Statistics are the four primary destinations.
-Settings opens from the top app bar. Automated and owner-reported 2.1.4 evidence is recorded in [verification](docs/VERIFICATION.md).
-The reusable [manual checklist](docs/MANUAL_ACCEPTANCE.md) remains available for future regressions.
+Financial records stay on the device. Invoking optional AI features sends the selected data to the backend/Gemini. Currency conversion defaults are dated suggestions, not a live exchange-rate feed.
 
-## Development
+## Engineering
 
-Use **Node.js 22**, npm, JDK 21 and an Android SDK (compile/target 36, minimum 24).
+| Area | Implementation |
+| --- | --- |
+| Frontend | React 19, TypeScript, Vite and Tailwind CSS |
+| Android | Capacitor, native Java integrations and Android Keystore; API 24 minimum, compile/target 36 |
+| Local storage | SQLCipher database and AES-GCM media protection on Android; browser-local persistence on the web |
+| Backend | Express, installation-signed authentication and durable PostgreSQL installation identities |
+| AI | Google Gemini with bounded requests, cancellation, schema validation and deterministic financial facts |
+| Quality | Node regression tests, Playwright browser/accessibility/visual tests, Maestro Android flows and native instrumentation |
+| Delivery | GitHub Actions, permanent-signed APKs, checksums, source receipts and a CycloneDX dependency SBOM |
+
+## Run locally
+
+Use **Node.js 22** and npm. Android development also requires JDK 21 and Android SDK 36.
 
 ```bash
 npm ci
+```
+
+Copy `.env.example` to `.env`, then start the development server:
+
+```bash
 npm run dev
 ```
 
-Copy `.env.example` to `.env` and set server-only `GEMINI_API_KEY` for optional AI.
-Open `http://localhost:3000`. Manual tracking works without a provider key. Never
-put provider keys or signing material in `VITE_*` variables.
+Open `http://localhost:3000`. Manual tracking works without a provider key. Set the server-only `GEMINI_API_KEY` for optional AI; keep provider keys and signing material out of `VITE_*` variables.
 
 ```bash
 npm run verify
-npm run android:sync
-```
-
-From the `android` directory, build debug Android on Windows with
-`.\gradlew.bat assembleDebug`; on Unix use `./gradlew assembleDebug`.
-The output is `android/app/build/outputs/apk/debug/app-debug.apk`. Installed official
-releases require the permanent-signed release APK for an update that preserves data.
-For Android AI, set `VITE_API_BASE_URL` to the deployed HTTPS backend before building.
-
-## Verification
-
-```bash
 node --import tsx --test tests/*.test.ts tests/*.test.cjs
-npx playwright install chromium
-npm run test:wp32
 ```
 
-CI retains web/component/accessibility tests, native Maestro flows, encrypted
-recovery, API36 FileProvider instrumentation and signed populated-upgrade checks.
-The `wpNN` names identify active regressions and fixtures.
+For browser tests, install Chromium with `npx playwright install chromium`, then run `npm run test:wp32`. The `wpNN` script names identify retained regression suites.
 
-## Maintainer documentation
+For Android, run `npm run android:sync`, then from `android/` run `.\gradlew.bat assembleDebug` on Windows or `./gradlew assembleDebug` on Unix. Debug output is `android/app/build/outputs/apk/debug/app-debug.apk`. See the [development guide](docs/DEVELOPMENT.md) for backend configuration and native test prerequisites.
 
-- [Development, backend settings and frozen product constraints](docs/DEVELOPMENT.md)
-- [Security, storage, backup and recovery boundaries](docs/SECURITY.md)
-- [Signing and release runbook](docs/RELEASE.md)
-- [Current green checkpoint](docs/STATUS.md)
-- [Completed work and next WP](docs/ROADMAP.md)
-- [Official 2.1.4 release receipt](docs/WP38_PUBLIC_RELEASE.md)
-- [Accepted 2.1.4 test APK receipt](docs/WP38_PRIVATE_APK.md)
-- [2.1 automated verification and artifact provenance](docs/VERIFICATION.md)
-- [Owner phone acceptance checklist](docs/MANUAL_ACCEPTANCE.md)
-- [Synthetic fixture inventory](tests/fixtures/README.md)
+## Release and verification
 
-Completed plans and superseded work-package reports were archived locally before
-removal from Git and remain recoverable in history. Source, tests, fixtures, build
-and release tooling remain in the repository. Generated artifacts, runtime state
-and signing material stay out of Git.
+The owner accepted 2.1.4 after phone testing on 2026-10-14. Required application CI passed, including **687/687 Node/PostgreSQL tests**, browser/accessibility/visual checks, Android acceptance, encrypted recovery and native instrumentation. The official public APK was independently checked for its permanent signature, package/version, checksum, source receipt and 16 KiB native alignment. [Verification evidence](docs/VERIFICATION.md) and the [public release receipt](docs/WP38_PUBLIC_RELEASE.md) identify the exact sources and runs.
+
+Install the official APK as an update; preserve app data and do not uninstall or clear storage. The accepted test APK has identical shared contents; its only extra file records private build provenance. There is no need to replace an already working 2.1.4 test installation.
+
+Production Gemini routing/live-provider behavior and exhaustive device/API/OEM/TalkBack coverage are separately documented limits. Automated checks and owner acceptance do not claim those broader certifications.
+
+## Repository guide
+
+| Path | Purpose |
+| --- | --- |
+| `src/` | Application UI, features, local repositories and security services |
+| `server/`, `server.ts` | API, Gemini services and installation authentication |
+| `android/` | Native Android integrations, resources and instrumentation |
+| `tests/`, `.maestro/` | Regression tests, synthetic fixtures and Android flows |
+| `scripts/`, `.github/` | Verification, build and release tooling |
+| `docs/` | Current guides, release evidence and dated engineering history |
+
+Start with the [documentation index](docs/README.md), [security boundaries](docs/SECURITY.md) and [release runbook](docs/RELEASE.md). Generated builds, local evidence, runtime state and signing material are excluded from Git.
+
+SpendWise is frozen at **2.1.4** with no planned feature work or routine dependency upgrades. Future changes require an explicit owner decision; the [freeze record](docs/FREEZE.md) defines the accepted checkpoint and remaining operational limits.

@@ -1,5 +1,7 @@
 # WP38 — 2.1.4/code14 hotfix report
 
+**Final outcome: merged, publicly released and owner accepted; product frozen at 2.1.4.** [Freeze record](FREEZE.md). Original branch/checkpoint descriptions below preserve implementation history; the source branch has been merged and deleted.
+
 Branch: `codex/wp38-auth-gemini-reliability`. Baseline: `16ea6870243d67daa28cfbc6e5d0e1126416fe47` (remote main verified2026-10-14). [Approved plan and owner execution boundaries](WP38_PLAN.md), [execution ledger](WP38_PROGRESS.md).
 
 ## Root causes and changes

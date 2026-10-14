@@ -1,5 +1,7 @@
 # Current status — SpendWise 2.1.4
 
+**Product development complete; frozen at 2.1.4 on 2026-10-14.** No next work package is scheduled. [Freeze record](FREEZE.md), [documentation index](README.md). Dated records below preserve historical checkpoints and do not describe outstanding product work.
+
 **2.1.4 / Android code14**, package `com.spendwise.app`, is accepted by the owner. On 2026-10-14 the owner reported “It officially all works” and authorized main integration, the official public Latest release, tag `v2.1.4`, current documentation updates and deletion of completed branches after verification. Publication and independent public download verification passed; [public release receipt](WP38_PUBLIC_RELEASE.md), [release notes](RELEASE_NOTES_2.1.4.md), [progress](WP38_PROGRESS.md).
 
 ## WP38 delivery gates
@@ -13,7 +15,8 @@
 | Main / public tag / Latest release | GREEN / PUBLISHED | [PR50](https://github.com/RyanEid06/SpendWise/pull/50) and formatting correction [PR51](https://github.com/RyanEid06/SpendWise/pull/51) merged; `v2.1.4` at GitHub-Verified `8dc968b055eeb2bfc6a531ef347dce563f26f8bc`; [official release verification](WP38_PUBLIC_RELEASE.md) |
 | Public tag/main CI | GREEN | [Main38596394266](https://github.com/RyanEid06/SpendWise/actions/runs/38596394266), [tag38597721857](https://github.com/RyanEid06/SpendWise/actions/runs/38597721857), verify-debug and signed-release passed |
 | Official public APK | GREEN / INDEPENDENTLY VERIFIED | Permanent signer/V2, package/version/source/checksum, accepted web/native assets, twelve 16KiB-aligned native libraries; [machine receipt](WP38_PUBLIC_APK_RECEIPT.json); Latest APK HTTP200 |
-| Render / live Gemini | SEPARATELY UNVERIFIED | No settings changes or manual provider calls included; an APK release is not proof of deployed backend routing |
+| Render health / reported source | VERIFIED READ-ONLY, 2026-10-14 | `/api/health` returned `ok: true`, source `6a356f6a742e`, installation authentication, AI configured and legacy compatibility disabled; application inputs match the public release, and readiness is distinct from provider success |
+| Effective Gemini routing / live calls | SEPARATELY UNVERIFIED | No settings changes or manual provider calls included; health does not prove provider availability, quota or effective task routing |
 
 The public release retains the permanent signer and version 2.1.4/code14. Historical release and deployment receipts below remain dated evidence, not the current release designation.
 

@@ -1,10 +1,12 @@
-# SpendWise 2.1 automated verification
+# SpendWise 2.1.4 verification
+
+The accepted product is frozen at 2.1.4. [Freeze record](FREEZE.md). Older sections below are dated evidence for earlier releases, preserved without promoting their results to current-source proof.
 
 ## WP38 2.1.4 / code14 — automated gates and owner testing passed
 
 The [WP38 ledger](WP38_PROGRESS.md) records current red/green evidence. All six required workflows passed immutable source `732065e5455ca4de734d4982a662c2819fdd01af`, including all four combined jobs and all five isolated native jobs. Private build38589986178 passed; independent Google apksig/binary-manifest/asset inspection verified V2, permanent signer, hash, package/version, embedded source/run and compiled HTTPS endpoint. [Artifact receipt and CI links](WP38_PRIVATE_APK.md). Final documentation changes do not alter the tested application. The owner reported “It officially all works” on 2026-10-14 and authorized the public Latest release/tag; [public build and independent download verification](WP38_PUBLIC_RELEASE.md) passed: main38596394266 and tag38597721857 at GitHub-Verified source `8dc968b055eeb2bfc6a531ef347dce563f26f8bc`; actual public package2.1.4/code14/permanentV2 signer/checksum/source/HTTPS and all twelve native ZIP/ELF16KiB alignments verified. Compiled web assets and native libraries match the accepted test APK. Latest APK resolves HTTP200. Exhaustive device coverage and effective Render/live-provider checks remain separately unverified. Historical WP37 acceptance is not used as WP38 proof.
 
-## WP37 2.1.3 / code13 — code, CI and main integration passed
+## Historical WP37 2.1.3 / code13 — code, CI and main integration passed
 
 [Combined38286074724 attempt2](https://github.com/RyanEid06/SpendWise/actions/runs/38286074724) passed web/PostgreSQL, API36 isolated
 editor/continuity, full API34 acceptance and encrypted draft recovery on

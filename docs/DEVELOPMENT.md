@@ -1,5 +1,7 @@
 # Development and maintenance
 
+**Product frozen at 2.1.4, 2026-10-14.** This guide supports reproduction of the completed release. No further feature work or routine dependency upgrades are planned; reopening maintenance requires an explicit owner decision. [Freeze record](FREEZE.md), [documentation index](README.md).
+
 **Current version: SpendWise 2.1.4 / Android code14.** WP38 authentication, Arabic lock copy/bidi and bounded Gemini reliability changes passed required CI; the owner reported all works on 2026-10-14 and authorized public release. [Release notes](RELEASE_NOTES_2.1.4.md), [release receipt](WP38_PUBLIC_RELEASE.md), [plan](WP38_PLAN.md), [progress](WP38_PROGRESS.md). Preserve existing encryption, key identities, timeouts, financial/schema validators and provider architecture. Render effective routing/live-provider checks remain separate. Historical WP36/WP37 receipts retain their own source and acceptance dates.
 
 ## Product constraints
