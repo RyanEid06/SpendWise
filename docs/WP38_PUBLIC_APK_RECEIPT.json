@@ -57,5 +57,21 @@
   "separatelyUnverified": [
     "effective Render routing/runtime and live-provider calls",
     "exhaustive device/API/OEM/TalkBack matrix"
-  ]
+  ],
+  "completedBranchCleanup": {
+    "verified": true,
+    "remainingLocalBranches": [
+      "main"
+    ],
+    "remainingRemoteBranches": [
+      "main"
+    ],
+    "deletedMergedBranches": [
+      "codex/wp38-auth-gemini-reliability",
+      "codex/wp38-release-docs"
+    ],
+    "mainAtCleanup": "511fbe6abb44fb5ea63ba1c3fecd462be002f74d",
+    "finalDocumentationPr": 52,
+    "releaseTagPreserved": true
+  }
 }
