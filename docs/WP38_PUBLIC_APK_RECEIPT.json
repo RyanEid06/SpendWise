@@ -1,0 +1,61 @@
+{
+  "package": "com.spendwise.app",
+  "versionName": "2.1.4",
+  "versionCode": 14,
+  "source": "8dc968b055eeb2bfc6a531ef347dce563f26f8bc",
+  "signingCertificateSha256": "e279124cd9d2cd6d4c191e2644fd71063993e42d13441a46759fa922f16d5965",
+  "runId": "38597721857",
+  "tag": "v2.1.4",
+  "apkFilename": "SpendWise-v2.1.4.apk",
+  "apkSha256": "af50377cc519c7dadcb20be23337e94ba44dd2a222951b985f8667d23ececdb5",
+  "apkBytes": 17758563,
+  "releaseId": 412941237,
+  "publishedAt": "2026-10-14T16:31:26Z",
+  "verifiedDate": "2026-10-14",
+  "latest": true,
+  "draft": false,
+  "prerelease": false,
+  "releaseUrl": "https://github.com/RyanEid06/SpendWise/releases/tag/v2.1.4",
+  "downloadUrl": "https://github.com/RyanEid06/SpendWise/releases/download/v2.1.4/SpendWise-v2.1.4.apk",
+  "latestDownloadUrl": "https://github.com/RyanEid06/SpendWise/releases/latest/download/SpendWise-v2.1.4.apk",
+  "latestDownloadHttpStatus": 200,
+  "apiBaseUrl": "https://spendwise-api-v9sv.onrender.com",
+  "gitHubCommitSignatureVerified": true,
+  "tagKind": "lightweight reference to GitHub-signed verified merge commit",
+  "acceptedApplicationSource": "732065e5455ca4de734d4982a662c2819fdd01af",
+  "mainCiRun": "38596394266",
+  "tagCiRun": "38597721857",
+  "desktopFile": "C:\\Users\\Administrator\\Desktop\\SpendWise-v2.1.4.apk",
+  "desktopCopyHashVerified": true,
+  "independentVerification": {
+    "googleApksig": "8.13.0",
+    "v2": true,
+    "permanentSignerMatched": true,
+    "compiledManifestMatched": true,
+    "publishedSourceReceiptMatchedExactTagWorkflow": true,
+    "checksumAndGitHubAssetDigestMatched": true,
+    "nonDebuggable": true,
+    "allowBackup": false,
+    "cleartextTraffic": false,
+    "authenticationHostExported": false,
+    "remoteServerOverrideAbsent": true,
+    "providerKeyPatternAbsent": true,
+    "compiledWebAssetsMatchAcceptedTestApk": true,
+    "nativeLibrariesMatchAcceptedTestApk": true,
+    "zipAndElf16KiBAlignmentLibraryCount": 12,
+    "sbom": "CycloneDX1.5"
+  },
+  "ownerAcceptance": {
+    "date": "2026-10-14",
+    "statement": "It officially all works",
+    "evidenceType": "owner-reported testing of accepted test APK"
+  },
+  "completedBranchCleanupAuthorized": [
+    "codex/wp38-auth-gemini-reliability",
+    "codex/wp38-release-docs"
+  ],
+  "separatelyUnverified": [
+    "effective Render routing/runtime and live-provider calls",
+    "exhaustive device/API/OEM/TalkBack matrix"
+  ]
+}

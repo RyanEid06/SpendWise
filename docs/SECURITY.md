@@ -1,6 +1,6 @@
 # Security, storage and recovery
 
-Current checkpoint: **WP38 / SpendWise 2.1.4 automated application/security gates passed; owner phone testing reported green on 2026-10-14**. Main/public release publication is authorized; [current status](STATUS.md), [release verification](WP38_PUBLIC_RELEASE.md). Exhaustive OEM/API/TalkBack coverage remains unverified. Earlier WP36/WP37 acceptance is historical.
+Current checkpoint: **WP38 / SpendWise 2.1.4 automated application/security gates passed; owner phone testing reported green on 2026-10-14**. Main integration and the official Latest 2.1.4 release/tag are verified; [current status](STATUS.md), [release verification](WP38_PUBLIC_RELEASE.md). Exhaustive OEM/API/TalkBack coverage remains unverified. Earlier WP36/WP37 acceptance is historical.
 This sign-off does not expand the threat model or waive the safeguards below.
 
 This records implemented boundaries and release checks. It does not establish

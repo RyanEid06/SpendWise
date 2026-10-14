@@ -1,6 +1,6 @@
 # SpendWise
 
-**SpendWise 2.1.4 / Android code14** is the owner-accepted release: reliable Android authentication, concise Arabic lock UX and bounded Gemini reliability improvements. Public publication is in progress.
+**SpendWise 2.1.4 / Android code14** is the owner-accepted release: reliable Android authentication, concise Arabic lock UX and bounded Gemini reliability improvements. It is the latest stable public release; the official APK, checksum, source receipt and SBOM are published and independently verified.
 
 [Download 2.1.4 APK](https://github.com/RyanEid06/SpendWise/releases/latest/download/SpendWise-v2.1.4.apk) · [Release and tag v2.1.4](https://github.com/RyanEid06/SpendWise/releases/tag/v2.1.4) · [Release notes](docs/RELEASE_NOTES_2.1.4.md) · [Release verification](docs/WP38_PUBLIC_RELEASE.md)
 
