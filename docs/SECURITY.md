@@ -1,5 +1,7 @@
 # Security, storage and recovery
 
+Product development is frozen at 2.1.4; the security boundaries and evidence limits below continue to apply. A future security finding requires an explicit owner decision about maintenance. [Freeze record](FREEZE.md).
+
 Current checkpoint: **WP38 / SpendWise 2.1.4 automated application/security gates passed; owner phone testing reported green on 2026-10-14**. Main integration and the official Latest 2.1.4 release/tag are verified; [current status](STATUS.md), [release verification](WP38_PUBLIC_RELEASE.md). Exhaustive OEM/API/TalkBack coverage remains unverified. Earlier WP36/WP37 acceptance is historical.
 This sign-off does not expand the threat model or waive the safeguards below.
 

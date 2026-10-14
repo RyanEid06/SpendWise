@@ -1,5 +1,7 @@
 # SpendWise 2.1.4 — official public Latest release
 
+**Final product freeze: 2026-10-14.** [Freeze record](FREEZE.md). Later presentation/maintenance-policy commits preserve this immutable public source, signed APK and all release receipts.
+
 Published and independently verified **2026-10-14**. The owner accepted the tested 2.1.4 build (“It officially all works”) and authorized main integration, public release/tag and completed-branch cleanup. The Releases page marks **SpendWise v2.1.4** as **Latest**.
 
 [Download official APK](https://github.com/RyanEid06/SpendWise/releases/latest/download/SpendWise-v2.1.4.apk) · [Release](https://github.com/RyanEid06/SpendWise/releases/tag/v2.1.4) · [Tag](https://github.com/RyanEid06/SpendWise/tree/v2.1.4) · [Notes](RELEASE_NOTES_2.1.4.md) · [Machine receipt](WP38_PUBLIC_APK_RECEIPT.json)
