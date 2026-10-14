@@ -1,0 +1,40 @@
+{
+  "package": "com.spendwise.app",
+  "versionName": "2.1.4",
+  "versionCode": 14,
+  "source": "732065e5455ca4de734d4982a662c2819fdd01af",
+  "runId": "38589986178",
+  "variant": "private-wp38-test",
+  "apkSha256": "0f4b5c46f93882387a45febf5ad58ceceabfdeb28c67d5074153117297747ab0",
+  "signingCertificateSha256": "e279124cd9d2cd6d4c191e2644fd71063993e42d13441a46759fa922f16d5965",
+  "apiBaseUrl": "https://spendwise-api-v9sv.onrender.com",
+  "verifiedDate": "2026-10-14",
+  "artifactId": 11907202097,
+  "artifactArchiveDigest": "sha256:47627cd5b4b3d12d3e63084c33f961bd892591c47d7b16d90599b171f6536fec",
+  "apkBytes": 17758826,
+  "localDeliveryFile": "artifacts/wp38/SpendWise-WP38-v2.1.4-test.apk",
+  "desktopDeliveryFile": "C:\\Users\\Administrator\\Desktop\\SpendWise-v2.1.4-test.apk",
+  "desktopCopyHashVerified": true,
+  "independentVerification": {
+    "googleApksigVersion": "8.13.0",
+    "signatureVerified": true,
+    "v2Verified": true,
+    "permanentSignerMatched": true,
+    "compiledManifestMatched": true,
+    "embeddedSourceRunVersionMatched": true,
+    "hashMatchedReceiptAndSHA256SUMS": true,
+    "compiledHttpsEndpointMatchedReceipt": true,
+    "nonDebuggable": true,
+    "allowBackup": false,
+    "usesCleartextTraffic": false,
+    "authenticationHostExported": false,
+    "remoteServerOverrideAbsent": true,
+    "providerKeyPatternAbsent": true
+  },
+  "ownerDeferred": [
+    "physical authentication and Arabic overlay acceptance",
+    "in-place real-data upgrade",
+    "Render effective routing and live-provider checks"
+  ],
+  "productionReleaseApproved": false
+}

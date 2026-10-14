@@ -24,25 +24,31 @@ See [detailed Gemini evidence and file list](WP38_GEMINI_REPORT.md). Qualified s
 
 A shared quota latch guards both handlers and visible controls across all four tasks, honors supplied Retry-After and existing valid context resets. Local preparation and fallback cache failures clear loading/in-flight/progress, and incomplete fallback is not published/cached. Smart Capture/Receipt keep previous validated extraction/photos on failure. No live requests or Render inspection/settings/deployment changes were performed.
 
-## Verification status
+## Verification status — final automated candidate
 
-- Clean baseline focused Node tests:70/70 passed.
-- Native state gate compiled with JDK21 in normal Windows context; JUnit9/9 passed.
-- Focused authentication/Arabic browser:8/8 passed, including real session/key/coordinator/LockScreen with only OS boundary mocked,65s hung recovery, cancellation acknowledgment and stale old success rejection.
-- Gemini scope:165passed,0failed,1existing real-PostgreSQL skip;20browser cases passed. Parent integration check36/36 passed.
-- Normal Windows production TypeScript/Vite build passed before final metadata; sandbox esbuild access denial recorded separately.
-- Full preliminary host24 suite:686cases,682pass/3fail/1skip;2explicit Node22 benchmark guards and1obsolete busy-expression source assertion. The bidi assertion was structurally updated and portable official Node22.23.3 checksum-verified without changing the machine runtime. Final2.1.4/code14 full Node suite: **687cases,686passed,0failed,1existing real-PostgreSQL skip** (34.8s). Combined CI supplies the isolated PostgreSQL test database.
-- Final Node22 production TypeScript/Vite build passed (existing bundle-size warning). Existing WP32 runner19/19, failure injection11/11, component105/106 plus one unchanged successful failed-case retry, and browser/accessibility/visual86/86 passed. The original component failure was a destroyed execution context during unrelated Home amount geometry, not an assertion mismatch; trace retained and no selector/assertion/timeout changed.
-- Luna High independent immutable16ea687..54085c2 review found one Important native host presentation defect: inherited default light decor/actionbar would replace the lockcard. Fixed with a private full-size translucent/no-action-bar/no-preview theme retaining the existing secured WebView under the OS prompt, without touch-through/keyguard privileges. Resource inheritance audit RED->GREEN in4day/nightAPI24/27qualifier contexts; parent auth/Arabic/source regressions58/58passed. Compiled Android theme assertions are wired into existing API36 CI. No other actionable static defects; device/lifecycle/OEM/upgrade/live-provider results explicitly not certified.
-- Exact-source Android compile/unit/lint/native encrypted recovery/full acceptance and signed APK identity/source/hash checks: pending.
+Exact reviewed application/workflow source: `732065e5455ca4de734d4982a662c2819fdd01af`. All six required workflows **SUCCESS** at this source; [artifact receipt](WP38_PRIVATE_APK.md) contains links and independent verification values. Final documentation is a docs-only child of this source.
 
-CI checkpoint2026-10-14T07:14Z at `a626ecc2985227bac5edc17b5c21db288eec7fb1`: Android Build, Auth Recovery, Gemini Runtime and WP32 E2E passed. Combined web/PostgreSQL passed **687/687,0skipped**, with existing component/browser/accessibility/visual/performance gates green. Combined API36 failed actual lint on the new host's obsolete `onBackPressed` override (`MissingSuperCall`, target36 `GestureBackNavigation`); a lifecycle-aware AndroidX Back-dispatcher repair is required, without suppression. Full Android acceptance failed after a proven GMS FontsProvider process death killed SpendWise (retained artifact11876126435/logcat07:06:58.428), not an auth assertion defect. Encrypted recovery/remaining isolated jobs were preserved running. New exact-source native/combined verification follows the Back repair; no signed APK is claimed ready while CI is red.
+| Evidence | Result |
+| --- | --- |
+| Full local Node22 suite | 687cases:686pass,0fail,1existing real-PostgreSQL skip |
+| Combined web/PostgreSQL CI | **687/687 passed,0skipped**; production build and existing component/browser/accessibility/visual/performance gates passed |
+| Focused authentication/Arabic browser | 8/8passed, real session/key/coordinator/LockScreen with OS boundary mocked, bounded hung recovery and stale-success rejection |
+| Gemini focused Node/browser | 165pass,0fail,1existing database skip;20browser cases passed |
+| Local native state gate / resource audit | JUnit9/9passed;4day/nightAPI24/27theme contexts and privacy guards passed |
+| Combined API36 native | Compile/JUnit/lint, both navigation flows and actual-host instrumentation **2tests/0failures/0errors** passed |
+| Full acceptance / encrypted recovery | Both combined jobs passed |
+| Isolated native gates | All5jobs passed |
+| Required PR workflows | Android Build, Auth Recovery, Gemini Runtime and WP32 E2E passed |
+| Private signed build38589986178 | Passed, including repeated synthetic regressions, web build, native signing and identity guards |
+| Independent downloaded APK | Valid Google apksigV2/permanent certificate, exact package2.1.4/code14/source/run/hash and compiled HTTPS endpoint |
+| Phone credentials / OEM / real-data upgrade | **OWNER-PENDING**, not certified by CI |
+| Effective Render routes / live Gemini | **OWNER-DEFERRED / UNVERIFIED**, no production action |
 
-Back repair is implemented with the existing AndroidX1.11.0 lifecycle-aware `OnBackPressedCallback`, replacing the obsolete override. The existing instrumentation class also checks actual-host Back before prompt launch, duplicate Back and callback detachment. Parent focused regression58/58, JVM9/9 and4resource audits pass; actual new lint/instrumentation need the next CI source. This follows [Android's documented Back migration](https://developer.android.com/guide/navigation/custom-back/predictive-back-gesture) without changing dependencies, suppression, terminal security checks or acceptance gates.
+Local `npm run verify` passed on Node22 (existing bundle-size warning). WP32 runner19/19 and failure-injection11/11 passed; local component105/106 plus one unchanged successful retry, and remaining browser/accessibility/visual86/86 passed. The initial component interruption was a destroyed execution context during Home geometry; no assertion/selector/timeout was changed. CI subsequently passed the full gates.
 
-CI checkpoint2026-10-14T07:44Z at abb4dcc: AndroidBuild/Auth/Gemini/WP32E2E, combined web and encrypted recovery passed. API36 compile/JUnit/lint and both existing navigation flows passed; compiled-resource/real-Activity instrumentation XML proves **2passed,0failed,0errors** (Back/duplicate/detach and day/night theme). The aggregate job failed afterwards on unrelated Cordova library test Kotlin duplicates because the Gradle task was unqualified. The command is now scoped to **`:app:connectedDebugAndroidTest`**, retaining every intended host assertion and both preceding Maestro gates, with no dependency/application change. Four of five isolated native jobs passed; import-v3-data failed before emulator in Gradle packaging with an unspecified IncrementalSplitterRunnable error, retained and not classified as a proven product defect. New workflow-head CI follows; full acceptance was preserved live.
+Luna High independent immutable16ea687..54085c2 review found one Important host presentation defect, fixed by the private full-size translucent/no-action-bar/no-preview host theme. Existing secured content remains beneath the OS prompt without added touch-through/keyguard privileges. Compiled day/night resources and actual-host Back/duplicate/detach are now proven by final native instrumentation. No other actionable static findings were reported; physical OS/OEM/upgrade/live results were not certified.
 
-No existing behavior/assertion/selector/timeout was weakened. Native source-contract checks follow moved prompt ownership and are supplemented by executable JVM/browser state tests. The Gemini actual-service invalid-schema assertion now requires the two exact approved models and zero task validation for invalid schema; generic executor assertions remain unchanged. Metadata guards will deliberately advance to the owner-selected2.1.4/code14.
+Historical failures remain in [WP38_PROGRESS.md](WP38_PROGRESS.md): deprecated Back override caused real target36 lint errors and was repaired with the existing lifecycle-aware AndroidX dispatcher; unqualified instrumentation selected unrelated Cordova Kotlin duplicates and was scoped to `:app:connectedDebugAndroidTest`. One prior acceptance run lost SpendWise after a documented GMS FontsProvider death; one isolated build failed in IncrementalSplitterRunnable packaging before emulator with unspecified cause. Final unchanged application gates passed on732065e. No assertions, security checks, selectors or timeout budgets were weakened; retained logs are not erased or relabeled green.
 
 ## Routing and budgets
 
@@ -50,6 +56,6 @@ Repository defaults, verified synthetically for each of smart-capture, scan-rece
 
 ## Version, artifact and remaining acceptance
 
-Candidate metadata:2.1.4/code14; `com.spendwise.app`; original permanent signing certificate. Package/lockfile root versions and deliberate current-version test/runbook/workflow expectations updated; dependency entries unchanged. Private immutable-source build/independent artifact receipt pending. Install over existing2.1.3 without uninstall/reset. Physical PIN/pattern/password, cancellation/overlays/OEM/API matrix and in-place real-data upgrade remain owner checks in [WP38_DEVICE_ACCEPTANCE.md](WP38_DEVICE_ACCEPTANCE.md).
+Candidate metadata:2.1.4/code14; `com.spendwise.app`; original permanent signing certificate. Package/lockfile root versions and deliberate current-version test/runbook/workflow expectations updated; dependency entries unchanged. Private immutable-source build and independent verification passed: [APK receipt](WP38_PRIVATE_APK.md), [machine-readable values](WP38_APK_RECEIPT.json). Install over existing2.1.3 without uninstall/reset. Physical PIN/pattern/password, cancellation/overlays/OEM/API matrix and in-place real-data upgrade remain owner checks in [WP38_DEVICE_ACCEPTANCE.md](WP38_DEVICE_ACCEPTANCE.md).
 
-Release recommendation: **candidate verification in progress; production release not approved**. Main merge, Render deployment/settings, tag/public release and branch deletion remain unauthorized.
+Release recommendation: **GREEN for automated private candidate delivery; owner acceptance pending and production release not approved**. Main merge, Render deployment/settings, tag/public release and branch deletion remain unauthorized.

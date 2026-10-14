@@ -10,9 +10,9 @@ Updated **2026-10-14**. [Current status and proof](STATUS.md).
 | WP35.3 | COMPLETE / GREEN | Observable AI progress, preserved drafts and Android editor safe-area/keyboard handling |
 | WP36 | COMPLETE / GREEN | Qualified task routes, deterministic financial facts, backend version visibility and optional localized descriptions; CI, deployment and owner phone sign-off complete |
 | WP37 | AUTOMATED DELIVERY VERIFIED | Code/required CI passed, main merged, private2.1.3/code13 independently verified; owner manual checks green; exhaustive OEM/API/TalkBack unverified |
-| WP38 | IN PROGRESS / PRIVATE CANDIDATE | Minimal Android authentication, Arabic lock UX and Gemini reliability fixes; target2.1.4/code14. [Plan](WP38_PLAN.md), [progress](WP38_PROGRESS.md), [owner phone/Render handoff](WP38_DEVICE_ACCEPTANCE.md). No merge/deployment/public release authorization |
+| WP38 | AUTOMATED PRIVATE DELIVERY VERIFIED / OWNER-PENDING | Minimal Android authentication, Arabic lock UX and Gemini reliability fixes; permanent-signed2.1.4/code14, exact-source CI and [independent APK receipt](WP38_PRIVATE_APK.md) passed. [Plan](WP38_PLAN.md), [progress](WP38_PROGRESS.md), [owner phone/Render handoff](WP38_DEVICE_ACCEPTANCE.md). No merge/deployment/public release authorization |
 | Next WP | UPCOMING / UNSPECIFIED | No work beyond WP38 is authorized |
-| Main integration / deployment | MAIN MERGED / RUNTIME VERIFIED | Main9045c699, matching live health/source and two bounded authenticated compatibility checks; owner screenshots confirm main / After CI Checks Pass. Render deployment ID/trigger receipt not captured |
+| Historical WP37 main integration / deployment | MAIN MERGED / RUNTIME VERIFIED | Main9045c699, matching live health/source and two bounded authenticated compatibility checks; owner screenshots confirm main / After CI Checks Pass. Render deployment ID/trigger receipt not captured |
 | Public release | NOT AUTHORIZED | No public tag or release is included in the WP37 checkpoint |
 
 The historical private signed WP36 2.1.2/code12 APK was owner accepted.

@@ -4,7 +4,7 @@ Status: pending owner testing of the private **2.1.4 / code14** candidate. Autom
 
 ## In-place phone upgrade
 
-Use only the permanent-signed APK identified in the WP38 artifact receipt. Install over 2.1.3 with the existing `com.spendwise.app` package; do not uninstall, clear storage or reset keys. Confirm the APK SHA-256 and permanent signer before installation. Confirm existing transactions, budgets, photos, encrypted storage, backups and App Lock remain usable after the update.
+Use only the permanent-signed APK identified in the [WP38 artifact receipt](WP38_PRIVATE_APK.md): `SpendWise-WP38-v2.1.4-test.apk`, source `732065e5455ca4de734d4982a662c2819fdd01af`, SHA256 `0f4b5c46f93882387a45febf5ad58ceceabfdeb28c67d5074153117297747ab0`. Its signature/identity/source/HTTPS checks passed independently; all required exact-source CI passed. Install over 2.1.3 with the existing `com.spendwise.app` package; do not uninstall, clear storage or reset keys. Confirm the APK SHA-256 and permanent signer before installation. Confirm existing transactions, budgets, photos, encrypted storage, backups and App Lock remain usable after the update.
 
 ## Authentication
 

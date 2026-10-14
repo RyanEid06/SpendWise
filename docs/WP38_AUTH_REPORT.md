@@ -1,5 +1,7 @@
 # WP38-A authentication implementation evidence
 
+Current integrated outcome: all required exact-source CI and independent private2.1.4/code14 APK checks passed at `732065e5455ca4de734d4982a662c2819fdd01af`; [final report](WP38_REPORT.md), [artifact receipt](WP38_PRIVATE_APK.md). Historical local/pending statements below describe their recorded checkpoint. Phone/upgrade and Render/live-provider acceptance remain owner-deferred.
+
 ## Confirmed source defects and limits
 
 The old plugin left `pendingCredentialCall`/`pendingCredentialToken` and cancellation quarantine outside terminal cleanup. A missing cancellation callback could therefore make later requests permanently busy. Its Android 11+ primary prompt used a separate negative-button credential prompt instead of the supported combined authenticator set. `LockScreen` awaited an unbounded callback; the session service held one boolean while that callback was pending. Clearing React busy alone would leave the underlying service blocked and its late result valid.

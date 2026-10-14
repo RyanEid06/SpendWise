@@ -2,7 +2,7 @@
 
 Current WP38 private candidate metadata: **2.1.4 / Android versionCode14**, package `com.spendwise.app`, upgrading installed2.1.3/code13 in place with the same permanent signing identity. The owner authorized implementation and private candidate delivery on `codex/wp38-auth-gemini-reliability`; **no main merge, Render deployment/settings change, tag/public release or branch deletion is authorized**. [WP38 report](WP38_REPORT.md), [phone/Render handoff](WP38_DEVICE_ACCEPTANCE.md).
 
-Run the existing combined CI on the exact WP38 branch head, then dispatch `wp35-integration.yml` on that branch with `signed_test_apk=true` and `expected_source=EXACT_REVIEWED_SHA`. The reusable private build enforces2.1.4/code14, source/run provenance, HTTPS endpoint, package and permanent certificate, uploads privately and does not deploy. Independently verify the downloaded artifact and stop for owner phone acceptance. Do not uninstall/reset the existing app.
+Completed delivery: [all required exact-source CI and private APK receipt](WP38_PRIVATE_APK.md), source `732065e5455ca4de734d4982a662c2819fdd01af`, signed run38589986178. Phone/Render sign-off remains pending. For any subsequently authorized candidate, run the existing combined CI on its exact WP38 branch head, then dispatch `wp35-integration.yml` on that branch with `signed_test_apk=true` and `expected_source=EXACT_REVIEWED_SHA`. The reusable private build enforces2.1.4/code14, source/run provenance, HTTPS endpoint, package and permanent certificate, uploads privately and does not deploy. Independently verify the downloaded artifact and stop for owner phone acceptance. Do not uninstall/reset the existing app.
 
 ## Historical WP37 delivery
 

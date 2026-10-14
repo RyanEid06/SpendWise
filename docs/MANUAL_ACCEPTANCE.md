@@ -2,7 +2,7 @@
 
 ## WP38 2.1.4/code14 — pending owner acceptance
 
-After the permanent-signed private APK is delivered, use the [WP38 phone/Render checklist](WP38_DEVICE_ACCEPTANCE.md). Preserve the installed2.1.3 app/data during upgrade. Native PIN/pattern/password, cancellation->retry, Arabic visual checks and effective production Gemini routes require the owner's separate sign-off. Do not reuse WP37's historical green status for this candidate.
+The permanent-signed private APK is independently verified ([receipt](WP38_PRIVATE_APK.md)). Use the [WP38 phone/Render checklist](WP38_DEVICE_ACCEPTANCE.md). Preserve the installed2.1.3 app/data during upgrade. Native PIN/pattern/password, cancellation->retry, Arabic visual checks and effective production Gemini routes require the owner's separate sign-off. Do not reuse WP37's historical green status for this candidate.
 
 ## WP37 2.1.3/code13 — GREEN, owner reported2026-10-12
 

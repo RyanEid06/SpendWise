@@ -1,6 +1,6 @@
 # SpendWise
 
-**WP38 private hotfix candidate: 2.1.4 / Android code14.** Android authentication reliability, concise Arabic lock UX and bounded Gemini fixes on `codex/wp38-auth-gemini-reliability`; [report](docs/WP38_REPORT.md), [plan](docs/WP38_PLAN.md), [progress](docs/WP38_PROGRESS.md), and [owner acceptance / Render handoff](docs/WP38_DEVICE_ACCEPTANCE.md). Final automated/artifact verification is in progress. Main/production remain at the WP37 checkpoint below. No merge, Render change or public release is authorized.
+**WP38 private hotfix candidate: 2.1.4 / Android code14.** Android authentication reliability, concise Arabic lock UX and bounded Gemini fixes on `codex/wp38-auth-gemini-reliability`; [report](docs/WP38_REPORT.md), [plan](docs/WP38_PLAN.md), [progress](docs/WP38_PROGRESS.md), and [owner acceptance / Render handoff](docs/WP38_DEVICE_ACCEPTANCE.md). All required exact-source CI and independent private APK verification passed; [APK identity/hash receipt](docs/WP38_PRIVATE_APK.md). Phone and Render/live-provider acceptance remain owner-pending. Main/production remain at the WP37 checkpoint below. No merge, Render change or public release is authorized.
 
 SpendWise is a local-first expense tracker and
 monthly budget planner for Android and the web. Package: `com.spendwise.app`.
