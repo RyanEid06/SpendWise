@@ -4,11 +4,11 @@
 
 > Execution authorization, 2026-10-14: implement WP38 on `codex/wp38-auth-gemini-reliability`, prepare and independently verify the private signed 2.1.4/code14 APK, then stop for the owner's acceptance. All Render inspection/live-provider checks and phone-only checks are deferred to the owner. No questions during execution; record unavailable checks in the handoff. No main merge, production deployment, tag/public release or branch deletion. Required build workflow metadata/branch changes are included; immutable source, endpoint, package and permanent signer guards remain intact. Home/background invalidates an interrupted authentication, while a fresh foreground authentication and established lock timeout behavior remain permitted. Candidate readiness is distinct from physical/production acceptance.
 
-**Target:** SpendWise **2.1.4 / Android `versionCode` 14** (candidate; apply version bump only after changes and tests are ready).  
-**Baseline:** current verified `main` carrying WP37 / 2.1.3 code 13. Do **not** blindly assume a commit hash—verify the exact checkout and clean worktree first.  
-**Work branch suggestion:** `fix/wp38-auth-gemini-reliability`.  
-**Implementation owner:** Codex.  
-**Scope:** **bug fixes only**. No feature expansion, architectural rewrite, design refresh, or speculative optimization.  
+**Target:** SpendWise **2.1.4 / Android `versionCode` 14** (candidate; apply version bump only after changes and tests are ready).
+**Baseline:** current verified `main` carrying WP37 / 2.1.3 code 13. Do **not** blindly assume a commit hash—verify the exact checkout and clean worktree first.
+**Work branch suggestion:** `fix/wp38-auth-gemini-reliability`.
+**Implementation owner:** Codex.
+**Scope:** **bug fixes only**. No feature expansion, architectural rewrite, design refresh, or speculative optimization.
 **Release policy:** prepare a private signed in-place-upgrade test APK and report; **do not merge, tag, publish, or change Render settings without owner approval**.
 
 ## 0. Inputs, symptoms and proven source facts
