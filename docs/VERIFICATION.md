@@ -1,5 +1,9 @@
 # SpendWise 2.1 automated verification
 
+## WP38 2.1.4 / code14 — implementation in progress
+
+The [WP38 ledger](WP38_PROGRESS.md) records current red/green evidence. Final immutable CI and private signer/hash/package/source verification are pending. [Owner phone and Render checks](WP38_DEVICE_ACCEPTANCE.md) remain separate and unverified; previous WP37 acceptance does not certify this hotfix.
+
 ## WP37 2.1.3 / code13 — code, CI and main integration passed
 
 [Combined38286074724 attempt2](https://github.com/RyanEid06/SpendWise/actions/runs/38286074724) passed web/PostgreSQL, API36 isolated

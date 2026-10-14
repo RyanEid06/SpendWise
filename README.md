@@ -1,5 +1,7 @@
 # SpendWise
 
+**WP38 hotfix candidate in progress:** Android authentication reliability, concise Arabic lock UX and bounded Gemini fixes. Target **2.1.4 / Android code14** on `codex/wp38-auth-gemini-reliability`; [plan](docs/WP38_PLAN.md), [progress](docs/WP38_PROGRESS.md), and [owner acceptance / Render handoff](docs/WP38_DEVICE_ACCEPTANCE.md). Main/production remain at the WP37 checkpoint below. No merge, Render change or public release is authorized.
+
 SpendWise **2.1.3**, Android build **13**, is a local-first expense tracker and
 monthly budget planner for Android and the web. Package: `com.spendwise.app`.
 

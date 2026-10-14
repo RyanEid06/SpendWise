@@ -1,4 +1,8 @@
-# Current status — WP37 integrated to main
+# Current status — WP38 hotfix candidate
+
+WP38 targets **2.1.4 / Android code14**, package `com.spendwise.app`, on the dedicated `codex/wp38-auth-gemini-reliability` branch. Implementation and private artifact verification are in progress; see [plan](WP38_PLAN.md) and [ledger](WP38_PROGRESS.md). The owner has deferred phone-only acceptance and all Render/live Gemini verification to the [handoff](WP38_DEVICE_ACCEPTANCE.md). No main merge, production deployment, Render settings change, tag/public release or branch deletion is authorized.
+
+## Accepted WP37 main checkpoint (historical)
 
 Updated **2026-10-13** after delivery and owner manual acceptance on2026-10-12. Candidate **2.1.3 / Android code13**, package
 `com.spendwise.app`. Independent immutable application, workflow and version

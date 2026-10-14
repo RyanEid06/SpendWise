@@ -1,5 +1,7 @@
 # Development and maintenance
 
+**WP38 implementation in progress:** target2.1.4/code14, limited to authentication, Arabic lock copy/bidi and bounded Gemini cleanup. Follow [WP38 plan](WP38_PLAN.md) and [progress](WP38_PROGRESS.md). Preserve existing encryption, key identities, timeouts, financial/schema validators and provider architecture. Render/live-provider and physical checks are owner-deferred; no production action is authorized.
+
 **WP37 2.1.3/code13: code/required CI passed and main merged, 2026-10-12.**
 The independently verified private APK and live-main runtime checks are tracked in
 [status](STATUS.md), [artifact receipt](WP37_PRIVATE_APK.md) and
