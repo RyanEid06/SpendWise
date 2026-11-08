@@ -11,7 +11,7 @@ Official Android release: **2.1.4 / versionCode14**, package `com.spendwise.app`
 - Consistent quota handling across AI Retry and Analyze/Refresh/Scan controls. Failed local analysis or cache preparation releases loading state; failed scans retain previous validated results/photos.
 - Bounded backend recovery after qualified invalid Gemini JSON/schema/quality responses, using at most one distinct configured alternate within existing limits. Strict schema/financial validation and deterministic calculations remain intact. Effective deployed routing is separately verified by the operator.
 
-This public release also includes the intervening WP35–WP37 reliability work previously delivered privately: durable installation authentication and readiness handling, bounded AI operations and cancellation, qualified task routing, deterministic localized Statistics explanations, and retained Android encryption/recovery/backup safeguards. See [current features](../README.md) and [verification](VERIFICATION.md).
+This public release also includes the intervening WP35–WP37 reliability work previously delivered privately: durable installation authentication and readiness handling, bounded AI operations and cancellation, qualified task routing, deterministic localized Statistics explanations, and retained Android encryption/recovery/backup safeguards. See [current features](../README.md) and the [public release record](WP38_PUBLIC_RELEASE.md).
 
 ## Update and verification
 

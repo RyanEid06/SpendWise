@@ -40,4 +40,4 @@ A future security issue or external service change may require an explicit owner
 
 Owner testing establishes practical phone acceptance. It does not certify every API/OEM/device/TalkBack combination. Read-only backend health establishes readiness and reported source only; effective Gemini routes, provider quota and cold/warm behavior require separate live-provider evidence. No live Gemini request is needed to freeze this source release.
 
-The [verification guide](VERIFICATION.md), [current status](STATUS.md) and [security boundaries](SECURITY.md) remain the detailed evidence references.
+The [public release record](WP38_PUBLIC_RELEASE.md) and [security boundaries](SECURITY.md) summarize the published result and its limits.

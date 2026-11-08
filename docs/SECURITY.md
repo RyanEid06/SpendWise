@@ -1,9 +1,8 @@
 # Security, storage and recovery
 
-Product development is frozen at 2.1.4; the security boundaries and evidence limits below continue to apply. A future security finding requires an explicit owner decision about maintenance. [Freeze record](FREEZE.md).
+Product development is frozen at 2.1.4; the security boundaries and evidence limits below continue to apply. A future security finding requires an explicit owner decision about maintenance. See the [freeze record](FREEZE.md) and [public release record](WP38_PUBLIC_RELEASE.md).
 
-Current checkpoint: **WP38 / SpendWise 2.1.4 automated application/security gates passed; owner phone testing reported green on 2026-10-14**. Main integration and the official Latest 2.1.4 release/tag are verified; [current status](STATUS.md), [release verification](WP38_PUBLIC_RELEASE.md). Exhaustive OEM/API/TalkBack coverage remains unverified. Earlier WP36/WP37 acceptance is historical.
-This sign-off does not expand the threat model or waive the safeguards below.
+The owner reported successful phone acceptance of 2.1.4. This does not certify every Android version, device maker, accessibility service, or hosted AI route, and it does not expand the threat model or waive the safeguards below.
 
 This records implemented boundaries and release checks. It does not establish
 physical-device acceptance or protection against a compromised OS.
@@ -70,9 +69,7 @@ can make data unrecoverable. Local encryption does not replace portable backups.
 
 ## Release evidence and limits
 
-See [verification](VERIFICATION.md) for actual source/run identities, signature,
-manifest, native alignment, dependency and secret-scan evidence. Hosted Dependabot
-alerts were disabled and secret-scanning API access was unavailable; no zero-alert
-claim is made for these services. CI dependency audits and a verified local redacted
-Gitleaks scan are retained separately. Manual phone/TalkBack acceptance remains
-[pending](MANUAL_ACCEPTANCE.md).
+The official release record includes the published version, APK checksum, source
+tag and signing certificate. Hosted AI routing and exhaustive device,
+accessibility and OEM coverage are separate limits; owner phone acceptance does
+not certify those conditions.
